@@ -26,6 +26,7 @@ return new class extends Migration
             // Professional Information
             $table->string('designation')->nullable();
             $table->unsignedBigInteger('role_id')->nullable();
+             $table->string('role')->nullable();
             $table->unsignedBigInteger('department_id')->nullable();
             $table->unsignedBigInteger('location_id')->nullable();
 

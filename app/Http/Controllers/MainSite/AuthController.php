@@ -45,7 +45,6 @@ class AuthController extends Controller
          ]);
      
          $user = user::where('email', $request->email)->first();
-  
 
          if ($user && Hash::check($request->password, $user->password)) {
 
