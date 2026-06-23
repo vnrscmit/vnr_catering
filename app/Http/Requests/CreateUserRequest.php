@@ -18,7 +18,7 @@ class CreateUserRequest extends FormRequest
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'email' => 'nullable|email|unique:users,email',
             'mobile' => 'required|string|max:20|unique:users,mobile',
             'designation' => 'required|string|max:255',
             'department_id' => 'required|exists:departments,id',

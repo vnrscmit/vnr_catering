@@ -1,89 +1,88 @@
-
 @extends('layouts.main-site')
 
 @push('styles')
-    
-    <!-- Animation CSS -->
-    <link rel="stylesheet" href="/assets/css/animate.css">	
-    <!-- Latest Bootstrap min CSS -->
-    <link rel="stylesheet" href="/assets/bootstrap/css/bootstrap.min.css">
-    <!-- Google Font -->
-    <link href="https://fonts.googleapis.com/css?family=Kaushan+Script&amp;display=swap" rel="stylesheet"> 
-    <link href="https://fonts.googleapis.com/css?family=Josefin+Sans:100,100i,300,300i,400,400i,600,600i,700,700i&amp;display=swap" rel="stylesheet"> 
-    <link href="https://fonts.googleapis.com/css?family=Roboto:100,100i,300,300i,400,400i,500,500i,700,700i,900,900i&amp;display=swap" rel="stylesheet"> 
-    <!-- Icon Font CSS -->
-    <link rel="stylesheet" href="/assets/css/all.min.css">
-    <link rel="stylesheet" href="/assets/css/ionicons.min.css">
-    <link rel="stylesheet" href="/assets/css/themify-icons.css">
-    <link rel="stylesheet" href="/assets/css/linearicons.css">
-    <link rel="stylesheet" href="/assets/css/flaticon.css">
-    <!--- owl carousel CSS-->
-    <link rel="stylesheet" href="/assets/owlcarousel/css/owl.carousel.min.css">
-    <link rel="stylesheet" href="/assets/owlcarousel/css/owl.theme.css">
-    <link rel="stylesheet" href="/assets/owlcarousel/css/owl.theme.default.min.css">
-    <!-- Slick CSS -->
-    <link rel="stylesheet" href="/assets/css/slick.css">
-    <link rel="stylesheet" href="/assets/css/slick-theme.css">
-    <!-- Magnific Popup CSS -->
-    <link rel="stylesheet" href="/assets/css/magnific-popup.css">
-    <!-- DatePicker CSS -->
-    <link href="/assets/css/datepicker.min.css" rel="stylesheet">
-    <!-- TimePicker CSS -->
-    <link href="/assets/css/mdtimepicker.min.css" rel="stylesheet">
-    <!-- Style CSS -->
-    <link rel="stylesheet" href="/assets/css/style.css">
-    <link rel="stylesheet" href="/assets/css/responsive.css">
-    <link id="layoutstyle" rel="stylesheet" href="/assets/color/theme-red.css">
+
+<!-- Animation CSS -->
+<link rel="stylesheet" href="/assets/css/animate.css">
+<!-- Latest Bootstrap min CSS -->
+<link rel="stylesheet" href="/assets/bootstrap/css/bootstrap.min.css">
+<!-- Google Font -->
+<link href="https://fonts.googleapis.com/css?family=Kaushan+Script&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Josefin+Sans:100,100i,300,300i,400,400i,600,600i,700,700i&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Roboto:100,100i,300,300i,400,400i,500,500i,700,700i,900,900i&amp;display=swap" rel="stylesheet">
+<!-- Icon Font CSS -->
+<link rel="stylesheet" href="/assets/css/all.min.css">
+<link rel="stylesheet" href="/assets/css/ionicons.min.css">
+<link rel="stylesheet" href="/assets/css/themify-icons.css">
+<link rel="stylesheet" href="/assets/css/linearicons.css">
+<link rel="stylesheet" href="/assets/css/flaticon.css">
+<!--- owl carousel CSS-->
+<link rel="stylesheet" href="/assets/owlcarousel/css/owl.carousel.min.css">
+<link rel="stylesheet" href="/assets/owlcarousel/css/owl.theme.css">
+<link rel="stylesheet" href="/assets/owlcarousel/css/owl.theme.default.min.css">
+<!-- Slick CSS -->
+<link rel="stylesheet" href="/assets/css/slick.css">
+<link rel="stylesheet" href="/assets/css/slick-theme.css">
+<!-- Magnific Popup CSS -->
+<link rel="stylesheet" href="/assets/css/magnific-popup.css">
+<!-- DatePicker CSS -->
+<link href="/assets/css/datepicker.min.css" rel="stylesheet">
+<!-- TimePicker CSS -->
+<link href="/assets/css/mdtimepicker.min.css" rel="stylesheet">
+<!-- Style CSS -->
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="/assets/css/responsive.css">
+<link id="layoutstyle" rel="stylesheet" href="/assets/color/theme-red.css">
 @endpush
 
 @push('scripts')
- 
-    <!-- Latest jQuery --> 
-    <script src="/assets/js/jquery-1.12.4.min.js"></script> 
-    <!-- Latest compiled and minified Bootstrap --> 
-    <script src="/assets/bootstrap/js/bootstrap.min.js"></script> 
-    <!-- owl-carousel min js  --> 
-    <script src="/assets/owlcarousel/js/owl.carousel.min.js"></script> 
-    <!-- magnific-popup min js  --> 
-    <script src="/assets/js/magnific-popup.min.js"></script> 
-    <!-- waypoints min js  --> 
-    <script src="/assets/js/waypoints.min.js"></script> 
-    <!-- parallax js  --> 
-    <script src="/assets/js/parallax.js"></script> 
-    <!-- countdown js  --> 
-    <script src="/assets/js/jquery.countdown.min.js"></script> 
-    <!-- jquery.countTo js  -->
-    <script src="/assets/js/jquery.countTo.js"></script>
-    <!-- imagesloaded js --> 
-    <script src="/assets/js/imagesloaded.pkgd.min.js"></script>
-    <!-- isotope min js --> 
-    <script src="/assets/js/isotope.min.js"></script>
-    <!-- jquery.appear js  -->
-    <script src="/assets/js/jquery.appear.js"></script>
-    <!-- jquery.dd.min js -->
-    <script src="/assets/js/jquery.dd.min.js"></script>
-    <!-- slick js -->
-    <script src="/assets/js/slick.min.js"></script>
-    <!-- DatePicker js -->
-    <script src="/assets/js/datepicker.min.js"></script>
-    <!-- TimePicker js -->
-    <script src="/assets/js/mdtimepicker.min.js"></script>
-    <!-- scripts js --> 
-    <script src="/assets/js/scripts.js"></script>
 
-    <script src="https://js.stripe.com/v3/"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        $(document).ready(function() {
-            $('.toggle-password').on('click', function() {
-                const input = $('#password');
-                const icon = $(this);
-                const type = input.attr('type') === 'password' ? 'text' : 'password';
-                input.attr('type', type);
-                icon.toggleClass('fa-eye fa-eye-slash');
-            });
+<!-- Latest jQuery -->
+<script src="/assets/js/jquery-1.12.4.min.js"></script>
+<!-- Latest compiled and minified Bootstrap -->
+<script src="/assets/bootstrap/js/bootstrap.min.js"></script>
+<!-- owl-carousel min js  -->
+<script src="/assets/owlcarousel/js/owl.carousel.min.js"></script>
+<!-- magnific-popup min js  -->
+<script src="/assets/js/magnific-popup.min.js"></script>
+<!-- waypoints min js  -->
+<script src="/assets/js/waypoints.min.js"></script>
+<!-- parallax js  -->
+<script src="/assets/js/parallax.js"></script>
+<!-- countdown js  -->
+<script src="/assets/js/jquery.countdown.min.js"></script>
+<!-- jquery.countTo js  -->
+<script src="/assets/js/jquery.countTo.js"></script>
+<!-- imagesloaded js -->
+<script src="/assets/js/imagesloaded.pkgd.min.js"></script>
+<!-- isotope min js -->
+<script src="/assets/js/isotope.min.js"></script>
+<!-- jquery.appear js  -->
+<script src="/assets/js/jquery.appear.js"></script>
+<!-- jquery.dd.min js -->
+<script src="/assets/js/jquery.dd.min.js"></script>
+<!-- slick js -->
+<script src="/assets/js/slick.min.js"></script>
+<!-- DatePicker js -->
+<script src="/assets/js/datepicker.min.js"></script>
+<!-- TimePicker js -->
+<script src="/assets/js/mdtimepicker.min.js"></script>
+<!-- scripts js -->
+<script src="/assets/js/scripts.js"></script>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('.toggle-password').on('click', function() {
+            const input = $('#password');
+            const icon = $(this);
+            const type = input.attr('type') === 'password' ? 'text' : 'password';
+            input.attr('type', type);
+            icon.toggleClass('fa-eye fa-eye-slash');
         });
-    </script>
+    });
+</script>
 
 @endpush
 
@@ -92,60 +91,64 @@
 
 @section('content')
 
-    <!-- START SECTION SHOP -->
-    <div class="section">
-        <div class="container">
-                  <div class="text-center mb-4">
-            <img src="{{ asset('assets/images/vnr_logo_login.png') }}"
-                 alt="Logo"
-                 style="max-height:120px;">
-        </div>
+<!-- START SECTION SHOP -->
+<div class="section"
+    style="
+        background:url('{{ url('assets/images/bg-image.png') }}') no-repeat center center;
+        background-size:cover;
+        min-height:100vh;
+    ">
+  
+    <div class="container">
+        <form method="post" action="{{ route('auth.login.process') }}">
+            @csrf
+            <div class="row justify-content-center">
+                <div class="col-12 col-lg-6 mx-auto">
+                    <div class="order_review">
 
-        
-            <form method="post" action="{{ route('auth.login.process') }}">
-                @csrf
-                <div class="row justify-content-center">
-                    <div class="col-12 col-lg-6 mx-auto">
+                        <div class="text-center mb-4">
+                            <img src="{{ asset('assets/images/vnr_logo_login.png') }}"
+                                alt="Logo"
+                                style="max-height:120px;">
+                        </div>
 
-                        <div class="order_review">
+                        <h4 class="mb-4">Login to Your Account</h4>
+                        @include('partials.message-bag')
 
-                            <h4 class="mb-4">Login to Your Account</h4>
-                            @include('partials.message-bag')
-                            
-                            <div class="row">
+                        <div class="row">
 
-                                <!-- Email -->
-                                <div class="form-group col-md-12">
-                                    <label for="email">Email Address</label>
-                                    <input id="email" class="form-control" required type="email" name="email" value="{{ old('email') }}">
-                                </div>
+                            <!-- Email -->
+                            <div class="form-group col-md-12">
+                                <label for="email">Email Address</label>
+                                <input id="email" class="form-control" placeholder="Enter your email" required type="email" name="email" value="{{ old('email') }}">
+                            </div>
 
-                                <!-- Password -->
-                                <div class="form-group col-md-12 position-relative">
-                                    <label for="password">Password</label>
-                                    <div class="input-group">
-                                        <input id="password" class="form-control" required type="password" name="password">
-                                        <div class="input-group-append">
-                                            <span class="input-group-text">
-                                                <i class="fas fa-eye toggle-password" style="cursor:pointer;"></i>
-                                            </span>
-                                        </div>
+                            <!-- Password -->
+                            <div class="form-group col-md-12 position-relative">
+                                <label for="password">Password</label>
+                                <div class="input-group">
+                                    <input id="password" class="form-control" placeholder="Enter your password" required type="password" name="password">
+                                    <div class="input-group-append">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-eye toggle-password" style="cursor:pointer;"></i>
+                                        </span>
                                     </div>
                                 </div>
-
-                                <!-- Submission -->
-                                <div class="form-group mb-0 mt-2 col-md-12">
-                                    <button type="submit" class="btn btn-default btn-block">Login</button>
-                                </div>
-
-
                             </div>
+
+                            <!-- Submission -->
+                            <div class="form-group mb-0 mt-2 col-md-12">
+                                <button type="submit" class="btn btn-default btn-block">Login</button>
+                            </div>
+
+
                         </div>
                     </div>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
+</div>
 
- 
+
 @endsection

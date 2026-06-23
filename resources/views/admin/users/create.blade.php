@@ -4,6 +4,7 @@
 <link rel="stylesheet" href="/admin_resources/vendors/typicons.font/font/typicons.css">
 <link rel="stylesheet" href="/admin_resources/vendors/css/vendor.bundle.base.css">
 <link rel="stylesheet" href="/admin_resources/css/vertical-layout-light/style.css">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 @endpush
 
 @push('scripts')
@@ -15,7 +16,42 @@
 <script src="/admin_resources/js/todolist.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    $(function() {
+
+        $('#location_id').on('change', function() {
+
+            let locationId = $(this).val();
+
+            $('#department_id').html(
+                '<option value="">Select Department</option>'
+            );
+
+            if (locationId) {
+
+                $.ajax({
+                    url: "{{ url('admin/get-departments') }}/" + locationId,
+                    type: "GET",
+                    dataType: "json",
+                    success: function(response) {
+
+                        $.each(response, function(index, department) {
+
+                            $('#department_id').append(
+                                '<option value="' + department.id + '">' +
+                                department.name +
+                                '</option>'
+                            );
+                        });
+                    }
+                });
+            }
+        });
+
+    });
+</script>
 @endpush
+
 
 @section('title', 'Create User')
 @section('content')
@@ -125,23 +161,6 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
-
-                        <!-- Department Dropdown -->
-                        <div class="col-md-6 mb-3">
-                            <label for="department_id" class="form-label">Department <span class="text-danger">*</span></label>
-                            <select class="form-control @error('department_id') is-invalid @enderror" id="department_id" name="department_id" required>
-                                <option value="">Select Department</option>
-                                @foreach($departments as $department)
-                                <option value="{{ $department->id }}" {{ old('department_id') == $department->id ? 'selected' : '' }}>
-                                    {{ $department->name }}
-                                </option>
-                                @endforeach
-                            </select>
-                            @error('department_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
                         <!-- Location Dropdown -->
                         <div class="col-md-6 mb-3">
                             <label for="location_id" class="form-label">Location <span class="text-danger">*</span></label>
@@ -154,6 +173,17 @@
                                 @endforeach
                             </select>
                             @error('location_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- Department Dropdown -->
+                        <div class="col-md-6 mb-3">
+                            <label for="department_id" class="form-label">Department <span class="text-danger">*</span></label>
+                            <select class="form-control" id="department_id" name="department_id" required>
+                                <option value="">Select Department</option>
+                            </select>
+                            @error('department_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -210,19 +240,20 @@
                         </div>
                     </div>
                     <div class="d-flex justify-content-end">
-                    <div class="mb-3">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fa fa-save"></i> Create User
-                        </button>
-                        <a href="{{ route('admin.users.index') }}" class="btn btn-secondary">
-                            <i class="fa fa-arrow-left"></i> Back
-                        </a>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fa fa-save"></i> Create User
+                            </button>
+                            <a href="{{ route('admin.users.index') }}" class="btn btn-secondary">
+                                <i class="fa fa-arrow-left"></i> Back
+                            </a>
+                        </div>
                     </div>
+                </form>
             </div>
-            </form>
         </div>
     </div>
 </div>
-</div>
+
 
 @endsection

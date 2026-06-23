@@ -29,6 +29,29 @@
             <div class="card-body">
                 <form action="{{ route('departments.store') }}" method="POST">
                     @csrf
+                    <div class="mb-3">
+                        <label for="location_id" class="form-label">
+                            Select Location <span class="text-danger">*</span>
+                        </label>
+
+                        <select class="form-control @error('location_id') is-invalid @enderror"
+                            id="location_id"
+                            name="location_id"
+                            required>
+                            <option value="">Select Location</option>
+
+                            @foreach($locations as $location)
+                            <option value="{{ $location->id }}"
+                                {{ old('location_id') == $location->id ? 'selected' : '' }}>
+                                {{ $location->name }}
+                            </option>
+                            @endforeach
+                        </select>
+
+                        @error('location_id')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
 
                     <div class="mb-3">
                         <label for="name" class="form-label">Department Name <span class="text-danger">*</span></label>

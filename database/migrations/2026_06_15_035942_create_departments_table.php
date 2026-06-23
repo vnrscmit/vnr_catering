@@ -13,6 +13,9 @@ return new class extends Migration
     {
         Schema::create('departments', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('location_id')
+                ->constrained('locations')
+                ->onDelete('cascade');
             $table->string('name')->unique();
             $table->string('short_code')->unique();
             $table->tinyInteger('status')->default(1);

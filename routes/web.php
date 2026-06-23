@@ -66,9 +66,9 @@ Route::get('blog/view/{id}', [MainSiteController::class, 'blogView'])->name('blo
 Route::get('privacy-policy/', [MainSiteController::class, 'privacyPolicy'])->name('privacy.policy');
 Route::get('terms-conditions/', [MainSiteController::class, 'termsConditions'])->name('terms.conditions');
 
-   // login routes
-    Route::get('auth/login', [AuthController::class, 'showLoginForm'])->name('auth.login');
-    Route::post('auth/process-login/', [AuthController::class, 'login'])->name('auth.login.process');
+// login routes
+Route::get('auth/login', [AuthController::class, 'showLoginForm'])->name('auth.login');
+Route::post('auth/process-login/', [AuthController::class, 'login'])->name('auth.login.process');
 
 //Resetting Password
 Route::middleware(['guest'])->group(function () {
@@ -77,7 +77,7 @@ Route::middleware(['guest'])->group(function () {
     Route::get('customer/create-account', [CustomerController::class, 'create'])->name('customer.account.create');
     Route::post('customer/store-account', [CustomerController::class, 'store'])->name('customer.account.store');
 
- 
+
 
 
     // activate route
@@ -262,15 +262,15 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
 
         //Admin Manage Users routes
         Route::get('users', [UserAdminController::class, 'index'])->name('admin.users.index');
-          Route::get('users/create', [UserAdminController::class, 'create'])->name('admin.users.create');
+        Route::get('users/create', [UserAdminController::class, 'create'])->name('admin.users.create');
         Route::post('users', [UserAdminController::class, 'store'])->name('admin.users.store');
         Route::put('users/{id}', [UserAdminController::class, 'update'])->name('admin.users.update');
         Route::delete('users/{id}', [UserAdminController::class, 'destroy'])->name('admin.users.destroy');
 
         //Admin Manage Users routes
         Route::get('roles', [RoleMasterController::class, 'index'])->name('admin.roles.index');
-           Route::get('roles/create', [RoleMasterController::class, 'create'])->name('admin.roles.create');
-              Route::get('roles/{id}', [RoleMasterController::class, 'edit'])->name('admin.roles.edit');
+        Route::get('roles/create', [RoleMasterController::class, 'create'])->name('admin.roles.create');
+        Route::get('roles/{id}', [RoleMasterController::class, 'edit'])->name('admin.roles.edit');
         Route::post('roles', [RoleMasterController::class, 'store'])->name('admin.roles.store');
         Route::put('roles/{id}', [RoleMasterController::class, 'update'])->name('admin.roles.update');
         Route::delete('roles/{id}', [RoleMasterController::class, 'destroy'])->name('admin.roles.destroy');
@@ -278,8 +278,10 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
 
         // Department Routes
         Route::resource('departments', DepartmentController::class);
+        Route::get('/get-departments/{locationId}', [DepartmentController::class, 'getDepartments']);
 
         // Location Routes
         Route::resource('locations', LocationController::class);
+
     });
 });

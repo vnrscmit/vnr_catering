@@ -58,12 +58,6 @@
 
             @if ($loggedInUser->role == "Super Admin")
 
-            <li class="nav-item {{ request()->route()->named('departments.*') ? 'active-nav' : '' }}">
-              <a class="nav-link" href="{{ route('departments.index') }}">
-                <i class="fa fa-building menu-icon"></i>
-                <span class="menu-title">Departments</span>
-              </a>
-            </li>
 
             <li class="nav-item {{ request()->route()->named('locations.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('locations.index') }}">
@@ -71,6 +65,15 @@
                 <span class="menu-title">Locations</span>
               </a>
             </li>
+
+            <li class="nav-item {{ request()->route()->named('departments.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('departments.index') }}">
+                <i class="fa fa-building menu-icon"></i>
+                <span class="menu-title">Departments</span>
+              </a>
+            </li>
+
+
 
             <li class="nav-item {{ request()->route()->named('admin.roles.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('admin.roles.index') }}">

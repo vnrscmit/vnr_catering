@@ -47,6 +47,10 @@
                     searchable: false
                 },
                 {
+    data: 'location',
+    name: 'location.name'
+},
+                {
                     data: 'name',
                     name: 'name'
                 },
@@ -126,7 +130,8 @@
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th>Name</th>
+                                <th>Location</th>
+                                <th>Department</th>
                                 <th>Short Code</th>
                                 <th>Status</th>
                                 <th>Created Date</th>

@@ -6,6 +6,7 @@ use App\Models\Department;
 use Illuminate\Http\Request;
 use DataTables;
 use App\Http\Controllers\Traits\AdminViewSharedDataTrait;
+use App\Models\Location;
 
 class DepartmentController extends Controller
 {
@@ -28,10 +29,13 @@ class DepartmentController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = Department::select('*');
+            $data = Department::with('location');
 
             return DataTables::of($data)
                 ->addIndexColumn()
+                ->addColumn('location', function ($row) {
+                    return $row->location->name ?? '-';
+                })
                 ->addColumn('status', function ($row) {
                     if ($row->status == 1) {
                         return '<span class="badge bg-success"><i class="fa fa-check"></i> Active</span>';
@@ -67,7 +71,8 @@ class DepartmentController extends Controller
      */
     public function create()
     {
-        return view('admin.departments.create');
+        $locations = Location::where('status', 1)->get();
+        return view('admin.departments.create', compact('locations'));
     }
 
     /**
@@ -76,13 +81,18 @@ class DepartmentController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|unique:departments,name|max:255',
-            'short_code' => 'required|string|unique:departments,short_code|max:50',
-            'status' => 'required',
+            'location_id' => 'required|exists:locations,id',
+            'name'        => 'required|string|max:255',
+            'short_code'  => 'required|string|max:50',
+            'status'      => 'required',
         ]);
 
-
-        Department::create($validated);
+        Department::create([
+            'location_id' => $request->location_id,
+            'name'        => $request->name,
+            'short_code'  => $request->short_code,
+            'status'      => $request->status,
+        ]);
 
         return redirect()->route('departments.index')
             ->with('success', 'Department created successfully!');
@@ -132,5 +142,14 @@ class DepartmentController extends Controller
 
         return redirect()->route('departments.index')
             ->with('success', 'Department deleted successfully!');
+    }
+
+    public function getDepartments($locationId)
+    {
+        $departments = Department::where('location_id', $locationId)
+            ->where('status', 1)
+            ->get();
+
+        return response()->json($departments);
     }
 }

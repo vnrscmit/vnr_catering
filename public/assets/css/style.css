@@ -54,7 +54,7 @@ body {
 	background: #ffffff none repeat scroll 0 0;
     color: #687188;
     font-family: 'Roboto', sans-serif;
-    font-size: 16px;
+    font-size: 14px;
 }
 h1,h2,h3,h4,h5,h6 {
 	color: #222222;
@@ -5619,9 +5619,15 @@ label.label_info {
 .product-subtotal {
 	font-weight: 600;
 }
+
+
 .order_review {
-	box-shadow: 0 0 10px rgba(0,0,0,0.2);
-	padding: 30px;
+    max-width: 513px;
+    width: 100%;
+    background: rgba(255,255,255,0.95);
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
 }
 .order_table thead th {
 	border-bottom-width: 1px;
