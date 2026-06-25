@@ -22,6 +22,7 @@ class User extends Authenticatable implements CanResetPassword
         'designation',       // Added designation field
         'department_id',     // Added department foreign key
         'location_id',       // Added location foreign key
+        'other_location_id', 
         'password',
         'status',
         'notice',

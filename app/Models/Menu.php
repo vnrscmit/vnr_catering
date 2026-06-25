@@ -9,10 +9,10 @@ class Menu extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'description', 'price', 'image', 'category_id'];
+    protected $fillable = ['name', 'status'];
 
-    public function category()
+    public function subMenus()
     {
-        return $this->belongsTo(Category::class);
+        return $this->hasMany(SubMenu::class);
     }
 }

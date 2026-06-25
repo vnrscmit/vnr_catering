@@ -29,8 +29,8 @@
             <div class="card-body">
                 <form action="{{ route('locations.store') }}" method="POST">
                     @csrf
-
-                    <div class="mb-3">
+                    <div class="row">
+                    <div class="mb-3 col-6">
                         <label for="name" class="form-label">Location Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" value="{{ old('name') }}" required>
                         @error('name')
@@ -38,7 +38,7 @@
                         @enderror
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-3 col-6">
                         <label for="short_code" class="form-label">Short Code <span class="text-danger">*</span></label>
                         <input type="text" class="form-control @error('short_code') is-invalid @enderror" id="short_code" name="short_code" value="{{ old('short_code') }}" placeholder="e.g., LOC" required>
                         @error('short_code')
@@ -46,7 +46,7 @@
                         @enderror
                     </div>
 
-<div class="mb-3">
+<div class="mb-3 col-6">
     <label class="form-label">
         Status <span class="text-danger">*</span>
     </label>
@@ -74,6 +74,7 @@
                 Inactive
             </label>
         </div>
+    </div>
     </div>
 </div>
 <div class="d-flex justify-content-end">

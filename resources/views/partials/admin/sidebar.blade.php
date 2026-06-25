@@ -89,6 +89,22 @@
               </a>
             </li>
 
+       <li class="nav-item {{ request()->route()->named('admin.menus.*') ? 'active-nav' : '' }}">
+    <a class="nav-link" href="{{ route('admin.menus.index') }}">
+        <i class="fa fa-utensils menu-icon"></i>
+        <span class="menu-title">Mess Menu</span>
+    </a>
+</li>
+
+<li class="nav-item {{ request()->route()->named('admin.submenus.*') ? 'active-nav' : '' }}">
+    <a class="nav-link" href="{{ route('admin.menus.index') }}">
+        <i class="fa fa-list-ul menu-icon"></i>
+        <span class="menu-title">Mess Submenu</span>
+    </a>
+</li>
+
+
+
 
 
 

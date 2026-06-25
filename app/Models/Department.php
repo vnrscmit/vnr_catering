@@ -13,8 +13,20 @@ class Department extends Model
         return $this->hasMany(User::class);
     }
 
-    public function location()
+    public static function getByLocation($departmentId)
     {
-        return $this->belongsTo(Location::class, 'location_id', 'id');
+        $alreadylinkedData = DepartmentLocation::select(
+            'department_locations.id',
+            'department_locations.department_id',
+            'department_locations.location_id',
+            'departments.name as department_name',
+            'locations.name as location_name'
+        )
+            ->join('departments', 'departments.id', '=', 'department_locations.department_id')
+            ->join('locations', 'locations.id', '=', 'department_locations.location_id')
+            ->where('department_locations.department_id', $departmentId)
+            ->get();
+
+            return $alreadylinkedData;
     }
 }

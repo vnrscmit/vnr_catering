@@ -6,6 +6,7 @@ use App\Models\Department;
 use Illuminate\Http\Request;
 use DataTables;
 use App\Http\Controllers\Traits\AdminViewSharedDataTrait;
+use App\Models\DepartmentLocation;
 use App\Models\Location;
 
 class DepartmentController extends Controller
@@ -29,37 +30,51 @@ class DepartmentController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = Department::with('location');
+
+            $data = Department::orderBy('name', 'ASC')->get();
+            foreach ($data  as $datas) {
+                $datas->locationcount = DepartmentLocation::where('department_id', $datas->id)->count();
+            }
 
             return DataTables::of($data)
                 ->addIndexColumn()
-                ->addColumn('location', function ($row) {
-                    return $row->location->name ?? '-';
+                ->addColumn('locationlink', function ($row) {
+                    return '<a href="' . route('locations.link', $row->id) . '" 
+                class="fw-bold text-primary">
+                ' . $row->locationcount . '
+            </a>';
                 })
+
                 ->addColumn('status', function ($row) {
-                    if ($row->status == 1) {
-                        return '<span class="badge bg-success"><i class="fa fa-check"></i> Active</span>';
-                    } else {
-                        return '<span class="badge bg-danger"><i class="fa fa-times"></i> Inactive</span>';
-                    }
+                    return $row->status == 1
+                        ? '<span class="badge bg-success"><i class="fa fa-check"></i> Active</span>'
+                        : '<span class="badge bg-danger"><i class="fa fa-times"></i> Inactive</span>';
                 })
-                ->addColumn('created_at', function ($row) {
+
+                ->editColumn('created_at', function ($row) {
                     return $row->created_at->format('d-m-Y');
                 })
+
                 ->addColumn('action', function ($row) {
-                    $btn = '<a href="' . route('departments.show', $row->id) . '" class="btn btn-info btn-sm" title="View">
-                                <i class="fa fa-eye"></i>
-                            </a>';
-                    $btn .= ' <a href="' . route('departments.edit', $row->id) . '" class="btn btn-warning btn-sm" title="Edit">
-                                <i class="fa fa-edit"></i>
-                            </a>';
-                    $btn .= ' <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" 
-                                data-bs-target="#deleteModal" data-id="' . $row->id . '" title="Delete">
-                                <i class="fa fa-trash"></i>
-                            </button>';
-                    return $btn;
+                    return '
+                    <a href="' . route('departments.show', $row->id) . '" class="btn btn-info btn-sm" title="View">
+                        <i class="fa fa-eye"></i>
+                    </a>
+
+                    <a href="' . route('departments.edit', $row->id) . '" class="btn btn-warning btn-sm" title="Edit">
+                        <i class="fa fa-edit"></i>
+                    </a>
+
+                    <button type="button" class="btn btn-danger btn-sm"
+                        data-bs-toggle="modal"
+                        data-bs-target="#deleteModal"
+                        data-id="' . $row->id . '"
+                        title="Delete">
+                        <i class="fa fa-trash"></i>
+                    </button>';
                 })
-                ->rawColumns(['status', 'action'])
+
+                ->rawColumns(['locationlink', 'status', 'action'])
                 ->make(true);
         }
 
@@ -72,7 +87,8 @@ class DepartmentController extends Controller
     public function create()
     {
         $locations = Location::where('status', 1)->get();
-        return view('admin.departments.create', compact('locations'));
+        $department = Department::where('status', 1)->orderBy('name', 'asc')->get();
+        return view('admin.departments.create', compact('locations', 'department'));
     }
 
     /**
@@ -81,20 +97,32 @@ class DepartmentController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'location_id' => 'required|exists:locations,id',
-            'name'        => 'required|string|max:255',
-            'short_code'  => 'required|string|max:50',
-            'status'      => 'required',
+            'location_id'   => 'nullable|array',
+            'location_id.*' => 'exists:locations,id',
+            'name'          => 'required|string|max:255',
+            'short_code'    => 'required|string|max:50',
+            'status'        => 'required',
         ]);
 
-        Department::create([
-            'location_id' => $request->location_id,
+        $department = Department::create([
             'name'        => $request->name,
             'short_code'  => $request->short_code,
             'status'      => $request->status,
         ]);
 
-        return redirect()->route('departments.index')
+        if (!empty($request->location_id)) {
+            foreach ($request->location_id as $locationId) {
+                DepartmentLocation::firstOrCreate([
+                    'department_id' => $department->id,
+                    'location_id'   => $locationId,
+                ], [
+                    'status' => 1,
+                ]);
+            }
+        }
+
+        return redirect()
+            ->route('departments.index')
             ->with('success', 'Department created successfully!');
     }
 
@@ -146,8 +174,16 @@ class DepartmentController extends Controller
 
     public function getDepartments($locationId)
     {
-        $departments = Department::where('location_id', $locationId)
-            ->where('status', 1)
+        $departments = DepartmentLocation::select(
+            'department_locations.id',
+            'department_locations.department_id',
+            'department_locations.location_id',
+            'departments.name as department_name',
+            'locations.name as location_name'
+        )
+            ->join('departments', 'departments.id', '=', 'department_locations.department_id')
+            ->join('locations', 'locations.id', '=', 'department_locations.location_id')
+            ->where('department_locations.location_id', $locationId)
             ->get();
 
         return response()->json($departments);

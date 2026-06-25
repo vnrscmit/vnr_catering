@@ -44,7 +44,6 @@
                                 <th>Name</th>
                                 <th>Short Code</th>
                                 <th>Status</th>
-                                <th>Created Date</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -61,7 +60,6 @@
                                             <span class="badge bg-danger"><i class="fa fa-times"></i> Inactive</span>
                                         @endif
                                     </td>
-                                    <td>{{ $location->created_at->format('d-m-Y') }}</td>
                                     <td>
                                         <a href="{{ route('locations.show', $location->id) }}" class="btn btn-info btn-sm" title="View">
                                             <i class="fa fa-eye"></i>

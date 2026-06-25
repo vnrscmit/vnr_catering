@@ -92,12 +92,15 @@
 @section('content')
 
 <!-- START SECTION SHOP -->
-<div class="section"
+<!-- <div class="section"
     style="
         background:url('{{ url('assets/images/bg-image.png') }}') no-repeat center center;
         background-size:cover;
         min-height:100vh;
-    ">
+    "> -->
+
+    <div class="section"
+   >
   
     <div class="container">
         <form method="post" action="{{ route('auth.login.process') }}">
@@ -107,7 +110,7 @@
                     <div class="order_review">
 
                         <div class="text-center mb-4">
-                            <img src="{{ asset('assets/images/vnr_logo_login.png') }}"
+                            <img src="{{ asset('assets/images/ahaar_logo_login.jpeg') }}"
                                 alt="Logo"
                                 style="max-height:120px;">
                         </div>

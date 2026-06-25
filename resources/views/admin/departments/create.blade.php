@@ -29,31 +29,10 @@
             <div class="card-body">
                 <form action="{{ route('departments.store') }}" method="POST">
                     @csrf
-                    <div class="mb-3">
-                        <label for="location_id" class="form-label">
-                            Select Location <span class="text-danger">*</span>
-                        </label>
+                    <div class="row">
 
-                        <select class="form-control @error('location_id') is-invalid @enderror"
-                            id="location_id"
-                            name="location_id"
-                            required>
-                            <option value="">Select Location</option>
-
-                            @foreach($locations as $location)
-                            <option value="{{ $location->id }}"
-                                {{ old('location_id') == $location->id ? 'selected' : '' }}>
-                                {{ $location->name }}
-                            </option>
-                            @endforeach
-                        </select>
-
-                        @error('location_id')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="mb-3">
+                  
+                    <div class="mb-3 col-6">
                         <label for="name" class="form-label">Department Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" value="{{ old('name') }}" required>
                         @error('name')
@@ -61,14 +40,15 @@
                         @enderror
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-3  col-6">
                         <label for="short_code" class="form-label">Short Code <span class="text-danger">*</span></label>
                         <input type="text" class="form-control @error('short_code') is-invalid @enderror" id="short_code" name="short_code" value="{{ old('short_code') }}" placeholder="e.g., QCS" required>
                         @error('short_code')
                         <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
-                    <div class="mb-3">
+
+                    <div class="mb-3  col-6">
                         <label class="form-label">
                             Status <span class="text-danger">*</span>
                         </label>
@@ -98,7 +78,28 @@
                             </div>
                         </div>
                     </div>
-                    <div class="d-flex justify-content-end">
+
+                    <div class="mb-3 col-6">
+                        <label class="form-label">Select Locations
+                        </label>
+                        <select
+                            name="location_id[]"
+                            class="form-control"
+                            multiple>
+                            <option value="">Select Locations</option>
+                            @foreach($locations as $location)
+
+                            <option value="{{ $location->id }}">
+                                {{ $location->name }}
+                            </option>
+
+                            @endforeach
+
+                        </select>
+                    </div>
+               
+                    </div>
+                         <div class="d-flex justify-content-end">
                         <div class="mb-3">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fa fa-save"></i> Create Department

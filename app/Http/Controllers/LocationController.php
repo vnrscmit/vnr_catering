@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DepartmentLocation;
 use App\Models\Location;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Traits\AdminViewSharedDataTrait;
+use App\Models\Department;
+use Illuminate\Support\Facades\DB;
 
 class LocationController extends Controller
 {
@@ -12,7 +15,7 @@ class LocationController extends Controller
      * Display a listing of the resource.
      */
 
-       use AdminViewSharedDataTrait;
+    use AdminViewSharedDataTrait;
 
     public function __construct()
     {
@@ -29,7 +32,8 @@ class LocationController extends Controller
      */
     public function create()
     {
-        return view('admin.locations.create');
+        $locations = Location::where('status', 1)->get();
+        return view('admin.locations.create', compact('locations'));
     }
 
     /**
@@ -94,5 +98,78 @@ class LocationController extends Controller
 
         return redirect()->route('locations.index')
             ->with('success', 'Location deleted successfully!');
+    }
+
+    public function link($id)
+    {
+        $data = Department::findOrFail($id);
+
+        $locations = Location::where('status', 1)
+            ->orderBy('name')
+            ->get();
+
+        $alreadylinkedData = DepartmentLocation::select(
+            'department_locations.id',
+            'department_locations.department_id',
+            'department_locations.location_id',
+            'departments.name as department_name',
+            'locations.name as location_name'
+        )
+            ->join('departments', 'departments.id', '=', 'department_locations.department_id')
+            ->join('locations', 'locations.id', '=', 'department_locations.location_id')
+            ->where('department_locations.department_id', $id)
+            ->get();
+
+        return view('admin.locations.link', compact(
+            'data',
+            'locations',
+            'alreadylinkedData'
+        ));
+    }
+
+    public function storeLink(Request $request)
+    {
+        $request->validate([
+            'department_id' => 'required|exists:departments,id',
+            'location_id'   => 'required|array',
+            'location_id.*' => 'exists:locations,id',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+
+            foreach ($request->location_id as $locationId) {
+
+                DepartmentLocation::updateOrCreate(
+                    [
+                        'department_id' => $request->department_id,
+                        'location_id'   => $locationId,
+                    ],
+                    [
+                        'status' => 1,
+                    ]
+                );
+            }
+
+            DB::commit();
+
+            return redirect()
+                ->route('locations.link', $request->department_id)
+                ->with('success', 'Locations linked successfully.');
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            return redirect()
+                ->route('locations.link', $request->department_id)
+                ->with('error', $e->getMessage());
+        }
+    }
+
+    public function getLocations($departmentId)
+    {
+        $departments = Department::getByLocation($departmentId);
+        return response()->json($departments);
     }
 }

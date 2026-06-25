@@ -19,27 +19,27 @@
 <script>
     $(function() {
 
-        $('#location_id').on('change', function() {
+        $('#department_id').on('change', function() {
 
-            let locationId = $(this).val();
+            let departmentId = $(this).val();
 
-            $('#department_id').html(
-                '<option value="">Select Department</option>'
+            $('#location_id').html(
+                '<option value="">Select Location</option>'
             );
 
-            if (locationId) {
+            if (departmentId) {
 
                 $.ajax({
-                    url: "{{ url('admin/get-departments') }}/" + locationId,
+                    url: "{{ url('admin/get-location') }}/" + departmentId,
                     type: "GET",
                     dataType: "json",
                     success: function(response) {
 
-                        $.each(response, function(index, department) {
+                        $.each(response, function(index, location) {
 
-                            $('#department_id').append(
-                                '<option value="' + department.id + '">' +
-                                department.name +
+                            $('#location_id').append(
+                                '<option value="' + location.location_id + '">' +
+                                location.location_name +
                                 '</option>'
                             );
                         });
@@ -119,27 +119,9 @@
 
                         <!-- First Name -->
                         <div class="col-md-6 mb-3">
-                            <label for="first_name" class="form-label">First Name <span class="text-danger">*</span></label>
+                            <label for="first_name" class="form-label">Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control @error('first_name') is-invalid @enderror" id="first_name" name="first_name" value="{{ old('first_name') }}" required>
                             @error('first_name')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <!-- Last Name -->
-                        <div class="col-md-6 mb-3">
-                            <label for="last_name" class="form-label">Last Name</label>
-                            <input type="text" class="form-control @error('last_name') is-invalid @enderror" id="last_name" name="last_name" value="{{ old('last_name') }}">
-                            @error('last_name')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <!-- Email -->
-                        <div class="col-md-6 mb-3">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email') }}">
-                            @error('email')
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -153,26 +135,20 @@
                             @enderror
                         </div>
 
+                        <!-- Email -->
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email') }}">
+                            @error('email')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
                         <!-- Designation -->
                         <div class="col-md-6 mb-3">
                             <label for="designation" class="form-label">Designation</label>
                             <input type="text" class="form-control @error('designation') is-invalid @enderror" id="designation" name="designation" value="{{ old('designation') }}" placeholder="e.g., Senior Developer">
                             @error('designation')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <!-- Location Dropdown -->
-                        <div class="col-md-6 mb-3">
-                            <label for="location_id" class="form-label">Location <span class="text-danger">*</span></label>
-                            <select class="form-control @error('location_id') is-invalid @enderror" id="location_id" name="location_id" required>
-                                <option value="">Select Location</option>
-                                @foreach($locations as $location)
-                                <option value="{{ $location->id }}" {{ old('location_id') == $location->id ? 'selected' : '' }}>
-                                    {{ $location->name }}
-                                </option>
-                                @endforeach
-                            </select>
-                            @error('location_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -182,11 +158,46 @@
                             <label for="department_id" class="form-label">Department <span class="text-danger">*</span></label>
                             <select class="form-control" id="department_id" name="department_id" required>
                                 <option value="">Select Department</option>
+                                @foreach($departments as $department)
+                                <option value="{{ $department->id }}" {{ old('department_id_id') == $department->id ? 'selected' : '' }}>
+                                    {{ $department->name }}
+                                </option>
+                                @endforeach
                             </select>
                             @error('department_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
+
+
+                        <!-- Location Dropdown -->
+                        <div class="col-md-6 mb-3">
+                            <label for="location_id" class="form-label">Base Location <span class="text-danger">*</span></label>
+                            <select class="form-control @error('location_id') is-invalid @enderror" id="location_id" name="location_id" required>
+                                <option value="">Select Base Location</option>
+                            </select>
+                            @error('location_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- Location Dropdown -->
+                        <div class="col-md-6 mb-3">
+                            <label for="other_location_id" class="form-label">Other Locations </label>
+                            <select class="form-control @error('other_location_id') is-invalid @enderror" id="location_id" name="other_location_id[]" multiple>
+                                <option value="">Select Location</option>
+                                @foreach($locations as $location)
+                                <option value="{{ $location->id }}" {{ old('other_location_id') == $location->id ? 'selected' : '' }}>
+                                    {{ $location->name }}
+                                </option>
+                                @endforeach
+                            </select>
+                            @error('other_location_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+
 
                         <!-- Password -->
                         <div class="col-md-6 mb-3">
