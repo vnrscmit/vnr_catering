@@ -16,6 +16,7 @@ use App\Models\Location;
 use App\Models\RoleMaster;
 use Illuminate\Support\Str;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
+use App\Models\UserLocation;
 
 class UserAdminController extends Controller
 {
@@ -52,32 +53,59 @@ class UserAdminController extends Controller
         return view('admin.users.create', compact('roles', 'departments', 'locations'));
     }
 
-   public function store(CreateUserRequest $request)
+
+
+    public function store(CreateUserRequest $request)
     {
+       
         try {
-            // Generate a random password if not provided or use the provided one
+
             $password = $request->password;
             $role = RoleMaster::find($request->role_id);
-            // Create the user
+
             $user = User::create([
-                'role_id' => $request->role_id,
-                'role' => $role->name,
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
-                'email' => $request->email,
-                'mobile' => $request->mobile,
-                'designation' => $request->designation,
+                'role_id'       => $request->role_id,
+                'role'          => $role->name,
+                'first_name'    => $request->first_name,
+                'last_name'     => $request->first_name,
+                'email'         => $request->email,
+                'mobile'        => $request->mobile,
+                'designation'   => $request->designation,
                 'department_id' => $request->department_id,
-                'location_id' => $request->location_id,
-                'password' => Hash::make($password),
-                'status' => $request->status,
-                'notice' => 'Account created successfully',
+                'location_id'   => $request->location_id,
+                'password'      => Hash::make($password),
+                'status'        => $request->status,
+                'notice'        => 'Account created successfully',
                 'activation_token' => Str::random(60),
             ]);
 
-            return redirect()->route('admin.users.index')->with('success', 'User created successfully.');
+            // Base Location
+            UserLocation::firstOrCreate([
+                'user_id'       => $user->id,
+                'location_id'   => $request->location_id,
+                'department_id' => $request->department_id,
+            ], [
+                'status' => 1,
+            ]);
 
+            // Other Locations
+            if (!empty($request->other_location_id)) {
+
+                foreach ($request->other_location_id as $locationId) {
+                    UserLocation::firstOrCreate([
+                        'user_id'       => $user->id,
+                        'location_id'   => $locationId,
+                        'department_id' => $request->department_id,
+                    ], [
+                        'status' => 1,
+                    ]);
+                }
+            }
+
+            return redirect()->route('admin.users.index')
+                ->with('success', 'User created successfully.');
         } catch (\Exception $e) {
+
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Failed to create user: ' . $e->getMessage());

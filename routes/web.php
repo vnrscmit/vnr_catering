@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\TableBookingController;
 use App\Http\Controllers\MainSite\AuthController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\SubMenuController;
 use App\Http\Controllers\Admin\TestimonyController;
 use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\Admin\RoleAdminController;
@@ -196,6 +197,7 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
     Route::delete('table-bookings/{id}', [AdminTableBookingController::class, 'destroy'])->name('admin.table-bookings.destroy');
 
 
+
     // Routes with CheckRoleAdmin is Global Admin middleware
     Route::middleware(CheckRoleAdmin::class)->group(function () {
 
@@ -205,11 +207,7 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
         Route::post('category/update/{id}', [CategoryController::class, 'update'])->name('admin.categories.update');
         Route::post('category/delete/{id}', [CategoryController::class, 'destroy'])->name('admin.categories.destroy');
 
-        //Admin Settings Menu
-        Route::get('menu', [MenuController::class, 'index'])->name('admin.menus.index');
-        Route::post('menu', [MenuController::class, 'store'])->name('admin.menus.store');
-        Route::patch('menu/{id}', [MenuController::class, 'update'])->name('admin.menus.update');
-        Route::delete('menu/{id}', [MenuController::class, 'destroy'])->name('admin.menus.destroy');
+
 
         Route::get('general-settings', [GeneralSettingsController::class, 'index'])->name('admin.general-settings');
 
@@ -263,7 +261,7 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
         //Admin Manage Users routes
         Route::get('users', [UserAdminController::class, 'index'])->name('admin.users.index');
         Route::get('users/create', [UserAdminController::class, 'create'])->name('admin.users.create');
-        Route::post('users', [UserAdminController::class, 'store'])->name('admin.users.store');
+        Route::post('users/store', [UserAdminController::class, 'store'])->name('admin.users.store');
         Route::put('users/{id}', [UserAdminController::class, 'update'])->name('admin.users.update');
         Route::delete('users/{id}', [UserAdminController::class, 'destroy'])->name('admin.users.destroy');
 
@@ -278,10 +276,24 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
 
         // Department Routes
         Route::resource('departments', DepartmentController::class);
-        Route::get('/get-departments/{locationId}', [DepartmentController::class, 'getDepartments']);
+
 
         // Location Routes
         Route::resource('locations', LocationController::class);
+        Route::get('/get-location/{departmentId}', [LocationController::class, 'getLocations']);
+        Route::get('locations/link/{id}', [LocationController::class, 'link'])
+            ->name('locations.link');
+        Route::post('locations/link/store', [LocationController::class, 'storeLink'])
+            ->name('locations.link.store');
 
+        //Admin Settings Menu
+        Route::get('menu', [MenuController::class, 'index'])->name('admin.menus.index');
+        Route::post('menu', [MenuController::class, 'store'])->name('admin.menus.store');
+        Route::patch('menu/{id}', [MenuController::class, 'update'])->name('admin.menus.update');
+        Route::delete('menu/{id}', [MenuController::class, 'destroy'])->name('admin.menus.destroy');
+
+        Route::post('submenu', [SubMenuController::class, 'store'])->name('admin.submenus.store');
+        Route::patch('submenu/{id}', [SubMenuController::class, 'update'])->name('admin.submenus.update');
+        Route::delete('submenu/{id}', [SubMenuController::class, 'destroy'])->name('admin.submenus.destroy');
     });
 });

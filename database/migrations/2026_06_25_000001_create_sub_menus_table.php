@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('departments', function (Blueprint $table) {
+        Schema::create('sub_menus', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
-            $table->string('short_code')->unique();
-            $table->tinyInteger('status')->default(1);
+            $table->foreignId('menu_id')->constrained('menus')->cascadeOnDelete();
+            $table->string('name');
+            $table->string('status')->default('active');
             $table->timestamps();
         });
     }
@@ -25,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('departments');
+        Schema::dropIfExists('sub_menus');
     }
 };
