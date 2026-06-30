@@ -9,7 +9,7 @@
 <!-- Google Font -->
 <link href="https://fonts.googleapis.com/css?family=Kaushan+Script&amp;display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css?family=Josefin+Sans:100,100i,300,300i,400,400i,600,600i,700,700i&amp;display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css?family=Roboto:100,100i,300,300i,400,400i,500,500i,700,700i,900,900i&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Inter:100,100i,300,300i,400,400i,500,500i,700,700i,900,900i&amp;display=swap" rel="stylesheet">
 <!-- Icon Font CSS -->
 <link rel="stylesheet" href="/assets/css/all.min.css">
 <link rel="stylesheet" href="/assets/css/ionicons.min.css">
@@ -91,42 +91,124 @@
 
 @section('content')
 
-<!-- START SECTION SHOP -->
-<!-- <div class="section"
-    style="
-        background:url('{{ url('assets/images/bg-image.png') }}') no-repeat center center;
-        background-size:cover;
-        min-height:100vh;
-    "> -->
+<style>
+    /* .login-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 15px;
+        background:
+            url('{{ asset('assets/images/ahaar_bg_login.png') }}') center/cover no-repeat;
+    } */
 
-    <div class="section"
-   >
-  
+            .login-page {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 15px;
+
+    background-image: url('{{ asset("assets/images/ahaar_bg_login.png") }}');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+    background-color: #f8f8f2;
+}
+
+
+
+    .login-card {
+        background: rgba(255, 255, 255, 0.97);  
+        border-radius: 24px;
+        padding: 36px 32px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.24);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        backdrop-filter: blur(10px);
+    }
+
+    .login-card .form-control {
+        border-radius: 12px;
+        padding: 12px 14px;
+        border: 1px solid #e0e0e0;
+        transition: all 0.3s ease;
+    }
+
+    .login-card .form-control:focus {
+        border-color: #4E7E24;
+    }
+
+    .login-card .input-group-text {
+        border-radius: 0 12px 12px 0;
+        background: #fff;
+        cursor: pointer;
+    }
+
+    .login-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: #2b2b2b;
+        margin-bottom: 8px;
+    }
+
+    .login-subtitle {
+        color: #777;
+        margin-bottom: 24px;
+    }
+
+    .login-btn {
+        border: none;
+        border-radius: 12px;
+        padding: 12px 16px;
+        font-weight: 600;
+        background: linear-gradient(135deg, #265A16, #2A5E16);
+        color: #fff;
+    }
+
+    .login-btn:hover {
+        color: #fff;
+        transform: translateY(-1px);
+     box-shadow: 0 10px 20px rgba(64, 103, 30, 0.35);
+    }
+
+    @media (max-width: 767px) {
+        .login-card {
+            padding: 24px 18px;
+        }
+
+        .login-title {
+            font-size: 24px;
+        }
+    }
+</style>
+
+<div class="login-page">
     <div class="container">
-        <form method="post" action="{{ route('auth.login.process') }}">
-            @csrf
-            <div class="row justify-content-center">
-                <div class="col-12 col-lg-6 mx-auto">
-                    <div class="order_review">
-
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-5">
+                <div class="login-card">
+                    <form method="post" action="{{ route('auth.login.process') }}">
+                        @csrf
                         <div class="text-center mb-4">
-                            <img src="{{ asset('assets/images/ahaar_logo_login.jpeg') }}"
+                            <img src="{{ asset('assets/images/ahaar_logo_login_3.png') }}"
                                 alt="Logo"
-                                style="max-height:120px;">
+                                style="max-height:100px;">
                         </div>
 
-                        <h4 class="mb-4">Login to Your Account</h4>
+                        <div class="text-center mb-4">
+                            <h3 class="login-title">Welcome Back</h3>
+                            <p class="login-subtitle">Sign in to continue to your account</p>
+                        </div>
+
                         @include('partials.message-bag')
 
                         <div class="row">
-
-                            <!-- Email -->
                             <div class="form-group col-md-12">
-                                <label for="email">Email Address</label>
-                                <input id="email" class="form-control" placeholder="Enter your email" required type="email" name="email" value="{{ old('email') }}">
+                                <label for="mobile">Mobile Number</label>
+                                <input id="mobile" class="form-control" placeholder="Enter your mobile number" required type="mobile" name="mobile" value="{{ old('mobile') }}">
                             </div>
 
-                            <!-- Password -->
                             <div class="form-group col-md-12 position-relative">
                                 <label for="password">Password</label>
                                 <div class="input-group">
@@ -139,19 +221,15 @@
                                 </div>
                             </div>
 
-                            <!-- Submission -->
-                            <div class="form-group mb-0 mt-2 col-md-12">
-                                <button type="submit" class="btn btn-default btn-block">Login</button>
+                            <div class="form-group mb-0 mt-3 col-md-12">
+                                <button type="submit" class="btn btn-block login-btn">Login</button>
                             </div>
-
-
                         </div>
-                    </div>
+                    </form>
                 </div>
             </div>
-        </form>
+        </div>
     </div>
 </div>
-
 
 @endsection

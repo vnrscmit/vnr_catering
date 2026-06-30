@@ -77,7 +77,7 @@
         modal.find('#viewEmail').text(email);
         modal.find('#viewRole').text(role);
         modal.find('#viewStatus').html(status === 1 
-            ? '<span class="badge bg-success"><i class="fa fa-check"></i> Active</span>' 
+            ? '<span class="badge bg-primary"><i class="fa fa-check"></i> Active</span>' 
             : '<span class="badge bg-danger"><i class="fa fa-exclamation"></i> Banned</span>');
         modal.find('#viewPhoneNumber').text(phoneNumber || 'N/A');
         modal.find('#viewAddress').text(address || 'N/A');
@@ -117,7 +117,6 @@
                             <th>Email</th>
                             <th>Role</th>
                             <th>Status</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -130,43 +129,10 @@
                                 <td>{{ ucwords(str_replace('_', ' ', $user->role)) }}</td>
                                 <td>
                                     @if($user->status == 1)
-                                      <span class="badge bg-success"><i class="fa fa-check"></i> Active</span>
+                                      <span class="badge bg-primary"><i class="fa fa-check"></i> Active</span>
                                         @else
                                             <span class="badge bg-danger"><i class="fa fa-times"></i> Inactive</span>
                                         @endif
-                                </td>
-                                <td>
-                                    <button 
-                                    class="btn btn-primary btn-sm" 
-                                    data-bs-toggle="modal" 
-                                    data-bs-target="#viewUserModal" 
-                                    data-first_name="{{ $user->first_name }}" 
-                                    data-middle_name="{{ $user->middle_name }}" 
-                                    data-last_name="{{ $user->last_name }}"
-                                    data-email="{{ $user->email }}"
-                                    data-role="{{ ucwords(str_replace('_', ' ', $user->role)) }}"
-                                    data-status="{{ $user->status }}"
-                                    data-phone-number="{{ $user->phone_number }}"
-                                    data-address="{{ $user->address }}"
-                                    data-profile-picture="{{ $user->profile_picture ? asset('storage/profile-picture/' . $user->profile_picture) : asset('assets/images/user-icon.png') }}"
-                                    > <i class="fa fa-eye"></i>  </button>
-
-                                    <button 
-                                    class="btn btn-warning btn-sm" 
-                                    data-bs-toggle="modal" 
-                                    data-bs-target="#editUserModal"
-                                    data-id="{{ $user->id }}"
-                                    data-first-name="{{ $user->first_name }}"
-                                    data-middle-name="{{ $user->middle_name }}"
-                                    data-last-name="{{ $user->last_name }}"
-                                    data-email="{{ $user->email }}"
-                                    data-role="{{ $user->role }}"
-                                    data-status="{{ $user->status }}"
-                                    data-notice="{{ $user->notice }}"
-                                    onclick="editUser(this)">
-                                    <i class='fa fa-edit'></i>
-                                    </button>
-                                                           
                                 </td>
                             </tr>
                         @endforeach

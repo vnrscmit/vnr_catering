@@ -362,7 +362,7 @@
                                         <i class="fa fa-phone" aria-hidden="true"></i> 
                                         {{ $phoneNumber->phone_number }}
                                         @if($phoneNumber->use_whatsapp == 1)
-                                            <span class="badge bg-success"><i class="fab fa-whatsapp"></i></span>
+                                            <span class="badge bg-primary"><i class="fab fa-whatsapp"></i></span>
                                         @endif
                                     </td>
                                     <td class="text-end">
@@ -551,7 +551,7 @@
                                         @if($workingHour->is_closed)
                                             <span class="badge bg-danger">Closed</span>
                                         @else
-                                            <span class="badge bg-success">Open</span>
+                                            <span class="badge bg-primary">Open</span>
                                         @endif
                                     </td>
                                     <td class="text-end">

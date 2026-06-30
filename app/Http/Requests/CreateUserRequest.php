@@ -24,6 +24,9 @@ class CreateUserRequest extends FormRequest
             'location_id' => 'required|exists:locations,id',
             'password' => 'required|min:8|confirmed',
             'status' => 'required|boolean',
+            'personal_guest_flag' => 'nullable|boolean',
+            'max_personal_guest_allowed' => 'nullable|integer|min:0|required_if:personal_guest_flag,1',
+            'max_office_guest_allowed' => 'nullable|integer|min:0|required_if:personal_guest_flag,1',
         ];
     }
 
@@ -46,6 +49,12 @@ class CreateUserRequest extends FormRequest
             'password.min' => 'Password must be at least 8 characters.',
             'password.confirmed' => 'Password confirmation does not match.',
             'status.required' => 'Please select a status.',
+            'max_personal_guest_allowed.required_if' => 'Personal guest count is required when guest access is enabled.',
+            'max_office_guest_allowed.required_if' => 'Office guest count is required when guest access is enabled.',
+            'max_personal_guest_allowed.integer' => 'Personal guest count must be a number.',
+            'max_office_guest_allowed.integer' => 'Office guest count must be a number.',
+            'max_personal_guest_allowed.min' => 'Personal guest count cannot be negative.',
+            'max_office_guest_allowed.min' => 'Office guest count cannot be negative.',
         ];
     }
 }

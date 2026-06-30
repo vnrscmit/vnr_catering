@@ -32,7 +32,7 @@ class UserAdminController extends Controller
     public function index()
     {
         // Get all users except the logged-in user
-        $users = User::where('id', '!=', Auth::id())->get();
+        $users = User::where('id', '!=', Auth::id())->orderBy('first_name', 'asc')->get();
         return view('admin.users.index', compact('users'));
     }
     public function create()
@@ -57,26 +57,39 @@ class UserAdminController extends Controller
 
     public function store(CreateUserRequest $request)
     {
-       
+
         try {
 
             $password = $request->password;
             $role = RoleMaster::find($request->role_id);
 
+            $personalGuestFlag = (int) $request->personal_guest_flag;
+
+            if ($personalGuestFlag == 1) {
+                $maxPersonalGuestAllowed = (int) $request->max_personal_guest_allowed;
+                $maxOfficeGuestAllowed = (int) $request->max_office_guest_allowed;
+            } else {
+                $maxPersonalGuestAllowed = 0;
+                $maxOfficeGuestAllowed = 0;
+            }
+
             $user = User::create([
-                'role_id'       => $request->role_id,
-                'role'          => $role->name,
-                'first_name'    => $request->first_name,
-                'last_name'     => $request->first_name,
-                'email'         => $request->email,
-                'mobile'        => $request->mobile,
-                'designation'   => $request->designation,
-                'department_id' => $request->department_id,
-                'location_id'   => $request->location_id,
-                'password'      => Hash::make($password),
-                'status'        => $request->status,
-                'notice'        => 'Account created successfully',
-                'activation_token' => Str::random(60),
+                'role_id'                    => $request->role_id,
+                'role'                       => $role->name,
+                'first_name'                 => $request->first_name,
+                'last_name'                  => $request->first_name,
+                'email'                      => $request->email,
+                'mobile'                     => $request->mobile,
+                'designation'                => $request->designation,
+                'department_id'              => $request->department_id,
+                'location_id'                => $request->location_id,
+                'personal_guest_flag'        => $personalGuestFlag,
+                'max_personal_guest_allowed' => $maxPersonalGuestAllowed,
+                'max_office_guest_allowed'   => $maxOfficeGuestAllowed,
+                'password'                   => Hash::make($password),
+                'status'                     => $request->status,
+                'notice'                     => 'Account created successfully',
+                'activation_token'           => Str::random(60),
             ]);
 
             // Base Location

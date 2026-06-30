@@ -7,28 +7,71 @@ use App\Http\Requests\MenuRequest;
 use App\Models\Menu;
 use Illuminate\Http\RedirectResponse;
 use App\Http\Controllers\Traits\AdminViewSharedDataTrait;
+use Yajra\DataTables\Facades\DataTables;
+use Illuminate\Http\Request;
 
 class MenuController extends Controller
 {
-    
+
     use AdminViewSharedDataTrait;
 
     public function __construct()
     {
         $this->shareAdminViewData();
     }
-    public function index()
-    {
-   
-        $menus = Menu::with('subMenus')->get();
-        return view('admin.menu.menus', compact('menus'));
+
+
+public function index(Request $request)
+{
+    if ($request->ajax()) {
+
+        $data = Menu::with('subMenus')
+            ->orderBy('name', 'ASC')
+            ->get();
+
+        return DataTables::of($data)
+            ->addIndexColumn()
+            ->addColumn('submenus', function ($row) {
+                $submenus = $row->subMenus->isNotEmpty() 
+                    ? $row->subMenus->pluck('name')->implode(', ') 
+                    : ' ';
+                
+                // Add the "+" button after submenus
+                return $submenus . ' 
+                    <a href="' . route('admin.submenus.create', $row->id) . '" 
+                       class="">
+                        Add New
+                    </a>';
+            })
+            ->addColumn('status', function ($row) {
+                return $row->status == 1
+                    ? '<span class="badge bg-primary"><i class="fa fa-check"></i> Active</span>'
+                    : '<span class="badge bg-danger"><i class="fa fa-times"></i> Inactive</span>';
+            })
+      
+            ->rawColumns(['submenus', 'status', 'action'])
+            ->make(true);
     }
 
-    public function store(MenuRequest $request): RedirectResponse
-    {
-        Menu::create($request->validated());
+    return view('admin.menu.index');
+}
 
-        return back()->with('success', 'Menu created successfully!');
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|unique:menus,name',
+            'status' => 'required'
+        ]);
+
+        Menu::create([
+            'name' => $request->name,
+            'status' => $request->status,
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Menu added successfully.'
+        ]);
     }
 
     public function update(MenuRequest $request, $id): RedirectResponse

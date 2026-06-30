@@ -27,6 +27,7 @@
   -webkit-font-smoothing: antialiased;
   font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  color: black;
 }
  
 /* Code for individual icons */ 

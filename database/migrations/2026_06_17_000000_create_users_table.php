@@ -26,7 +26,7 @@ return new class extends Migration
             // Professional Information
             $table->string('designation')->nullable();
             $table->unsignedBigInteger('role_id')->nullable();
-             $table->string('role')->nullable();
+            $table->string('role')->nullable();
             $table->unsignedBigInteger('department_id')->nullable();
             $table->unsignedBigInteger('location_id')->nullable();
 
@@ -36,6 +36,11 @@ return new class extends Migration
             $table->boolean('two_factor_auth')->default(false);
             $table->rememberToken();
             $table->timestamp('email_verified_at')->nullable();
+
+            // Guest Settings
+            $table->boolean('personal_guest_flag')->default(false);
+            $table->integer('max_personal_guest_allowed')->default(0);
+            $table->integer('max_office_guest_allowed')->default(0);
 
             // Status & Additional
             $table->boolean('status')->default(1);
@@ -63,6 +68,7 @@ return new class extends Migration
             // Indexes for better performance
             $table->index('email');
             $table->index('role_id');
+            $table->index('personal_guest_flag');
             $table->index('department_id');
             $table->index('location_id');
             $table->index('status');

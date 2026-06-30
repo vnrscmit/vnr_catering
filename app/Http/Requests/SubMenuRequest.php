@@ -15,8 +15,9 @@ class SubMenuRequest extends FormRequest
     {
         return [
             'menu_id' => 'required|exists:menus,id',
-            'name' => 'required|string|max:255',
-            'status' => 'required|string|max:50',
+            'submenu_name' => ['required', 'array', 'min:1'],
+            'submenu_name.*' => ['required', 'string', 'max:255'],
+
         ];
     }
 }
