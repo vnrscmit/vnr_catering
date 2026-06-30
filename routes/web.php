@@ -288,10 +288,10 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
 
         //Admin Settings Menu
         Route::get('menu', [MenuController::class, 'index'])->name('admin.menus.index');
+        Route::get('menu/create', [MenuController::class, 'create'])->name('admin.menus.create');
         Route::post('menu', [MenuController::class, 'store'])->name('admin.menus.store');
-        Route::patch('menu/{id}', [MenuController::class, 'update'])->name('admin.menus.update');
-        Route::delete('menu/{id}', [MenuController::class, 'destroy'])->name('admin.menus.destroy');
 
+        Route::get('submenu/create/{id}', [SubMenuController::class, 'create'])->name('admin.submenus.create');
         Route::post('submenu', [SubMenuController::class, 'store'])->name('admin.submenus.store');
         Route::patch('submenu/{id}', [SubMenuController::class, 'update'])->name('admin.submenus.update');
         Route::delete('submenu/{id}', [SubMenuController::class, 'destroy'])->name('admin.submenus.destroy');

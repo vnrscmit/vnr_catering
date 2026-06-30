@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="/admin_resources/vendors/css/vendor.bundle.base.css">
 <link rel="stylesheet" href="/admin_resources/css/vertical-layout-light/style.css">
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="/admin_resources/vendors/select2/select2.min.css">
 @endpush
 
 @push('scripts')
@@ -16,6 +17,7 @@
 <script src="/admin_resources/js/todolist.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/admin_resources/vendors/select2/select2.min.js"></script>
 <script>
     $(function() {
 
@@ -48,6 +50,33 @@
             }
         });
 
+        function toggleGuestFields() {
+            const guestAllowed = $('input[name="personal_guest_flag"]:checked').val();
+
+            if (guestAllowed == '1') {
+                $('#guest_limits_wrapper').slideDown();
+            } else {
+                $('#guest_limits_wrapper').slideUp();
+
+                // Optional: reset values when "No" is selected
+                $('#max_personal_guest_allowed').val(0);
+                $('#max_office_guest_allowed').val(0);
+            }
+        }
+
+        // Trigger on both radio buttons
+        $('input[name="personal_guest_flag"]').on('change', toggleGuestFields);
+
+        // Run on page load
+        toggleGuestFields();
+
+    });
+
+    $(function() {
+        $('.select2').select2({
+            placeholder: 'Select Locations',
+            allowClear: true
+        });
     });
 </script>
 @endpush
@@ -184,7 +213,7 @@
                         <!-- Location Dropdown -->
                         <div class="col-md-6 mb-3">
                             <label for="other_location_id" class="form-label">Other Locations </label>
-                            <select class="form-control @error('other_location_id') is-invalid @enderror" id="location_id" name="other_location_id[]" multiple>
+                            <select class="form-control select2 @error('other_location_id') is-invalid @enderror" id="location_id" name="other_location_id[]" multiple>
                                 <option value="">Select Location</option>
                                 @foreach($locations as $location)
                                 <option value="{{ $location->id }}" {{ old('other_location_id') == $location->id ? 'selected' : '' }}>
@@ -217,8 +246,38 @@
                             @enderror
                         </div>
 
+                        <!-- Guest Allowed -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Guest Allowed <span class="text-danger">*</span></label>
+                            <div class="d-flex align-items-center gap-4">
+                                <div class="form-check me-4">
+                                    <input class="form-check-input"
+                                        type="radio"
+                                        name="personal_guest_flag"
+                                        id="personal_guest_flag_no"
+                                        value="0"
+                                        {{ old('personal_guest_flag', 0) == 0 ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="personal_guest_flag_no">
+                                        No
+                                    </label>
+                                </div>
+
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                        type="radio"
+                                        name="personal_guest_flag"
+                                        id="personal_guest_flag_yes"
+                                        value="1"
+                                        {{ old('personal_guest_flag') == 1 ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="personal_guest_flag_yes">
+                                        Yes
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Status -->
-                        <div class="col-md-12 mb-3">
+                        <div class="col-md-6 mb-3">
                             <label class="form-label">Status <span class="text-danger">*</span></label>
                             <div class="d-flex align-items-center gap-4">
                                 <div class="form-check me-4">
@@ -249,6 +308,37 @@
                             <div class="text-danger small">{{ $message }}</div>
                             @enderror
                         </div>
+
+
+                        <div id="guest_limits_wrapper" class="row" style="display: none;">
+                            <div class="col-md-6 mb-3">
+                                <label for="max_personal_guest_allowed" class="form-label">Personal Guest Count</label>
+                                <input type="number"
+                                    class="form-control @error('max_personal_guest_allowed') is-invalid @enderror"
+                                    id="max_personal_guest_allowed"
+                                    name="max_personal_guest_allowed"
+                                    min="0"
+                                    value="{{ old('max_personal_guest_allowed', 0) }}">
+                                @error('max_personal_guest_allowed')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="max_office_guest_allowed" class="form-label">Office Guest Count</label>
+                                <input type="number"
+                                    class="form-control @error('max_office_guest_allowed') is-invalid @enderror"
+                                    id="max_office_guest_allowed"
+                                    name="max_office_guest_allowed"
+                                    min="0"
+                                    value="{{ old('max_office_guest_allowed', 0) }}">
+                                @error('max_office_guest_allowed')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
+
                     </div>
                     <div class="d-flex justify-content-end">
                         <div class="mb-3">

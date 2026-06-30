@@ -55,7 +55,7 @@
                                     <td>{{ $role->short_code }}</td>
                                     <td>
                                         @if($role->status === 1)
-                                            <span class="badge bg-success"><i class="fa fa-check"></i> Active</span>
+                                            <span class="badge bg-primary"><i class="fa fa-check"></i> Active</span>
                                         @else
                                             <span class="badge bg-danger"><i class="fa fa-times"></i> Inactive</span>
                                         @endif

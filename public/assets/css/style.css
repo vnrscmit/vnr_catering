@@ -53,7 +53,7 @@ html, body {
 body {
 	background: #ffffff none repeat scroll 0 0;
     color: #687188;
-    font-family: 'Roboto', sans-serif;
+    font-family: "Inter", sans-serif;
     font-size: 14px;
 }
 h1,h2,h3,h4,h5,h6 {
@@ -5735,6 +5735,7 @@ label.label_info {
 	height: 50px;
 	padding: 8px 15px;
 }
+
 .form-control:focus,
 .custom-file-input:focus ~ .custom-file-label {
 	color: #000;
@@ -7227,5 +7228,6 @@ body.switch-open {
 	-webkit-transform: translateX(-270px);
 	transform: translateX(-270px);
 }
+
 
 }

@@ -11,10 +11,10 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable implements CanResetPassword
 {
     use  HasApiTokens,  HasFactory, Notifiable;
-    
+
     protected $fillable = [
         'role_id',           // Changed from 'role' to 'role_id' for foreign key
-         'role', 
+        'role',
         'first_name',
         'last_name',
         'email',
@@ -22,7 +22,10 @@ class User extends Authenticatable implements CanResetPassword
         'designation',       // Added designation field
         'department_id',     // Added department foreign key
         'location_id',       // Added location foreign key
-        'other_location_id', 
+        'other_location_id',
+        'personal_guest_flag',
+        'max_personal_guest_allowed',
+        'max_office_guest_allowed',
         'password',
         'status',
         'notice',
@@ -31,9 +34,9 @@ class User extends Authenticatable implements CanResetPassword
         'activation_token',
         'two_factor_auth',
     ];
-    
+
     protected $hidden = [
-        'password', 
+        'password',
         'remember_token',
     ];
 
@@ -71,13 +74,13 @@ class User extends Authenticatable implements CanResetPassword
     public function getFullNameAttribute()
     {
         $name = $this->first_name;
-        
+
         if ($this->middle_name) {
             $name .= ' ' . $this->middle_name;
         }
-        
+
         $name .= ' ' . $this->last_name;
-        
+
         return $name;
     }
 

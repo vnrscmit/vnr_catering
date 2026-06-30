@@ -40,21 +40,20 @@ class AuthController extends Controller
      public function login(Request $request)
      {
          $request->validate([
-             'email' => 'required|email',
+             'mobile' => 'required',
              'password' => 'required|string',
          ]);
      
-         $user = user::where('email', $request->email)->first();
+         $user = user::where('mobile', $request->mobile)->first();
 
          if ($user && Hash::check($request->password, $user->password)) {
-
             $dashboardRoute = $this->getDashboardRoute($user);
 
              if ($user->status == 1) {
                  auth()->login($user);
                  return redirect()->route($dashboardRoute);
              } else {
-                 session(['user_email' => $user->email, 'user_name' => $user->first_name]);
+                 session(['mobile' => $user->mobile, 'user_name' => $user->first_name]);
      
                  if ($user->notice === "change_password_to_activate_account") {
 
@@ -68,7 +67,7 @@ class AuthController extends Controller
                  } 
              }
          } else {
-             return back()->withErrors(['email' => 'Invalid email or password.']);
+             return back()->withErrors(['email' => 'Invalid mobile or password.']);
          }
      }
      
@@ -78,11 +77,11 @@ class AuthController extends Controller
     // Request Activation Link
      public function requestActivationLink(Request $request)
      {
-        if (!session()->has('user_email') || !session()->has('user_name')) {
+        if (!session()->has('mobile') || !session()->has('user_name')) {
             $errorMessage = 'Something went wrong, please try to login again.';
             return redirect()->route('auth.login')->withErrors(['error' => $errorMessage]);
         }
-        $email = session('user_email');
+        $email = session('mobile');
         $user = user::where('email', $email)->first();
        
  
@@ -103,7 +102,7 @@ class AuthController extends Controller
     // Account Activation 
     public function activateAccount()
     {
-        if (!session()->has('user_email') || !session()->has('user_name')) {
+        if (!session()->has('mobile') || !session()->has('user_name')) {
             $errorMessage = 'Something went wrong, please try to login again.';
             return redirect()->route('auth.login')->withErrors(['error' => $errorMessage]);
         }
@@ -119,13 +118,13 @@ class AuthController extends Controller
     public function processApdatePassword(ChangePasswordRequest $request)
     {
 
-        if (!session()->has('user_email') || !session()->has('user_name')) {
+        if (!session()->has('mobile') || !session()->has('user_name')) {
             $errorMessage = 'Something went wrong, please try to login again.';
             return redirect()->route('auth.login')->withErrors(['error' => $errorMessage]);
         }
 
         // Retrieve the user's email from the session
-        $email = session('user_email');
+        $email = session('mobile');
         $user = user::where('email', $email)->first();
 
         if (!$user) {
@@ -146,7 +145,7 @@ class AuthController extends Controller
         
         // Authenticate the user
         Auth::login($user);
-        session()->forget(['user_email', 'user_name']);
+        session()->forget(['mobile', 'user_name']);
 
         $dashboardRoute = $this->getDashboardRoute($user);
 
@@ -209,7 +208,7 @@ class AuthController extends Controller
 
     private function getDashboardRoute(User $user): string
     {
-        return in_array($user->role, ['admin', 'Super Admin']) 
+        return in_array($user->role, ['Admin', 'Super Admin', 'Canteen Incharge']) 
             ? 'admin.dashboard' 
             : 'home';
     }

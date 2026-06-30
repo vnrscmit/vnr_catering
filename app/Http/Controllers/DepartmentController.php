@@ -40,14 +40,14 @@ class DepartmentController extends Controller
                 ->addIndexColumn()
                 ->addColumn('locationlink', function ($row) {
                     return '<a href="' . route('locations.link', $row->id) . '" 
-                class="fw-bold text-primary">
+                class="fw-bold text-info">
                 ' . $row->locationcount . '
             </a>';
                 })
 
                 ->addColumn('status', function ($row) {
                     return $row->status == 1
-                        ? '<span class="badge bg-success"><i class="fa fa-check"></i> Active</span>'
+                        ? '<span class="badge bg-primary"><i class="fa fa-check"></i> Active</span>'
                         : '<span class="badge bg-danger"><i class="fa fa-times"></i> Inactive</span>';
                 })
 

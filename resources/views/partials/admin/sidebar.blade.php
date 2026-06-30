@@ -4,19 +4,17 @@
               <div class="d-flex sidebar-profile">
                 <div class="sidebar-profile-image">
                   <img src=" {{ $loggedInUser && $loggedInUser->profile_picture ? asset('storage/profile-picture/' . $loggedInUser->profile_picture) : asset('assets/images/user-icon.png') }}" alt="image">
-                  <span class="sidebar-status-indicator"></span>
                 </div>
                 <div class="sidebar-profile-name">
                   <p class="sidebar-name">
                     {{ $loggedInUser->first_name }}
                   </p>
                   <p class="sidebar-designation">
-                    Admin
+                    {{ $loggedInUser->role }}
                   </p>
                 </div>
               </div>
             </li>
-
 
             <li class="nav-item {{ request()->route()->named('admin.dashboard') ? 'active-nav' : '' }} ">
               <a class="nav-link" href="{{ route('admin.dashboard') }}">
@@ -58,7 +56,6 @@
 
             @if ($loggedInUser->role == "Super Admin")
 
-
             <li class="nav-item {{ request()->route()->named('locations.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('locations.index') }}">
                 <i class="fa fa-map-marker-alt menu-icon"></i>
@@ -89,57 +86,36 @@
               </a>
             </li>
 
-       <li class="nav-item {{ request()->route()->named('admin.menus.*') ? 'active-nav' : '' }}">
-    <a class="nav-link" href="{{ route('admin.menus.index') }}">
-        <i class="fa fa-utensils menu-icon"></i>
-        <span class="menu-title">Mess Menu</span>
-    </a>
-</li>
+            <li class="nav-item {{ request()->route()->named('admin.menus.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('admin.menus.index') }}">
+                <i class="fa fa-utensils menu-icon"></i>
+                <span class="menu-title">Mess Menu</span>
+              </a>
+            </li>
 
-<li class="nav-item {{ request()->route()->named('admin.submenus.*') ? 'active-nav' : '' }}">
-    <a class="nav-link" href="{{ route('admin.menus.index') }}">
-        <i class="fa fa-list-ul menu-icon"></i>
-        <span class="menu-title">Mess Submenu</span>
-    </a>
-</li>
-
-
-
-
-
-
-            <!-- <li class="nav-item">
-            <a class="nav-link collapsed" data-toggle="collapse" href="#site-settings" aria-expanded="false" aria-controls="site-settings">
-                <i class="fa fa-cog menu-icon"></i>
-                <span class="menu-title">Site Settings</span>
-                <i class="menu-arrow"></i>
-            </a>
-            <div class="collapse" id="site-settings" style="">
-                <ul class="nav flex-column sub-menu">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('admin.menus.index') }}">Menu</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('admin.categories.index') }}">Category</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('admin.testimonies.index') }}">Testimony</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('admin.terms.edit') }}">Terms & Condition</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('admin.privacy-policy.edit') }}">Privacy Policy</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('admin.general-settings') }}">General Settings</a>
-                    </li>
-                </ul>
-            </div>
-        </li> -->
+                <li class="nav-item {{ request()->route()->named('admin.menus.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('admin.menus.index') }}">
+                <i class="fa fa-utensils menu-icon"></i>
+                <span class="menu-title">Daily Menu</span>
+              </a>
+            </li>
             @endif
 
+            @if ($loggedInUser->role == "Canteen Incharge")
+            <li class="nav-item {{ request()->route()->named('admin.menus.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('admin.menus.index') }}">
+                <i class="fa fa-utensils menu-icon"></i>
+                <span class="menu-title">Mess Menu</span>
+              </a>
+            </li>
+            <li class="nav-item {{ request()->route()->named('admin.menus.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('admin.menus.index') }}">
+                <i class="fa fa-utensils menu-icon"></i>
+                <span class="menu-title">Daily Menu</span>
+              </a>
+            </li>
 
+            @endif
 
             <li class="nav-item {{ request()->route()->named('admin.view.myprofile') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('admin.view.myprofile') }}">
