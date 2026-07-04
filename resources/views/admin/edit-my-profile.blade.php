@@ -47,9 +47,6 @@
 
 @section('title', 'Admin - Edit Profile')
 
-
-
-
 @section('content')
 
 <div class="main-panel">
@@ -63,7 +60,7 @@
         @method('PUT')
     
         <div class="card">
-            <div class="card-header bg-info text-white">
+            <div class="card-header">
                 <i class="fa fa-user"></i>&nbsp; Edit Profile
             </div>
             <div class="card-body">
@@ -83,43 +80,69 @@
                 </div>
     
                 <hr/>
-                <table class="table table-bordered">
-                    <tbody>
-                        <!-- Name -->
-                        <tr>
-                            <td><label for="first_name">First Name</label></td>
-                            <td><input type="text" class="form-control" id="first_name" name="first_name" value="{{ old('first_name', $user->first_name) }}" required></td>
-                        </tr>
-                        <tr>
-                            <td><label for="middle_name">Middle Name</label></td>
-                            <td><input type="text" class="form-control" id="middle_name" name="middle_name" value="{{ old('middle_name', $user->middle_name) }}"></td>
-                        </tr>
-                        <tr>
-                            <td><label for="last_name">Last Name</label></td>
-                            <td><input type="text" class="form-control" id="last_name" name="last_name" value="{{ old('last_name', $user->last_name) }}" required></td>
-                        </tr>
-                        
-                        <!-- Email -->
-                        <tr>
-                            <td><label for="email">Email</label></td>
-                            <td><input type="email" class="form-control" id="email" name="email" value="{{ old('email', $user->email) }}" required></td>
-                        </tr>
-                        <!-- Phone Number -->
-                        <tr>
-                            <td><label for="phone_number">Phone Number</label></td>
-                            <td><input type="text" class="form-control" id="phone_number" name="phone_number" value="{{ old('phone_number', $user->phone_number) }}"></td>
-                        </tr>
-                        <!-- Address -->
-                        <tr>
-                            <td><label for="address">Address</label></td>
-                            <td><input type="text" class="form-control" id="address" name="address" value="{{ old('address', $user->address) }}"></td>
-                        </tr>
-                    </tbody>
-                </table>
+             <table class="table table-bordered">
+    <tbody>
+
+        <tr>
+            <td width="30%">
+                <label for="first_name">Name</label>
+            </td>
+            <td>
+                <input type="text"
+                    class="form-control"
+                    id="first_name"
+                    name="first_name"
+                    value="{{ old('first_name', $user->first_name) }}"
+                    required>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <label for="email">Email</label>
+            </td>
+            <td>
+                <input type="email"
+                    class="form-control"
+                    id="email"
+                    name="email"
+                    value="{{ old('email', $user->email) }}"
+                    required>
+            </td>
+        </tr>
+
+        <tr>
+            <td>
+                <label for="mobile">Mobile</label>
+            </td>
+            <td>
+                <input type="text"
+                    class="form-control"
+                    id="mobile"
+                    name="mobile"
+                    maxlength="10"
+                    value="{{ old('mobile', $user->mobile) }}">
+            </td>
+        </tr>
+
+        <tr>
+            <td>
+                <label for="designation">Designation</label>
+            </td>
+            <td>
+                <input type="text"
+                    class="form-control"
+                    id="designation"
+                    name="designation"
+                    value="{{ old('designation', $user->designation) }}">
+            </td>
+        </tr>
+
+    </tbody>
+</table>
             </div>
             <div class="card-footer">
-                <button type="submit" class="btn btn-success">Update Profile</button>
-                <button type="button" onclick="window.location='{{ route('admin.view.myprofile') }}'" class="btn btn-danger float-right">Back</button>
+                <button type="submit" class="btn btn-primary">Update Profile</button>
+                <button type="button" onclick="window.location='{{ route('admin.view.myprofile') }}'" class="btn btn-secondary float-right">Back</button>
             </div>
         </div>
     </form> 

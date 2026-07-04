@@ -19,6 +19,7 @@ class DayStatus extends Model
         'open_user_id',
         'closed_flag',
         'closed_remarks',
+        'lock_flag',
         'remarks',
         'status',
     ];

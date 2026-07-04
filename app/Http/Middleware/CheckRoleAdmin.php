@@ -10,7 +10,7 @@ class CheckRoleAdmin
 
     public function handle($request, Closure $next)
     {
-        if (Auth::check() && Auth::user()->role == "Super Admin") {
+        if (Auth::check()) {
             return $next($request);
         }
 

@@ -67,47 +67,68 @@ class ApiAttendanceController extends Controller
         ]);
     }
 
-
     public function calendar()
     {
         $userData = Auth::user();
-        $previousStart = Carbon::now()->subMonth()->startOfMonth();
-        $previousEnd   = Carbon::now()->subMonth()->endOfMonth();
+        $today = Carbon::today()->toDateString();
 
-        $currentStart = Carbon::now()->startOfMonth();
-        $currentEnd   = Carbon::now()->endOfMonth();
+        $query = function ($start, $end, $type) use ($userData, $today) {
 
-        $nextStart = Carbon::now()->addMonth()->startOfMonth();
-        $nextEnd   = Carbon::now()->addMonth()->endOfMonth();
-
-        $query = function ($start, $end) use ($userData) {
-            return DayStatus::whereBetween('day_statuses.date', [$start, $end])
-                ->leftJoin('attendance_absents', function ($join)  use ($userData) {
+            $days = DayStatus::whereBetween('day_statuses.date', [
+                $start->toDateString(),
+                $end->toDateString()
+            ])
+                ->leftJoin('attendance_absents', function ($join) use ($userData) {
                     $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
                         ->where('attendance_absents.user_id', $userData->id);
                 })
                 ->select(
                     'day_statuses.*',
-                    DB::raw('COALESCE(attendance_absents.absent_flag, 0) as absent_flag')
+                    DB::raw('IFNULL(attendance_absents.absent_flag,0) as absent_flag')
                 )
                 ->orderBy('day_statuses.date')
                 ->get();
-        };
 
-        $previousMonth = $query($previousStart->format('Y-m-d'), $previousEnd->format('Y-m-d'));
-        $currentMonth  = $query($currentStart->format('Y-m-d'), $currentEnd->format('Y-m-d'));
-        $nextMonth     = $query($nextStart->format('Y-m-d'), $nextEnd->format('Y-m-d'));
+            return [
+                $type . 'days' => $days,
+                $type . 'Summary' => [
+                    'present' => $days->where('absent_flag', 0)
+                        ->where('open_flag', 1)
+                        ->where('date', '<=', $today)
+                        ->count(),
+
+                    'absent' => $days->where('absent_flag', 1)->count(),
+
+                    'locked' => $days->where('open_flag', 1)
+                        ->where('date', '<', $today)
+                        ->count(),
+                ]
+            ];
+        };
 
         return response()->json([
             'status' => true,
             'data' => [
-                'previous_month' => $previousMonth,
-                'current_month'  => $currentMonth,
-                'next_month'     => $nextMonth,
+                'previous_month' => $query(
+                    Carbon::now()->subMonth()->startOfMonth(),
+                    Carbon::now()->subMonth()->endOfMonth(),
+                    'previous'
+                ),
+
+                'current_month' => $query(
+                    Carbon::now()->startOfMonth(),
+                    Carbon::now()->endOfMonth(),
+                    'current'
+                ),
+
+                'next_month' => $query(
+                    Carbon::now()->addMonth()->startOfMonth(),
+                    Carbon::now()->addMonth()->endOfMonth(),
+                    'next'
+                ),
             ]
         ]);
     }
-
 
     public function guestCreate(Request $request)
     {
@@ -119,6 +140,7 @@ class ApiAttendanceController extends Controller
             'guest_count'     => 'required|integer|min:1',
             'guest_remarks'   => 'nullable|string|max:1000',
             'attend_user_id'  => 'nullable|exists:users,id',
+            'date'           => 'required|date',
         ]);
 
         if ($validator->fails()) {
@@ -128,9 +150,9 @@ class ApiAttendanceController extends Controller
                 'errors' => $validator->errors(),
             ], 422);
         }
-
+        $date = Carbon::parse($request->date)->format('Y-m-d');
         $today = Carbon::today()->format('Y-m-d');
-        $calendarId = DayStatus::where('date', $today)->where('open_flag', 1)->value('id');
+        $calendarId = DayStatus::where('date', $date)->where('open_flag', 1)->value('id');
         if ($calendarId) {
         } else {
             return response()->json([
@@ -180,6 +202,48 @@ class ApiAttendanceController extends Controller
         ], 201);
     }
 
+    public function guestList(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'nullable|exists:users,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        $startDate = Carbon::now()->startOfMonth()->toDateString();
+        $endDate   = Carbon::now()->endOfMonth()->toDateString();
+
+        $dayStatusId = DayStatus::whereBetween('date', [$startDate, $endDate])
+            ->pluck('id');
+
+        $guestList = Guest::with([
+            'attendUser:id,first_name,role',
+        ])
+            ->whereIn('calendar_id', $dayStatusId)
+            ->where('guests.attend_user_id', $request->user_id)
+            ->latest()
+            ->get();
+
+        $personalGuestCount = $guestList->where('guest_type', 'Personal Guest')->count();
+        $officeGuestCount   = $guestList->where('guest_type', 'Office Guest')->count();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Guest list fetched successfully.',
+            'summary' => [
+                'total_guest' => $guestList->count(),
+                'personal_guest_count' => $personalGuestCount,
+                'office_guest_count' => $officeGuestCount,
+            ],
+            'data' => $guestList
+        ]);
+    }
 
     public function markAttendance(Request $request)
     {
@@ -198,7 +262,7 @@ class ApiAttendanceController extends Controller
             ], 422);
         }
 
-        $userData = User::where('status', 1)->first();
+        $userData = User::where('status', 1)->where('id', $request->user_id)->first();
         if ($userData) {
         } else {
             return response()->json([
@@ -219,17 +283,21 @@ class ApiAttendanceController extends Controller
             ], 404);
         }
 
-        $CompanyParameter = CompanyParameter::where('location_id', $userData->location_id)->first();
-        $currentTime = Carbon::now()->format('H:i:s');
-    $maxTime = $CompanyParameter->attendance_out_time->format('H:i:s');
-        if ($currentTime > $maxTime) {
-            $maxTime = Carbon::createFromFormat('H:i:s', $maxTime)
-                ->format('h:i A');
+        $today = Carbon::today()->toDateString();
 
-            return response()->json([
-                'status' => false,
-                'message' => "Attendance cannot be marked after {$maxTime}. The maximum allowed attendance marking time has been exceeded."
-            ], 422);
+        $CompanyParameter = CompanyParameter::where('location_id', $userData->location_id)->first();
+
+        if ($calendar->date == $today) {
+            $currentTime = Carbon::now()->format('H:i:s');
+            $maxTime = $CompanyParameter->attendance_out_time->format('H:i:s');
+            if ($currentTime > $maxTime) {
+                $maxTime = Carbon::createFromFormat('H:i:s', $maxTime)
+                    ->format('h:i A');
+                return response()->json([
+                    'status' => false,
+                    'message' => "Attendance cannot be marked after {$maxTime}. The maximum allowed attendance marking time has been exceeded."
+                ], 422);
+            }
         }
         AttendanceAbsent::updateOrCreate(
             [

@@ -12,6 +12,9 @@ class CompanyParameter extends Model
         'lunch_out_time',
         'max_day_show',
         'status',
+        'member_rate',
+        'non_member_rate',
+        'guest_rate',
     ];
 
     protected $casts = [
@@ -19,6 +22,8 @@ class CompanyParameter extends Model
         'lunch_out_time'      => 'datetime:H:i:s',
         'max_day_show'        => 'integer',
         'status'              => 'boolean',
+        'member_rate'         => 'decimal:2',
+        'guest_rate'          => 'decimal:2',
     ];
 
     public function location()

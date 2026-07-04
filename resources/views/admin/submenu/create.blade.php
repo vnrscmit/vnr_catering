@@ -62,7 +62,7 @@
             </td>
             <td>
                 <button type="button"
-                        class="btn btn-primary btn-sm addRowBtn">
+                        class="btn btn-info btn-sm addRowBtn">
                     <i class="fa fa-plus"></i>
                 </button>
                 <button type="button" 
@@ -88,15 +88,15 @@
         <div class="card mb-4">
 
             <div class="card-header">
-                <h5 class="mb-0">Sub Menu Details</h5>
+                <h5 class="mb-0">Item Details</h5>
             </div>
             <div class="card-body">
                 <table class="table table-bordered">
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>Menu</th>
-                            <th>SubMenu</th>
+                            <th>Menu Category</th>
+                            <th>Items</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -129,7 +129,7 @@
 
             <div class="card-header d-flex justify-content-between">
 
-                <h5>Add Sub Menus</h5>
+                <h5>Add Items</h5>
 
             </div>
 
@@ -147,7 +147,8 @@
                         <thead>
 
                             <tr>
-                                <th>Sub Menu Name</th>
+                                <th>Item Name</th>
+                                <th>Special Item</th>
                                 <th width="150">Action</th>
                             </tr>
 
@@ -160,24 +161,38 @@
                                     <input type="text"
                                         name="submenu_name[]"
                                         class="form-control"
-                                        placeholder="Enter Sub Menu Name"
+                                        placeholder="Enter Item Name"
                                         required>
                                 </td>
                                 <td>
-                                    <button type="button"
-                                        class="btn btn-primary btn-sm addRowBtn">
+                                 
+                                  <input type="checkbox"
+       name="special_items[]"
+       class="form-check-input"
+       style="width:22px !important; height:22px !important; transform:scale(1.3) !important; cursor:pointer !important;">
+                                    <!-- No delete button in first row -->
+                                </td>
+                                <td>
+                                       <button type="button"
+                                        class="btn btn-info btn-sm addRowBtn">
                                         <i class="fa fa-plus"></i>
                                     </button>
-                                    <!-- No delete button in first row -->
                                 </td>
                             </tr>
                         </tbody>
 
                     </table>
 
-                    <button class="btn btn-primary mt-3">
-                        Save Sub Menus
-                    </button>
+                    <div class="d-flex justify-content-end  mt-2">
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">
+                                Submit
+                            </button>
+                            <a href="{{ route('admin.menus.index') }}" class="btn btn-secondary">
+                                <i class="fa fa-arrow-left"></i> Back
+                            </a>
+                        </div>
+                    </div>
 
                 </form>
 

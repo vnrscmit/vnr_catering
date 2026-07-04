@@ -208,7 +208,7 @@ class AuthController extends Controller
 
     private function getDashboardRoute(User $user): string
     {
-        return in_array($user->role, ['Admin', 'Super Admin', 'Canteen Incharge']) 
+        return in_array($user->role, ['Admin', 'Super Admin', 'Canteen Incharge', 'Member', 'Non Member', 'Canteen President']) 
             ? 'admin.dashboard' 
             : 'home';
     }

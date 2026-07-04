@@ -3,9 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\SubMenu;
+use App\Models\Menu;
+use App\Models\DailyMenu;
+
 
 class DailyMenuItem extends Model
 {
+    public $timestamps = true;
     protected $fillable = [
         'daily_menu_id',
         'menu_id',
@@ -25,6 +30,6 @@ class DailyMenuItem extends Model
 
     public function submenu()
     {
-        return $this->belongsTo(Submenu::class);
+        return $this->belongsTo(SubMenu::class);
     }
 }

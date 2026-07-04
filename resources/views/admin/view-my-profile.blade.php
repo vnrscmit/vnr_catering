@@ -32,9 +32,6 @@
 
 @section('title', 'Admin - Settings - Categories')
 
-
-
-
 @section('content')
 
 <div class="main-panel">
@@ -58,43 +55,100 @@
                 </div>
             </div>
             <hr/>
-            <table class="table table-bordered">
-                <tbody>
-                    <tr>
-                        <td><b>First Name:</b></td>
-                        <td>{{ $user->first_name }}</td>
-                    </tr>
-                    <tr>
-                        <td><b>Middle Name:</b></td>
-                        <td>{{ $user->middle_name ?? '' }}</td>
-                    </tr>
-                    <tr>
-                        <td><b>Last Name:</b></td>
-                        <td>{{ $user->last_name }}</td>
-                    </tr>
-                    <tr>
-                        <td><b>Email:</b></td>
-                        <td>{{ $user->email }}</td>
-                    </tr>
-                    <tr>
-                        <td><b>Role:</b></td>
-                        <td>{{ ucwords(str_replace('_', ' ', $user->role)) }}</td>
-                    </tr>
-                    <tr>
-                        <td><b>Phone Number:</b></td>
-                        <td>{{ $user->phone_number ?? 'N/A' }}</td>
-                    </tr>
-                    <tr>
-                        <td><b>Address:</b></td>
-                        <td>{{ $user->address ?? 'N/A' }}</td>
-                    </tr>
-                </tbody>
-            </table>
+         <table class="table table-bordered table-striped">
+    <tbody>
+        <tr>
+            <th width="40%">First Name</th>
+            <td>{{ $user->first_name }}</td>
+        </tr>
+
+        <tr>
+            <th>Last Name</th>
+            <td>{{ $user->last_name }}</td>
+        </tr>
+
+        <tr>
+            <th>Email</th>
+            <td>{{ $user->email ?? 'N/A' }}</td>
+        </tr>
+
+        <tr>
+            <th>Mobile</th>
+            <td>{{ $user->mobile }}</td>
+        </tr>
+
+        <tr>
+            <th>Designation</th>
+            <td>{{ $user->designation ?? 'N/A' }}</td>
+        </tr>
+
+        <tr>
+            <th>Role</th>
+            <td>{{ $user->role ?? 'N/A' }}</td>
+        </tr>
+
+        <tr>
+            <th>Department</th>
+            <td>{{ optional($user->department)->name ?? 'N/A' }}</td>
+        </tr>
+
+        <tr>
+            <th>Location</th>
+            <td>{{ optional($user->location)->name ?? 'N/A' }}</td>
+        </tr>
+
+        <tr>
+            <th>Personal Guest Allowed</th>
+            <td>{{ $user->personal_guest_flag ? 'Yes' : 'No' }}</td>
+        </tr>
+
+        <tr>
+            <th>Max Personal Guest</th>
+            <td>{{ $user->max_personal_guest_allowed }}</td>
+        </tr>
+
+        <tr>
+            <th>Max Office Guest</th>
+            <td>{{ $user->max_office_guest_allowed }}</td>
+        </tr>
+
+        <tr>
+            <th>Two Factor Authentication</th>
+            <td>{{ $user->two_factor_auth ? 'Enabled' : 'Disabled' }}</td>
+        </tr>
+
+        <tr>
+            <th>Status</th>
+            <td>
+                @if($user->status)
+                    <span class="badge bg-primary">Active</span>
+                @else
+                    <span class="badge bg-danger">Inactive</span>
+                @endif
+            </td>
+        </tr>
+
+        <tr>
+            <th>Email Verified At</th>
+            <td>{{ $user->email_verified_at ? $user->email_verified_at->format('d-m-Y H:i A') : 'Not Verified' }}</td>
+        </tr>
+
+        <tr>
+            <th>Created At</th>
+            <td>{{ $user->created_at ? $user->created_at->format('d-m-Y H:i A') : 'N/A' }}</td>
+        </tr>
+
+        <tr>
+            <th>Updated At</th>
+            <td>{{ $user->updated_at ? $user->updated_at->format('d-m-Y H:i A') : 'N/A' }}</td>
+        </tr>
+    </tbody>
+</table>
             
         </div>
         <div class="card-footer">
-            <button type="button" onclick="window.location='{{ route('admin.myprofile.edit') }}'" class="btn btn-info">Edit My Profile</button>
-            <button type="button" onclick="window.location='{{ route('admin.dashboard') }}'" class="btn btn-primary float-right">Dashboard</button>
+            <button type="button" onclick="window.location='{{ route('admin.myprofile.edit') }}'" class="btn btn-primary">Edit My Profile</button>
+            <button type="button" onclick="window.location='{{ route('admin.dashboard') }}'" class="btn btn-secondary float-right">Back</button>
         </div>
     </div>
 

@@ -26,7 +26,7 @@ use App\Http\Controllers\Admin\PrivacyPolicyController;
 use App\Http\Controllers\Admin\GeneralSettingsController;
 use App\Http\Controllers\Admin\TermsAndConditionController;
 use App\Http\Controllers\Admin\TableBookingController as AdminTableBookingController;
-
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\RoleMasterController;
@@ -78,9 +78,6 @@ Route::middleware(['guest'])->group(function () {
     Route::get('customer/create-account', [CustomerController::class, 'create'])->name('customer.account.create');
     Route::post('customer/store-account', [CustomerController::class, 'store'])->name('customer.account.store');
 
-
-
-
     // activate route
     Route::get('auth/activate-link-request', [AuthController::class, 'requestActivationLink'])->name('auth.activate.link.request');
     Route::get('auth/activate-account/{token}', [AuthController::class, 'activateAccount'])->name('auth.activate.account');
@@ -97,7 +94,6 @@ Route::middleware(['guest'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
 });
-
 
 // Customer Dashboard routes
 Route::prefix('customer')->middleware(CheckRoleCustomer::class)->group(function () {
@@ -147,7 +143,6 @@ Route::prefix('customer')->middleware(CheckRoleCustomer::class)->group(function 
     // Step 5: Confirmation
     Route::get('/checkout/complete/{order}', [CheckoutController::class, 'complete'])->name('customer.checkout.complete');
 });
-
 
 //Admin Dashboard routes
 Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function () {
@@ -295,5 +290,36 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
         Route::post('submenu', [SubMenuController::class, 'store'])->name('admin.submenus.store');
         Route::patch('submenu/{id}', [SubMenuController::class, 'update'])->name('admin.submenus.update');
         Route::delete('submenu/{id}', [SubMenuController::class, 'destroy'])->name('admin.submenus.destroy');
+
+        Route::get('/today-menu-list', [MenuController::class, 'menuListToday'])
+            ->name('today-menu.index');
+
+        Route::get('/today-menu-create', [MenuController::class, 'createTodayMenu'])
+            ->name('today-menu.create');
+
+        Route::post('/today-menu-store', [MenuController::class, 'storeTodayMenu'])
+            ->name('today-menu.store');
+
+        Route::get('/today-menu/{id}/edit', [MenuController::class, 'editTodayMenu'])
+            ->name('today-menu.edit');
+
+        Route::put('/today-menu/{id}', [MenuController::class, 'updateTodayMenu'])
+            ->name('today-menu.update');
+
+        Route::delete('/today-menu/{id}', [MenuController::class, 'destroyTodayMenu'])
+            ->name('today-menu.destroy');
     });
+
+    // Attendance routes
+    Route::get('/mark-attendance/{id}', [AttendanceController::class, 'markAttendance'])->name('mark-attendance');
+    Route::get('/mark-guest-attendance/{id}', [AttendanceController::class, 'markGuestAttendance'])->name('mark-guest-attendance');
+    Route::get('/guests', [AttendanceController::class, 'index'])->name('admin.guests.index');
+    Route::get('/guests/create/{id}', [AttendanceController::class, 'guestCreate'])->name('admin.guests.create');
+     Route::get('/guests/list/{id}', [AttendanceController::class, 'guestList'])->name('admin.guests.list');
+    Route::post('/guests', [AttendanceController::class, 'guestStore'])->name('admin.guests.store');
+    Route::get('/guests/{guest}/edit', [AttendanceController::class, 'guestEdit'])->name('admin.guests.edit');
+    Route::put('/guests/{guest}', [AttendanceController::class, 'guestUpdate'])->name('admin.guests.update');
+    Route::delete('/guests/{guest}', [AttendanceController::class, 'destroy'])->name('admin.guests.destroy');
+    Route::post('/attendance/override', [AttendanceController::class, 'overrideAttendance'])
+    ->name('attendance.override');
 });

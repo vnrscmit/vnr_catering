@@ -10,7 +10,7 @@ class CheckRoleCustomer
 
     public function handle($request, Closure $next)
     {
-        if (Auth::check() && Auth::user()->role == "customer") {
+        if (Auth::check()) {
             return $next($request);
         }
 

@@ -114,6 +114,7 @@
                         <tr>
                             <th>#</th>
                             <th>Name</th>
+                              <th>Mobile</th>
                             <th>Email</th>
                             <th>Role</th>
                             <th>Status</th>
@@ -124,7 +125,7 @@
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
                                 <td><i class='fa fa-user'></i>&nbsp; {{ $user->first_name }}  </td>
-                                
+                                <td>{{ $user->mobile }}</td>
                                 <td>{{ $user->email }}</td>
                                 <td>{{ ucwords(str_replace('_', ' ', $user->role)) }}</td>
                                 <td>

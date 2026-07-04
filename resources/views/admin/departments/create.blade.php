@@ -4,6 +4,7 @@
 <link rel="stylesheet" href="/admin_resources/vendors/typicons.font/font/typicons.css">
 <link rel="stylesheet" href="/admin_resources/vendors/css/vendor.bundle.base.css">
 <link rel="stylesheet" href="/admin_resources/css/vertical-layout-light/style.css">
+<link rel="stylesheet" href="/admin_resources/vendors/select2/select2.min.css">
 @endpush
 
 @push('scripts')
@@ -15,6 +16,15 @@
 <script src="/admin_resources/js/todolist.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/admin_resources/vendors/select2/select2.min.js"></script>
+<script>
+    $(function () {
+        $('.select2').select2({
+            placeholder: 'Select Locations',
+            allowClear: true
+        });
+    });
+</script>
 @endpush
 
 @section('title', 'Create Department')
@@ -84,7 +94,7 @@
                         </label>
                         <select
                             name="location_id[]"
-                            class="form-control"
+                            class="form-control select2"
                             multiple>
                             <option value="">Select Locations</option>
                             @foreach($locations as $location)
@@ -102,7 +112,7 @@
                          <div class="d-flex justify-content-end">
                         <div class="mb-3">
                             <button type="submit" class="btn btn-primary">
-                                <i class="fa fa-save"></i> Create Department
+                                <i class="fa fa-save"></i> Submit
                             </button>
                             <a href="{{ route('departments.index') }}" class="btn btn-secondary">
                                 <i class="fa fa-arrow-left"></i> Back
