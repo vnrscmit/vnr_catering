@@ -29,6 +29,9 @@ class ApiDashboardController extends Controller
         $currentStart = Carbon::now()->startOfMonth();
         $currentEnd   = Carbon::now()->endOfMonth();
 
+        $previousStart = Carbon::now()->subMonth()->startOfMonth();
+        $previousEnd   = Carbon::now()->subMonth()->endOfMonth();
+
         $dayStatus = DayStatus::where('date', $today)->first();
 
         $todaysAttendance =  DayStatus::where('day_statuses.date', '=', $today)
@@ -65,6 +68,8 @@ class ApiDashboardController extends Controller
             ->limit($CompanyParameter->max_day_show)
             ->get();
 
+
+        // Current Month Summary Data
         $summaryCurrentMonth = DayStatus::whereBetween('day_statuses.date', [
             $currentStart->format('Y-m-d'),
             $currentEnd->format('Y-m-d')
@@ -91,6 +96,76 @@ class ApiDashboardController extends Controller
         $presentDays = ($monthDayCount - $summaryCurrentMonth->absent_days);
         $summaryCurrentMonth->presentDays = $presentDays;
 
+
+        // Previous Month Summary Data
+        $summaryMealCount = DayStatus::whereBetween('day_statuses.date', [
+            $previousStart->format('Y-m-d'),
+            $previousEnd->format('Y-m-d')
+        ])
+            ->leftJoin('attendance_absents', function ($join)  use ($userData) {
+                $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
+                    ->where('attendance_absents.user_id', $userData->id);
+            })
+            ->leftJoin('guests', function ($join)  use ($userData) {
+                $join->on('day_statuses.id', '=', 'guests.calendar_id')
+                    ->where('guests.guest_type', 'Personal Guest')
+                    ->where('guests.attend_user_id', $userData->id);
+            })
+            ->where('day_statuses.sunday_flag', 0)
+            ->where('day_statuses.holiday_flag', 0)
+            ->where('day_statuses.open_flag', 1)
+            ->selectRaw("
+        SUM(CASE WHEN attendance_absents.absent_flag = 1 THEN 1 ELSE 0 END) as absent_days,
+         COALESCE(SUM(guests.guest_count), 0) AS guest_count
+    ")
+            ->first();
+
+        $previousMonthDayCount = DayStatus::whereBetween('day_statuses.date', [
+            $previousStart->format('Y-m-d'),
+            $previousEnd->format('Y-m-d')
+        ])->where('day_statuses.sunday_flag', 0)
+            ->where('day_statuses.holiday_flag', 0)
+            ->where('day_statuses.open_flag', 1)->count();
+
+        $PreviousPresentDays = ($previousMonthDayCount - $summaryMealCount->absent_days);
+
+        if ($userData->role == 'Non Member') {
+            $summaryMealCount->your_meal_count  = $PreviousPresentDays;
+            $summaryMealCount->your_meal_rate   = $CompanyParameter->non_member_rate;
+            $summaryMealCount->guest_meal_count = $summaryMealCount->guest_count;
+            $summaryMealCount->guest_meal_rate  = $CompanyParameter->guest_rate;
+
+            // Total Amounts
+            $summaryMealCount->your_meal_amount =
+                $summaryMealCount->your_meal_count * $summaryMealCount->your_meal_rate;
+
+            $summaryMealCount->guest_meal_amount =
+                $summaryMealCount->guest_meal_count * $summaryMealCount->guest_meal_rate;
+
+            // Grand Total
+            $summaryMealCount->total_amount =
+                $summaryMealCount->your_meal_amount + $summaryMealCount->guest_meal_amount;
+        } else {
+            $summaryMealCount->your_meal_count  = $PreviousPresentDays;
+            $summaryMealCount->your_meal_rate   = $CompanyParameter->member_rate;
+            $summaryMealCount->guest_meal_count = $summaryMealCount->guest_count;
+            $summaryMealCount->guest_meal_rate  = $CompanyParameter->guest_rate;
+
+            // Total Amounts
+            $summaryMealCount->your_meal_amount =
+                $summaryMealCount->your_meal_count * $summaryMealCount->your_meal_rate;
+
+            $summaryMealCount->guest_meal_amount =
+                $summaryMealCount->guest_meal_count * $summaryMealCount->guest_meal_rate;
+
+            // Grand Total
+            $summaryMealCount->total_amount =
+                $summaryMealCount->your_meal_amount + $summaryMealCount->guest_meal_amount;
+        }
+
+
+        //End of Previous Month Summary Data
+
         $personalguestCount = 0;
         $officeguestCount = 0;
 
@@ -114,9 +189,9 @@ class ApiDashboardController extends Controller
         $dailyMenuList = DailyMenu::with('items.submenu')
             ->where('calendar_id', $dayStatus->id)->where('menu_date', $today)->first();
 
-       $todayMenu = $dailyMenuList
-    ? $dailyMenuList->items->pluck('submenu.name')->values()->toArray()
-    : [];
+        $todayMenu = $dailyMenuList
+            ? $dailyMenuList->items->pluck('submenu.name')->values()->toArray()
+            : [];
 
         $data = [
             'today' => [
@@ -140,6 +215,7 @@ class ApiDashboardController extends Controller
             ],
             'summaryCurrentMonth' => $summaryCurrentMonth,
             'todayMenus'    => $todayMenu,
+            'summaryMealCount' => $summaryMealCount,
         ];
 
         return response()->json([

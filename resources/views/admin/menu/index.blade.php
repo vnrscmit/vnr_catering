@@ -142,7 +142,7 @@
 @endpush
 
 
-@section('title','Menu Master')
+@section('title','Menu Category')
 
 @section('content')
 
@@ -155,13 +155,13 @@
 
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
-                    Menu Master
+                    Menu Category
                 </h5>
 
                 <button class="btn btn-primary btn-sm"
                     data-bs-toggle="modal"
                     data-bs-target="#addMenuModal">
-                    <i class="fa fa-plus"></i> Add Menu
+                    <i class="fa fa-plus"></i> Add Menu Category
                 </button>
             </div>
 
@@ -174,8 +174,8 @@
                         <thead>
                             <tr>
                                 <th width="5%">#</th>
-                                <th width="25%">Menu Name</th>
-                                <th width="60%"></thwidth>Sub Menus</th>
+                                <th width="25%">Menu Category</th>
+                                <th width="60%"></thwidth>Items</th>
                                 <th width="10%">Status</th>
                             
                             </tr>
@@ -257,7 +257,7 @@
               @csrf
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Add Menu</h5>
+                    <h5 class="modal-title">Add Menu Category</h5>
 
                     <button type="button"
                         class="btn-close"
@@ -267,7 +267,7 @@
 
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Menu Name <span class="text-danger">*</span></label>
+                        <label class="form-label">Menu Category Name <span class="text-danger">*</span></label>
 
                         <input type="text"
                             name="name"

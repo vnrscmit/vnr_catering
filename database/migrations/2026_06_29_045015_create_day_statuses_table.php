@@ -30,6 +30,8 @@ return new class extends Migration
             $table->boolean('closed_flag')->default(0);
             $table->text('closed_remarks')->nullable();
 
+            $table->boolean('lock_flag')->default(0);
+
             $table->text('remarks')->nullable();
 
             $table->boolean('status')->default(1);

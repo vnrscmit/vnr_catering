@@ -23,16 +23,12 @@
               </a>
             </li>
 
-
-
             <!-- <li class="nav-item {{ request()->route()->named('admin.pos.index') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('admin.pos.index') }}">
                 <i class="fa fa-shopping-cart menu-icon" ></i>
                   <span class="menu-title">Point of Sale</span>
               </a>
           </li>
-          
-          
       
           <li class="nav-item {{ Request::is('admin/order*') ? 'active-nav' : '' }}">
             <a class="nav-link" href="{{ route('admin.orders.index') }}">
@@ -89,12 +85,12 @@
             <li class="nav-item {{ request()->route()->named('admin.menus.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('admin.menus.index') }}">
                 <i class="fa fa-utensils menu-icon"></i>
-                <span class="menu-title">Mess Menu</span>
+                <span class="menu-title">Menu Category</span>
               </a>
             </li>
 
-                <li class="nav-item {{ request()->route()->named('admin.menus.*') ? 'active-nav' : '' }}">
-              <a class="nav-link" href="{{ route('admin.menus.index') }}">
+                <li class="nav-item {{ request()->route()->named('today-menu.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('today-menu.index') }}">
                 <i class="fa fa-utensils menu-icon"></i>
                 <span class="menu-title">Daily Menu</span>
               </a>
@@ -114,7 +110,7 @@
                 <span class="menu-title">Daily Menu</span>
               </a>
             </li>
-
+              
             @endif
 
             <li class="nav-item {{ request()->route()->named('admin.view.myprofile') ? 'active-nav' : '' }}">

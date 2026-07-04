@@ -17,4 +17,6 @@ class SubMenu extends Model
     {
         return $this->belongsTo(Menu::class);
     }
+
+    
 }

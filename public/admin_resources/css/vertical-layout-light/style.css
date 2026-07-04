@@ -12370,10 +12370,7 @@ fieldset:disabled a.btn {
   ;
 }
 
-.btn-outline-primary:focus,
-.btn-outline-primary.focus {
-  box-shadow: 0 0 0 0.2rem rgba(242, 18, 94, 0.5);
-}
+
 
 .btn-outline-primary.disabled,
 .btn-outline-primary:disabled {
@@ -12395,7 +12392,7 @@ fieldset:disabled a.btn {
 .btn-outline-primary:not(:disabled):not(.disabled):active:focus,
 .btn-outline-primary:not(:disabled):not(.disabled).active:focus,
 .show>.btn-outline-primary.dropdown-toggle:focus {
-  box-shadow: 0 0 0 0.2rem rgba(242, 18, 94, 0.5);
+
 }
 
 .btn-outline-secondary {
@@ -25949,7 +25946,7 @@ body.avgrund-active {
      width: calc(255px - 130px);
     /* max-width: 100%; */
     height: 97px;
-    width: 156px;
+    width: 189px;
     margin: auto;
     vertical-align: middle;
 }
@@ -27782,3 +27779,459 @@ div.dt-buttons {
   float: left;
   padding-left: 5px;
 }
+
+/* ===========================
+   Lunch Card
+=========================== */
+
+.lunch-card{
+    border:0;
+    border-radius:16px;
+    overflow:hidden;
+    background:#fff;
+    box-shadow:0 4px 15px rgba(0,0,0,.08);
+}
+
+.lunch-card .card-body{
+    padding:30px;
+}
+
+/* Header */
+
+.card-header-simple{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding-bottom:18px;
+    border-bottom:1px solid #edf1f5;
+}
+
+.card-header-simple small{
+    color:#0F8A4B;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.5px;
+}
+
+.card-date{
+    color:#6c757d;
+    font-size:14px;
+}
+
+/* Status */
+
+.status-box{
+    display:flex;
+    align-items:center;
+    margin:28px 0;
+}
+
+.status-icon{
+    width:60px;
+    height:60px;
+    border-radius:50%;
+    background:#E9F8EF;
+    color:#0F8A4B;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:24px;
+    flex-shrink:0;
+        margin-right: 9px;
+}
+
+.status-content{
+    margin-left:18px;
+}
+
+.present-title{
+    font-size:24px;
+    font-weight:700;
+    color:#222;
+}
+
+.present-subtitle{
+    color:#6c757d;
+    margin-top:4px;
+    font-size:15px;
+}
+
+/* Timer */
+
+.timer-box{
+    margin:25px 0;
+    padding:14px 18px;
+    border-radius:12px;
+    background:#F8FAFC;
+    border:1px solid #E9ECEF;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.timer-box span{
+    color:#555;
+}
+
+.timer-box strong{
+    color:#E53935;
+    font-size:18px;
+}
+
+/* Menu */
+
+.menu-box{
+    border:1px solid #edf1f5;
+    border-radius:14px;
+    padding:22px;
+    background:#fff;
+}
+
+.menu-box h6{
+    margin-bottom:18px;
+    font-weight:700;
+    color:#222;
+}
+
+.menu-item{
+    display:flex;
+    align-items:center;
+    margin-bottom:14px;
+    color:#555;
+}
+
+.menu-item:last-child{
+    margin-bottom:0;
+}
+
+.menu-item i{
+    width:34px;
+    height:34px;
+    border-radius:8px;
+    background:#F3F8F5;
+    color:#0F8A4B;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    margin-right:12px;
+}
+
+.special-box{
+    margin-top:20px;
+    padding:14px 16px;
+    background:#FFF9E8;
+    border-left:4px solid #FFC107;
+    border-radius:10px;
+    color:#555;
+}
+
+/* Buttons */
+
+.btn-menu{
+    color:black;
+    border:none;
+    border-radius:10px;
+    border:1px solid #0B733D;
+    padding:12px;
+    font-weight:600;
+}
+
+.btn-menu:hover{
+    background:#0B733D;
+    color:#fff;
+}
+
+.btn-absent{
+    background:#fff;
+    color:#dc3545;
+    border:1px solid #dc3545;
+    border-radius:10px;
+    padding:12px;
+    font-weight:600;
+}
+
+.btn-absent:hover{
+    background:#dc3545;
+    color:#fff;
+}
+
+/* ===========================
+   Upcoming Card
+=========================== */
+
+.upcoming-card{
+    border:0;
+    border-radius:16px;
+    box-shadow:0 4px 15px rgba(0,0,0,.08);
+}
+
+.upcoming-card .card-body{
+    padding:28px;
+}
+
+.upcoming-title{
+    font-size:22px;
+    font-weight:700;
+    color:#222;
+}
+
+.mark-link{
+    color:#0F8A4B;
+    font-weight:600;
+    text-decoration:none;
+}
+
+.day-card{
+    border:1px solid #edf1f5;
+    border-radius:14px;
+    padding:22px 15px;
+    text-align:center;
+    transition:.25s;
+    background:#fff;
+}
+
+.day-card:hover{
+    transform:translateY(-3px);
+    box-shadow:0 8px 20px rgba(0,0,0,.08);
+}
+
+.day-name{
+    font-size:14px;
+    color:#888;
+}
+
+.day-date{
+    font-size:28px;
+    font-weight:700;
+    margin:8px 0 16px;
+}
+
+.status-circle{
+    width:48px;
+    height:48px;
+    margin:auto;
+    border-radius:50%;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:18px;
+}
+
+.success{
+    background:#E9F8EF;
+    color:#0F8A4B;
+}
+
+.absent-icon{
+    background:#FFECEC;
+    color:#dc3545;
+}
+
+.status-text{
+    margin-top:12px;
+    font-weight:600;
+    color:#555;
+}
+
+
+.undo-timer-box{
+    background:#FFF4CC;
+    border-radius:18px;
+    padding:14px 18px;
+    color:#B45309;
+    font-size:16px;
+    font-weight:500;
+}
+
+.undo-timer-box strong{
+    color:#7C2D12;
+}
+
+.btn-undo{
+    background:#2F6F08;
+    color:#fff;
+    font-size:18px;
+    font-weight:700;
+    border-radius:18px;
+    padding:16px;
+    transition:.3s;
+}
+
+.btn-undo:hover{
+    background:#255807;
+    color:#fff;
+}
+
+.status-icon{
+    width:52px;
+    height:52px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:22px;
+}
+
+.bg-danger-subtle{
+    background:#FEE2E2;
+}
+
+.text-danger{
+    color:#DC2626 !important;
+}
+
+.status-icon{
+    width:56px;
+    height:56px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:22px;
+}
+
+.marked-absent{
+    color:#E60000;
+    font-size:1.5rem;      /* 32px */
+    font-weight:800;     /* Extra Bold */
+    margin:0;
+    line-height:1.2;
+    padding-left:10px;
+}
+
+/* Guest Card */
+/* ===========================
+   Guest Card
+=========================== */
+
+.guest-card{
+    border:0;
+    border-radius:16px;
+    overflow:hidden;
+    background:#fff;
+    box-shadow:0 4px 15px rgba(0,0,0,.08);
+}
+
+.guest-card .card-body{
+    padding:30px;
+}
+
+/* Header */
+
+.guest-icon{
+    width:60px;
+    height:60px;
+    border-radius:14px;
+    background:#E9F8EF;
+    color:#0F8A4B;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:24px;
+}
+
+.guest-title{
+    font-size:24px;
+    font-weight:700;
+    color:#222;
+    margin-bottom:4px;
+}
+
+.guest-subtitle{
+    font-size:15px;
+    color:#6c757d;
+    margin:0;
+}
+
+.guest-arrow{
+    color:#6c757d;
+    font-size:18px;
+}
+
+/* Guest Boxes */
+
+.guest-box{
+    border-radius:14px;
+    padding:20px;
+    height:100%;
+}
+
+.personal{
+    background:#F3F2FF;
+}
+
+.official{
+    background:#EEF8F1;
+}
+
+.guest-label{
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.8px;
+    margin-bottom:12px;
+}
+
+.personal-text{
+    color:#5A54F9;
+}
+
+.official-text{
+    color:#0F8A4B;
+}
+
+.guest-count{
+    font-size:42px;
+    font-weight:700;
+    line-height:1;
+    margin-bottom:8px;
+}
+
+.personal .guest-count{
+    color:#5A54F9;
+}
+
+.official .guest-count{
+    color:#0F8A4B;
+}
+
+.guest-limit{
+    color:#6c757d;
+    font-size:15px;
+    margin-bottom:18px;
+}
+
+/* Progress */
+
+.guest-progress{
+    height:10px;
+    border-radius:30px;
+    background:#DDE3EA;
+    overflow:hidden;
+}
+
+.personal-bar{
+    background:#5A54F9;
+}
+
+.official-bar{
+    background:#4F7D2A;
+}
+
+/* Button */
+
+.btn-schedule{
+    background:#0B733D;
+    color:#fff;
+    border:none;
+    border-radius:10px;
+    padding:12px;
+    font-size:17px;
+    font-weight:600;
+    transition:.3s;
+}
+
+.btn-schedule:hover{
+    background:#095B31;
+    color:#fff;
+}
+

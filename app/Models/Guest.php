@@ -29,4 +29,14 @@ class Guest extends Model
     {
         return $this->belongsTo(User::class, 'attend_user_id');
     }
+
+    public function department()
+    {
+        return $this->belongsTo(Department::class, 'department_id');
+    }
+
+    public function location()
+    {
+        return $this->belongsTo(Location::class, 'location_id');
+    }
 }

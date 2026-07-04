@@ -44,7 +44,7 @@ class LocationController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|unique:locations,name|max:255',
-            'short_code' => 'required|string|unique:locations,short_code|max:50',
+            'short_code' => 'required|string|unique:locations,short_code|max:4|min:2',
             'status' => 'required',
         ]);
 

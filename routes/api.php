@@ -18,9 +18,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard', [ApiDashboardController::class, 'dashboard']);
     Route::get('/calendar', [ApiAttendanceController::class, 'calendar']);
     Route::post('/add-guest', [ApiAttendanceController::class, 'guestCreate']);
+    Route::get('/guest-list', [ApiAttendanceController::class, 'guestList']);
     Route::post('/mark-attendance', [ApiAttendanceController::class, 'markAttendance']);
-
-        Route::get('/today-menu-list', [ApiMenuController::class, 'menuListToday']);
+    Route::get('/today-menu-list', [ApiMenuController::class, 'menuListToday']);
 });
 
 Route::post('/generate-year', [ApiAttendanceController::class, 'generateYear']);

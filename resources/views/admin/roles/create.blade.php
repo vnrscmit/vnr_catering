@@ -79,7 +79,7 @@
    <div class="d-flex justify-content-end">
                     <div class="mb-3">
                         <button type="submit" class="btn btn-primary">
-                            <i class="fa fa-save"></i> Create Role
+                            <i class="fa fa-save"></i> Submit
                         </button>
                         <a href="{{ route('admin.roles.index') }}" class="btn btn-secondary">
                             <i class="fa fa-arrow-left"></i> Back

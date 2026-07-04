@@ -6,7 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class DailyMenu extends Model
 {
-    protected $fillable = [
+public $timestamps = true;    
+protected $fillable = [
         'calendar_id',
         'menu_date',
         'remarks',
