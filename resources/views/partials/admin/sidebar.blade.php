@@ -66,8 +66,6 @@
               </a>
             </li>
 
-
-
             <li class="nav-item {{ request()->route()->named('admin.roles.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('admin.roles.index') }}">
                 <i class="fa fa-user-shield menu-icon"></i>
@@ -89,10 +87,17 @@
               </a>
             </li>
 
-                <li class="nav-item {{ request()->route()->named('today-menu.*') ? 'active-nav' : '' }}">
+            <li class="nav-item {{ request()->route()->named('today-menu.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('today-menu.index') }}">
                 <i class="fa fa-utensils menu-icon"></i>
                 <span class="menu-title">Daily Menu</span>
+              </a>
+            </li>
+
+            <li class="nav-item {{ request()->route()->named('company-parameters.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('company-parameters.index') }}">
+                <i class="fa fa-cogs menu-icon"></i>
+                <span class="menu-title">Canteen Setting</span>
               </a>
             </li>
             @endif
@@ -104,13 +109,13 @@
                 <span class="menu-title">Mess Menu</span>
               </a>
             </li>
-            <li class="nav-item {{ request()->route()->named('admin.menus.*') ? 'active-nav' : '' }}">
-              <a class="nav-link" href="{{ route('admin.menus.index') }}">
-                <i class="fa fa-utensils menu-icon"></i>
-                <span class="menu-title">Daily Menu</span>
+            <li class="nav-item {{ request()->route()->named('company-parameters.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('company-parameters.index') }}">
+                <i class="fa fa-cogs menu-icon"></i>
+                <span class="menu-title">Canteen Setting</span>
               </a>
             </li>
-              
+
             @endif
 
             <li class="nav-item {{ request()->route()->named('admin.view.myprofile') ? 'active-nav' : '' }}">
@@ -126,15 +131,6 @@
                 <span class="menu-title">Change Password</span>
               </a>
             </li>
-
-
-            <!-- <li class="nav-item">
-                <a target="_blank" class="nav-link" href="{{ route('home') }}">
-                  <i class="fa fa-globe menu-icon"></i>
-                  <span class="menu-title">Main Website</span>
-                </a>
-              </li> -->
-
             <li class="nav-item">
               <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">
                 <i class="fa fa-power-off menu-icon"></i>

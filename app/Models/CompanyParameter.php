@@ -15,6 +15,9 @@ class CompanyParameter extends Model
         'member_rate',
         'non_member_rate',
         'guest_rate',
+        'active_till_date',
+        'active_till_calendar_id',
+        'inactive_user_id'
     ];
 
     protected $casts = [

@@ -27,6 +27,23 @@ class Department extends Model
             ->where('department_locations.department_id', $departmentId)
             ->get();
 
-            return $alreadylinkedData;
+        return $alreadylinkedData;
+    }
+
+    public static function getByDepartment($locationId)
+    {
+        $alreadylinkedData = DepartmentLocation::select(
+            'department_locations.id',
+            'department_locations.department_id',
+            'department_locations.location_id',
+            'departments.name as department_name',
+            'locations.name as location_name'
+        )
+            ->join('departments', 'departments.id', '=', 'department_locations.department_id')
+            ->join('locations', 'locations.id', '=', 'department_locations.location_id')
+            ->where('department_locations.location_id', $locationId)
+            ->get();
+
+        return $alreadylinkedData;
     }
 }

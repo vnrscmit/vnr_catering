@@ -29,6 +29,7 @@ return new class extends Migration
             $table->string('role')->nullable();
             $table->unsignedBigInteger('department_id')->nullable();
             $table->unsignedBigInteger('location_id')->nullable();
+            $table->unsignedBigInteger('start_calendar_id')->nullable();
 
             // Authentication & Security
             $table->string('password');
@@ -46,6 +47,7 @@ return new class extends Migration
             $table->boolean('status')->default(1);
             $table->text('notice')->nullable();
             $table->string('profile_picture')->nullable();
+            $table->boolean('multilocation_flag')->default(0);
 
             $table->timestamps();
 

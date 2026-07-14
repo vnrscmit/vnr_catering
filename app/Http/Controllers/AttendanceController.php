@@ -15,6 +15,8 @@ use App\Models\Guest;
 use App\Models\Department;
 use App\Models\Location;
 use App\Http\Controllers\Traits\AdminViewSharedDataTrait;
+use App\Models\DepartmentLocation;
+use App\Models\MultipleLocation;
 
 class AttendanceController extends Controller
 {
@@ -73,7 +75,6 @@ class AttendanceController extends Controller
             return back()->with('error', 'You are not allowed to schedule guests.');
         }
 
-
         // Check calendar id and date match
         $calendar = DayStatus::where('id', $id)
             ->first();
@@ -86,17 +87,22 @@ class AttendanceController extends Controller
         }
 
         if ($userDataCheck->role == 'Member' || $userDataCheck->role == 'Non Member' || $userDataCheck->role == 'Canteen President') {
-            $userData = User::where('status', 1)->where('id', $userDataCheck->id)->get();
+            $userData = User::where('status', 1)->where('id', $userDataCheck->id)->where('personal_guest_flag', 1)->get();
             $department = Department::where('id', $userDataCheck->department_id)->where('status', 1)->get();
-            $locatin = Location::where('id', $userDataCheck->location_id)->where('status', 1)->get();
+            $location = Location::where('id', $userDataCheck->location_id)->where('status', 1)->get();
+        } else if ($userDataCheck->role == 'Canteen Incharge') {
+            $userData = User::where('status', 1)->where('location_id', $userDataCheck->location_id)->where('personal_guest_flag', 1)->get();
+            $allLinkedDepartment = DepartmentLocation::where('location_id', $userDataCheck->location_id)->pluck('department_id');
+            $department = Department::whereIn('id',  $allLinkedDepartment)->where('status', 1)->get();
+            $location = Location::where('id', $userDataCheck->location_id)->where('status', 1)->get();
         } else {
-            $userData = User::where('status', 1)->get();
+            $userData = User::where('status', 1)->where('personal_guest_flag', 1)->get();
             $department = Department::where('status', 1)->get();
             if (!$department) {
                 return back()->with('error', 'No active department found. Please contact the administrator.');
             }
-            $locatin = Location::where('status', 1)->get();
-            if (!$locatin) {
+            $location = Location::where('status', 1)->get();
+            if (!$location) {
                 return back()->with('error', 'No active location found. Please contact the administrator.');
             }
         }
@@ -104,7 +110,7 @@ class AttendanceController extends Controller
         return view('admin.guests.create', [
             'guest' => new Guest(),
             'departments' => $department,
-            'locations' =>  $locatin,
+            'locations' =>  $location,
             'users' => $userData,
             'selectedDate' => $calendar->date,
             'dayStatus' => $dayStatus,
@@ -114,7 +120,6 @@ class AttendanceController extends Controller
 
     public function guestStore(Request $request)
     {
-
         $validator = Validator::make($request->all(), [
             'guest_type' => 'required|in:Office Guest,Personal Guest',
             'department_id' => 'nullable|exists:departments,id',
@@ -158,6 +163,18 @@ class AttendanceController extends Controller
             }
         }
 
+
+        $companyParameter = CompanyParameter::where('location_id', $request->location_id)->where('status', 1)->first();
+
+        $currentTime = Carbon::now();
+
+        $lateFlag = 0;
+
+        if ($companyParameter && $currentTime->gt($companyParameter->attendance_out_time)) {
+            $lateFlag = 1;
+        }
+
+
         Guest::create([
             'guest_type' => $request->guest_type,
             'department_id' => $request->department_id,
@@ -167,6 +184,7 @@ class AttendanceController extends Controller
             'guest_count' => $request->guest_count,
             'guest_remarks' => $request->guest_remarks,
             'attend_user_id' => $request->attend_user_id,
+            'late_flag'        => $lateFlag,
             'status' => 1,
         ]);
 
@@ -197,17 +215,9 @@ class AttendanceController extends Controller
         ])->where('calendar_id', $dayStatus->id);
 
         if ($user->role == 'Admin' || $user->role == 'Super Admin') {
-
-            // No additional filter
-
-        } elseif ($user->role == 'Canteen President') {
-
-            $userIds = User::where('location_id', $user->location_id)
-                ->pluck('id');
-
-            $query->whereIn('attend_user_id', $userIds);
+        } elseif ($user->role == 'Canteen President' || $user->role == 'Canteen Incharge') {
+            $query->where('location_id', $user->location_id);
         } else {
-
             $query->where('attend_user_id', $user->id);
         }
 
@@ -232,13 +242,34 @@ class AttendanceController extends Controller
 
     public function guestEdit(Guest $guest)
     {
+
+        $userDataCheck = Auth::user();
+
         $guest->load('calendar');
 
+        if ($userDataCheck->role == 'Member' || $userDataCheck->role == 'Non Member' || $userDataCheck->role == 'Canteen President') {
+            $location = Location::where('id', $userDataCheck->location_id)->where('status', 1)->get();
+            $departmentFetchId = Department::getByDepartment($userDataCheck->location_id)->pluck('department_id')->toArray();
+            $department = Department::where('status', 1)->whereIn('id', $departmentFetchId)->get();
+            $user = User::where('status', 1)->where('id', $userDataCheck->id)->get();
+        } else if ($userDataCheck->role == 'Canteen Incharge') {
+            $location = Location::where('id', $userDataCheck->location_id)->where('status', 1)->get();
+            $departmentFetchId = Department::getByDepartment($userDataCheck->location_id)->pluck('department_id')->toArray();
+            $department = Department::where('status', 1)->whereIn('id', $departmentFetchId)->get();
+            $userData1 = User::where('status', 1)->where('location_id', $userDataCheck->location_id)->pluck('id')->toArray();
+            $userData2 = MultipleLocation::where('location_id', $userDataCheck->location_id)->pluck('user_id')->toArray();
+            $userIds = array_values(array_unique(array_merge($userData1, $userData2)));
+            $user = User::where('status', 1)->where('id', $userDataCheck->id)->get();
+        } else {
+            $location = Location::where('status', 1)->get();
+            $department = Department::where('status', 1)->get();
+            $user = User::where('status', 1)->get();
+        }
         return view('admin.guests.edit', [
             'guest'         => $guest,
-            'departments'   => Department::where('status', 1)->get(),
-            'locations'     => Location::where('status', 1)->get(),
-            'users'         => User::where('status', 1)->get(),
+            'departments'   => $department,
+            'locations'     => $location,
+            'users'         => $user,
             'selectedDate'  => optional($guest->calendar)->date,
         ]);
     }
@@ -253,20 +284,15 @@ class AttendanceController extends Controller
             'guest_name'     => 'required|string|max:255',
             'guest_count'    => 'required|integer|min:1',
             'guest_remarks'  => 'nullable|string|max:1000',
-            'attend_user_id' => 'required|exists:users,id',
+            'attend_user_id' => 'nullable|exists:users,id',
         ]);
 
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
         }
 
-        $user = User::find($request->attend_user_id);
-
-        if (!$user) {
-            return back()->with('error', 'Selected employee not found.')->withInput();
-        }
-
         $userData = User::find($request->attend_user_id);
+
 
         $existingGuest = Guest::where('calendar_id', $request->calendar_id)
             ->where('attend_user_id', $request->attend_user_id)
@@ -277,7 +303,6 @@ class AttendanceController extends Controller
         $newGuestCount = $existingGuest + $request->guest_count;
 
         if ($userData) {
-
             if (
                 $request->guest_type == 'Personal Guest' &&
                 $newGuestCount > $userData->max_personal_guest_allowed
@@ -305,6 +330,16 @@ class AttendanceController extends Controller
             }
         }
 
+        $companyParameter = CompanyParameter::where('location_id', $request->location_id)->where('status', 1)->first();
+
+        $currentTime = Carbon::now();
+
+        $lateFlag = 0;
+
+        if ($companyParameter && $currentTime->gt($companyParameter->attendance_out_time)) {
+            $lateFlag = 1;
+        }
+
         $guest->update([
             'guest_type'     => $request->guest_type,
             'calendar_id'    => $request->calendar_id,
@@ -314,6 +349,7 @@ class AttendanceController extends Controller
             'guest_count'    => $request->guest_count,
             'guest_remarks'  => $request->guest_remarks,
             'attend_user_id' => $request->attend_user_id,
+            'late_flag' => $lateFlag,
         ]);
 
         return redirect()
@@ -363,7 +399,7 @@ class AttendanceController extends Controller
 
         $today = Carbon::today()->toDateString();
 
-        $CompanyParameter = CompanyParameter::where('location_id', $UserData->location_id)->first();
+        $CompanyParameter = CompanyParameter::where('location_id', $UserData->location_id)->where('status', 1)->first();
 
         if ($calendar->date == $today) {
             $currentTime = Carbon::now()->format('H:i:s');
@@ -484,6 +520,22 @@ class AttendanceController extends Controller
             return back()->with('error', 'Day status not found for the selected date.');
         }
 
+        $checkUser = User::find($request->user_id);
+
+        if (!$checkUser) {
+            return back()->with('error', 'User not found.');
+        }
+
+        if ($checkUser->status == 0) {
+            return back()->with('error', 'This user is inactive.');
+        }
+
+        if (is_null($checkUser->start_calendar_id)) {
+            return back()->with('error', 'Start date is not set for this user.');
+        }
+
+        $companyParameter = CompanyParameter::where('location_id', $checkUser->location_id)->where('status', 1)->first();
+
         if ($request->status == 1) {
             $absentFlag = 0;
         } else {
@@ -494,14 +546,24 @@ class AttendanceController extends Controller
             ->where('user_id', $request->user_id)
             ->first();
 
+        $currentTime = Carbon::now();
+
+        $lateFlag = 0;
+
+        if ($companyParameter && $currentTime->gt($companyParameter->attendance_out_time)) {
+            $lateFlag = 1;
+        }
+
         if ($attendance) {
 
             // Update existing record
             $attendance->update([
                 'absent_flag'      => $absentFlag,
+                'late_flag'        => $lateFlag,
                 'status'           => 1,
                 'override_flag'    => 1,
                 'override_remarks' => $request->remarks,
+                'override_user_id' => auth()->id(),
             ]);
         } else {
 
@@ -510,9 +572,11 @@ class AttendanceController extends Controller
                 'calendar_id'      => $dayStatus->id,
                 'user_id'          => $request->user_id,
                 'absent_flag'      => $absentFlag,
+                'late_flag'        => $lateFlag,
                 'status'           => 1,
                 'override_flag'    => 1,
                 'override_remarks' => $request->remarks,
+                'override_user_id' => auth()->id(),
             ]);
         }
         AttendanceLog::create([

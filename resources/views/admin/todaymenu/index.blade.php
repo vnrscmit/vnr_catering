@@ -54,6 +54,12 @@
                     data: 'menu_date',
                     name: 'menu_date'
                 },
+
+                {
+                    data: 'location',
+                    name: 'location'
+                },
+
                 {
                     data: 'menu_items',
                     name: 'menu_items',
@@ -89,7 +95,7 @@
         $('#deleteModal').on('show.bs.modal', function(event) {
             var button = $(event.relatedTarget);
             var id = button.data('id');
-                var actionUrl = "{{ route('today-menu.destroy', ':id') }}".replace(':id', id);
+            var actionUrl = "{{ route('today-menu.destroy', ':id') }}".replace(':id', id);
             $('#deleteForm').attr('action', actionUrl);
         });
     });
@@ -117,6 +123,7 @@
                             <tr>
                                 <th>#</th>
                                 <th>Date</th>
+                                  <th>Location</th>
                                 <th>Items</th>
                                 <th>Actions</th>
                             </tr>

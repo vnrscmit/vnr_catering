@@ -135,12 +135,12 @@
 
         <tr>
             <th>Created At</th>
-            <td>{{ $user->created_at ? $user->created_at->format('d-m-Y H:i A') : 'N/A' }}</td>
+            <td>{{ $user->created_at ? $user->created_at->format('d-m-Y') : 'N/A' }}</td>
         </tr>
 
         <tr>
             <th>Updated At</th>
-            <td>{{ $user->updated_at ? $user->updated_at->format('d-m-Y H:i A') : 'N/A' }}</td>
+            <td>{{ $user->updated_at ? $user->updated_at->format('d-m-Y') : 'N/A' }}</td>
         </tr>
     </tbody>
 </table>

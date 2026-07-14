@@ -11,12 +11,20 @@ use Illuminate\Support\Facades\Mail;
 use App\Http\Requests\CreateUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Controllers\Traits\AdminViewSharedDataTrait;
+use App\Models\AttendanceAbsent;
+use App\Models\DayStatus;
 use App\Models\Department;
 use App\Models\Location;
+use App\Models\MultipleLocation;
 use App\Models\RoleMaster;
 use Illuminate\Support\Str;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use App\Models\UserLocation;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Exception;
+use Illuminate\Support\Facades\Log;
+use App\Mail\UserCredentialsMail;
 
 class UserAdminController extends Controller
 {
@@ -32,7 +40,13 @@ class UserAdminController extends Controller
     public function index()
     {
         // Get all users except the logged-in user
-        $users = User::where('id', '!=', Auth::id())->orderBy('first_name', 'asc')->get();
+        $users = User::leftJoin('day_statuses', 'users.start_calendar_id', '=', 'day_statuses.id')
+            ->orderBy('users.first_name', 'asc')
+            ->select(
+                'users.*',
+                'day_statuses.date as start_date'
+            )
+            ->get();
         return view('admin.users.index', compact('users'));
     }
     public function create()
@@ -54,24 +68,23 @@ class UserAdminController extends Controller
     }
 
 
-
     public function store(CreateUserRequest $request)
     {
+        DB::beginTransaction();
 
         try {
 
-            $password = $request->password;
-            $role = RoleMaster::find($request->role_id);
+            $role = RoleMaster::findOrFail($request->role_id);
 
             $personalGuestFlag = (int) $request->personal_guest_flag;
 
-            if ($personalGuestFlag == 1) {
-                $maxPersonalGuestAllowed = (int) $request->max_personal_guest_allowed;
-                $maxOfficeGuestAllowed = (int) $request->max_office_guest_allowed;
-            } else {
-                $maxPersonalGuestAllowed = 0;
-                $maxOfficeGuestAllowed = 0;
-            }
+            $maxPersonalGuestAllowed = $personalGuestFlag
+                ? (int) $request->max_personal_guest_allowed
+                : 0;
+
+            $maxOfficeGuestAllowed = $personalGuestFlag
+                ? (int) $request->max_office_guest_allowed
+                : 0;
 
             $user = User::create([
                 'role_id'                    => $request->role_id,
@@ -86,42 +99,91 @@ class UserAdminController extends Controller
                 'personal_guest_flag'        => $personalGuestFlag,
                 'max_personal_guest_allowed' => $maxPersonalGuestAllowed,
                 'max_office_guest_allowed'   => $maxOfficeGuestAllowed,
-                'password'                   => Hash::make($password),
+                'password'                   => Hash::make($request->password),
                 'status'                     => $request->status,
                 'notice'                     => 'Account created successfully',
                 'activation_token'           => Str::random(60),
             ]);
 
-            // Base Location
-            UserLocation::firstOrCreate([
-                'user_id'       => $user->id,
-                'location_id'   => $request->location_id,
-                'department_id' => $request->department_id,
-            ], [
-                'status' => 1,
-            ]);
+            // Primary Location
+            UserLocation::firstOrCreate(
+                [
+                    'user_id'       => $user->id,
+                    'location_id'   => $request->location_id,
+                    'department_id' => $request->department_id,
+                ],
+                [
+                    'status' => 1,
+                ]
+            );
 
-            // Other Locations
-            if (!empty($request->other_location_id)) {
+            // Additional Locations
+            if ($request->filled('other_location_id')) {
 
                 foreach ($request->other_location_id as $locationId) {
-                    UserLocation::firstOrCreate([
-                        'user_id'       => $user->id,
-                        'location_id'   => $locationId,
-                        'department_id' => $request->department_id,
-                    ], [
-                        'status' => 1,
-                    ]);
+
+                    // Skip if same as primary location
+                    if ($locationId == $request->location_id) {
+                        continue;
+                    }
+
+                    UserLocation::firstOrCreate(
+                        [
+                            'user_id'       => $user->id,
+                            'location_id'   => $locationId,
+                            'department_id' => $request->department_id,
+                        ],
+                        [
+                            'status' => 1,
+                        ]
+                    );
+
+                    MultipleLocation::firstOrCreate(
+                        [
+                            'user_id'       => $user->id,
+                            'location_id'   => $locationId,
+                            'department_id' => $request->department_id,
+                        ],
+                        [
+                            'status' => 1,
+                        ]
+                    );
                 }
+
+                $user->update([
+                    'multilocation_flag' => 1
+                ]);
             }
 
-            return redirect()->route('admin.users.index')
-                ->with('success', 'User created successfully.');
-        } catch (\Exception $e) {
+            $plainPassword = $request->password;
+            Mail::to($user->email)->send(
+                new UserCredentialsMail($user, $plainPassword)
+            );
 
-            return redirect()->back()
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.users.index')
+                ->with('success', 'User created successfully.');
+        } catch (Exception $e) {
+
+            DB::rollBack();
+
+            \Log::error('User Creation Error', [
+                'message' => $e->getMessage(),
+                'file'    => $e->getFile(),
+                'line'    => $e->getLine(),
+                'trace'   => $e->getTraceAsString(),
+                'request' => $request->except(['password', 'password_confirmation']),
+            ]);
+
+            return redirect()
+                ->back()
                 ->withInput()
-                ->with('error', 'Failed to create user: ' . $e->getMessage());
+                ->with('error', app()->environment('local')
+                    ? $e->getMessage()
+                    : 'Something went wrong while creating the user. Please try again.');
         }
     }
 
@@ -170,5 +232,176 @@ class UserAdminController extends Controller
     {
         $users = User::where('id', '!=', Auth::id())->get();
         return response()->json($users);
+    }
+
+    public function updateDate(Request $request)
+    {
+        $request->validate([
+            'date'    => 'required|date|after_or_equal:today',
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+
+
+            $user = User::findOrFail($request->user_id);
+
+            $dayStatus = DayStatus::where('date', $request->date)->first();
+
+            if (!$dayStatus) {
+                return redirect()->back()->with('error', 'Selected date is not available.');
+            }
+
+            $user->start_calendar_id = $dayStatus->id;
+            $user->save();
+
+            $yearDate =  DayStatus::where('id', '>=', $dayStatus->id)->where('open_flag', 1)->get();
+            if (in_array($user->role, ['Non Member'])) {
+                if ($user->role === 'Non Member') {
+
+                    $dayStatusesOld = DayStatus::where('id', '<', $user->start_calendar_id)
+                        ->get();
+
+                    foreach ($dayStatusesOld as $dayStatusesOldData) {
+
+                        AttendanceAbsent::firstOrCreate(
+                            [
+                                'calendar_id' => $dayStatusesOldData->id,
+                                'user_id'     => $user->id,
+                                'location_id'     => $user->location_id,
+                            ],
+                            [
+                                'absent_flag'      => 1,
+                                'absent_remarks'   => null,
+                                'override_flag'    => 0,
+                                'override_remarks' => null,
+                                'status'           => 1,
+                            ]
+                        );
+                    }
+
+
+                    $dayStatuses = DayStatus::where('id', '>=', $user->start_calendar_id)
+                        ->get();
+
+                    foreach ($dayStatuses as $dayStatus) {
+                        AttendanceAbsent::firstOrCreate(
+                            [
+                                'calendar_id' => $dayStatus->id,
+                                'user_id'     => $user->id,
+                                'location_id'     => $user->location_id,
+                            ],
+                            [
+                                'absent_flag'      => 1,
+                                'absent_remarks'   => null,
+                                'override_flag'    => 0,
+                                'override_remarks' => null,
+                                'status'           => 1,
+                            ]
+                        );
+                    }
+                }
+            } else {
+
+                $dayStatusesOld = DayStatus::where('id', '<', $user->start_calendar_id)
+                    ->get();
+
+                foreach ($dayStatusesOld as $dayStatusesOldData) {
+
+                    AttendanceAbsent::firstOrCreate(
+                        [
+                            'calendar_id' => $dayStatusesOldData->id,
+                            'user_id'     => $user->id,
+                            'location_id'     => $user->location_id,
+                        ],
+                        [
+                            'absent_flag'      => 1,
+                            'absent_remarks'   => null,
+                            'override_flag'    => 0,
+                            'override_remarks' => null,
+                            'status'           => 1,
+                        ]
+                    );
+                }
+
+
+                $dayStatuses = DayStatus::where('id', '>=', $user->start_calendar_id)
+                    ->where(function ($query) {
+                        $query->where('open_flag', 0)
+                            ->orWhere('sunday_flag', 1)
+                            ->orWhere('holiday_flag', 1)
+                            ->orWhere('closed_flag', 1);
+                    })
+                    ->get();
+
+                foreach ($dayStatuses as $dayStatus) {
+
+                    AttendanceAbsent::firstOrCreate(
+                        [
+                            'calendar_id' => $dayStatus->id,
+                            'user_id'     => $user->id,
+                            'location_id'     => $user->location_id,
+                        ],
+                        [
+                            'absent_flag'      => 1,
+                            'absent_remarks'   => null,
+                            'override_flag'    => 0,
+                            'override_remarks' => null,
+                            'status'           => 1,
+                        ]
+                    );
+                }
+            }
+
+            // Multilocation Logic
+
+            if ($user->multilocation_flag == 1) {
+
+                $locationIds = MultipleLocation::where('user_id', $user->id)
+                    ->pluck('location_id');
+
+                $calendarIds = DayStatus::pluck('id');
+
+                foreach ($locationIds as $locationId) {
+
+                    foreach ($calendarIds as $calendarId) {
+
+                        AttendanceAbsent::firstOrCreate(
+                            [
+                                'calendar_id' => $calendarId,
+                                'user_id'     => $user->id,
+                                'location_id' => $locationId,
+                            ],
+                            [
+                                'absent_flag'      => 1,
+                                'absent_remarks'   => null,
+                                'override_flag'    => 0,
+                                'override_remarks' => null,
+                                'status'           => 1,
+                            ]
+                        );
+                    }
+                }
+            }
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Start date updated successfully.');
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            Log::error('Update Start Date Error', [
+                'user_id' => $request->user_id,
+                'message' => $e->getMessage(),
+                'line'    => $e->getLine(),
+                'file'    => $e->getFile(),
+            ]);
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Something went wrong. ' . $e->getMessage());
+        }
     }
 }

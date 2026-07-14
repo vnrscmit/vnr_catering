@@ -22,13 +22,14 @@ return new class extends Migration
 
             $table->boolean('override_flag')->default(0);
             $table->text('override_remarks')->nullable();
+            $table->unsignedBigInteger('override_user_id')->nullable();
+            $table->boolean('late_flag')->default(0);
 
             $table->boolean('status')->default(1);
 
             $table->timestamps();
 
-            // Prevent duplicate absent record for same user on same calendar day
-            $table->unique(['calendar_id', 'user_id']);
+
 
             // Optional Foreign Keys
             /*

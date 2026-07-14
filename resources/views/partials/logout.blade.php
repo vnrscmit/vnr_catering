@@ -12,7 +12,7 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <form id="logout-form" action="{{ route('auth.logout') }}" method="GET" class="d-inline">
-                            <button type="submit" class="btn btn-success">Logout</button>
+                            <button type="submit" class="btn btn-primary">Logout</button>
                         </form>
                     </div>
                 </div>

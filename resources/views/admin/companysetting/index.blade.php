@@ -36,75 +36,84 @@
 
 <script type="text/javascript">
     $(function() {
-        var table = $('.data-table').DataTable({
+
+        $('.data-table').DataTable({
+
             processing: true,
             serverSide: true,
-            ajax: "{{ route('locations.index') }}",
+            ajax: "{{ route('company-parameters.index') }}",
+
             columns: [{
                     data: 'DT_RowIndex',
                     name: 'DT_RowIndex',
                     orderable: false,
                     searchable: false
                 },
-             
                 {
-                    data: 'name',
-                    name: 'name'
+                    data: 'location',
+                    name: 'location'
                 },
                 {
-                    data: 'short_code',
-                    name: 'short_code'
+                    data: 'member_rate',
+                    name: 'member_rate'
                 },
-           
+                {
+                    data: 'non_member_rate',
+                    name: 'non_member_rate'
+                },
+                {
+                    data: 'guest_rate',
+                    name: 'guest_rate'
+                },
+
+                {
+                    data: 'attendance_out_time',
+                    name: 'attendance_out_time'
+                },
+                {
+                    data: 'lunch_out_time',
+                    name: 'lunch_out_time'
+                },
+
                 {
                     data: 'status',
-                    name: 'status'
+                    name: 'status',
+                    orderable: false,
+                    searchable: false
                 },
-                {
-                    data: 'action',
-                    name: 'action',
+                   {
+                    data: 'active_till_date',
+                    name: 'active_till_date',
                     orderable: false,
                     searchable: false
                 },
             ],
+
             pageLength: 10,
+
             lengthMenu: [
                 [10, 25, 50, 100, -1],
                 [10, 25, 50, 100, "All"]
             ],
+
             order: [
-                [4, 'desc']
-            ], // Sort by created_at desc
-            language: {
-                search: "Search:",
-                lengthMenu: "Show _MENU_ entries",
-                info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                infoEmpty: "Showing 0 to 0 of 0 entries",
-                infoFiltered: "(filtered from _MAX_ total entries)",
-                zeroRecords: "No records found",
-            },
+                [0, 'desc']
+            ],
+
             dom: 'lBfrtip',
+
             buttons: [
                 'excel',
                 'pdf'
-            ],
+            ]
 
         });
-    });
 
-    // Delete confirmation modal
-    $(document).ready(function() {
-        $('#deleteModal').on('show.bs.modal', function(event) {
-            var button = $(event.relatedTarget);
-            var id = button.data('id');
-            var actionUrl = "{{ route('locations.destroy', ':id') }}".replace(':id', id);
-            $('#deleteForm').attr('action', actionUrl);
-        });
     });
 </script>
 @endpush
 
-@section('title', 'Location Master')
+@section('title', 'Department Master')
 @section('content')
 
 <div class="main-panel">
@@ -113,25 +122,38 @@
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Location Master</h5>
-                <a href="{{ route('locations.create') }}" class="btn btn-primary btn-sm">
-                    <i class="fa fa-plus"></i> Add Location
+                <h5 class="card-title mb-0">Canteen Setting</h5>
+                <a href="{{ route('company-parameters.create') }}" class="btn btn-primary btn-sm">
+                    <i class="fa fa-plus"></i> Add New
                 </a>
             </div>
+
             <div class="card-body">
+
                 <div class="table-responsive">
-                    <table class="table table-bordered data-table" id="departments-table">
+
+                    <table class="table table-bordered data-table">
+
                         <thead>
+
                             <tr>
                                 <th>#</th>
                                 <th>Location</th>
-                                <th>Short Code</th>
+                                <th>Member Rate</th>
+                                <th>Non Member Rate</th>
+                                <th>Guest Rate</th>
+                                <th>Attendance Out Time</th>
+                                <th>Lunch Out Time</th>
                                 <th>Status</th>
-                                <th>Actions</th>
+                                <th width="120">Till Date</th>
                             </tr>
+
                         </thead>
+
                     </table>
+
                 </div>
+
             </div>
         </div>
 

@@ -9,11 +9,14 @@ class AttendanceAbsent extends Model
     protected $fillable = [
         'calendar_id',
         'user_id',
+        'location_id',
         'absent_flag',
         'absent_remarks',
         'override_flag',
         'override_remarks',
         'status',
+        'override_user_id', 
+        'late_flag'
     ];
 
     public function calendar()

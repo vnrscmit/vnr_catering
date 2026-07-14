@@ -44,28 +44,6 @@
                     <input type="hidden" name="calendar_id" value="{{ $guest->calendar_id }}">
                     <div class="row">
 
-                        <!-- Department -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">
-                                Department <span class="text-danger">*</span>
-                            </label>
-
-                            <select class="form-control" name="department_id" required>
-                                <option value="">Select Department</option>
-
-                                @foreach($departments as $department)
-                                <option value="{{ $department->id }}"
-                                    {{ old('department_id', $guest->department_id) == $department->id ? 'selected' : '' }}>
-                                    {{ $department->name }}
-                                </option>
-                                @endforeach
-                            </select>
-
-                            @error('department_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
                         <!-- Location -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">
@@ -88,13 +66,37 @@
                             @enderror
                         </div>
 
+                        <!-- Department -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Department 
+                            </label>
+
+                            <select class="form-control" name="department_id">
+                                <option value="">Select Department</option>
+
+                                @foreach($departments as $department)
+                                <option value="{{ $department->id }}"
+                                    {{ old('department_id', $guest->department_id) == $department->id ? 'selected' : '' }}>
+                                    {{ $department->name }}
+                                </option>
+                                @endforeach
+                            </select>
+
+                            @error('department_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                    
+
                         <!-- Employee -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">
-                                Employee <span class="text-danger">*</span>
+                                Employee
                             </label>
 
-                            <select class="form-control" name="attend_user_id" required>
+                            <select class="form-control" name="attend_user_id">
                                 <option value="">Select Employee</option>
 
                                 @foreach($users as $user)

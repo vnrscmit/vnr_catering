@@ -15,6 +15,7 @@ class Guest extends Model
         'guest_count',
         'guest_remarks',
         'attend_user_id',
+        'late_flag',
         'status',
     ];
 

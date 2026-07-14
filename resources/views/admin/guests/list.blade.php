@@ -35,8 +35,8 @@
                 <div class="row">
 
                     <div class="col-md-4 mb-4">
-                        <div class="card upcoming-card h-100">
-                            <div class="card-body">
+                        <div class="card upcoming-card h-100 guest-box personal">
+                            <div class="card-body ">
                                 <p class="summary-label">Personal Guests</p>
                                 <h2 class="summary-count">
                                     {{ $summary['personal_guest_count'] }}
@@ -46,9 +46,9 @@
                     </div>
 
                     <div class="col-md-4 mb-4">
-                        <div class="card upcoming-card h-100">
+                        <div class="card upcoming-card h-100 guest-box official">
                             <div class="card-body">
-                                <p class="summary-label">Office Guests</p>
+                                <p class="">Office Guests</p>
                                 <h2 class="summary-count">
                                     {{ $summary['office_guest_count'] }}
                                 </h2>
@@ -57,7 +57,7 @@
                     </div>
 
                     <div class="col-md-4 mb-4">
-                        <div class="card upcoming-card h-100">
+                        <div class="card upcoming-card h-100 guest-box total-card">
                             <div class="card-body">
                                 <p class="summary-label">Total Guests</p>
                                 <h2 class="summary-count">
@@ -92,14 +92,14 @@
                                 <td>{{ $guest->guest_name }}</td>
                                 <td>{{ $guest->guest_type }}</td>
                                 <td>{{ $guest->guest_count }}</td>
-                                <td>{{ $guest->location->name ?? '-' }}</td>
-                                <td>{{ $guest->department->name ?? '-' }}</td>
-                                <td>{{ $guest->attendUser->first_name ?? '-' }}</td>
+                                <td>{{ $guest->location->name ?? ' ' }}</td>
+                                <td>{{ $guest->department->name ?? ' ' }}</td>
+                                <td>{{ $guest->attendUser->first_name ?? ' ' }}</td>
                                 <td>
                                     {{ optional($guest->calendar)->date ? \Carbon\Carbon::parse($guest->calendar->date)->format('d-m-Y') : '-' }}
                                 </td>
                                 <td>{{ $guest->status ? 'Active' : 'Inactive' }}</td>
-                                <td>
+                                <td style="width: 120px;">
                                     <a href="{{ route('admin.guests.edit', $guest->id) }}"
                                         class="btn btn-warning btn-sm"
                                         title="Edit">
