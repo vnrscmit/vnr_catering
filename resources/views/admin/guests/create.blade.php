@@ -43,30 +43,8 @@
                     <input type="hidden" name="calendar_id" value="{{ $dayStatus->id }}">
                     <div class="row">
 
-                        <!-- Department -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">
-                                Department <span class="text-danger">*</span>
-                            </label>
 
-                            <select class="form-control @error('department') is-invalid @enderror"
-                                name="department_id"
-                                required>
-
-                                <option value="">Select Department</option>
-                                @foreach($departments as $department)
-                                <option value="{{ $department->id }}" {{ old('department') == $department->id ? 'selected' : '' }}>
-                                    {{ $department->name }}
-                                </option>
-                                @endforeach
-                            </select>
-
-                            @error('department_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <!-- Location -->
+                         <!-- Location -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">
                                 Location <span class="text-danger">*</span>
@@ -88,17 +66,40 @@
                             @enderror
                         </div>
 
+                        <!-- Department -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Department
+                            </label>
+
+                            <select class="form-control @error('department') is-invalid @enderror"
+                                name="department_id"
+                                >
+
+                                <option value="">Select Department</option>
+                                @foreach($departments as $department)
+                                <option value="{{ $department->id }}" {{ old('department') == $department->id ? 'selected' : '' }}>
+                                    {{ $department->name }}
+                                </option>
+                                @endforeach
+                            </select>
+
+                            @error('department_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                   
+
                         <!-- Employee -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">
-                                Employee <span class="text-danger">*</span>
+                                Employee
                             </label>
 
                             <select name="attend_user_id"
                                 class="form-control @error('attend_user_id') is-invalid @enderror">
-
                                 <option value="">Select Employee</option>
-
                                 @foreach($users as $user)
                                 <option value="{{ $user->id }}"
                                     {{ old('attend_user_id') == $user->id ? 'selected' : '' }}>

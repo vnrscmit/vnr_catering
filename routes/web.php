@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\TableBookingController;
 use App\Http\Controllers\MainSite\AuthController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\CompanyParameterController;
 use App\Http\Controllers\Admin\SubMenuController;
 use App\Http\Controllers\Admin\TestimonyController;
 use App\Http\Controllers\Admin\UserAdminController;
@@ -30,7 +31,8 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\RoleMasterController;
-
+use App\Http\Controllers\ForgotPasswordController;
+use App\Models\CompanyParameter;
 
 Route::get('/', [MainSiteController::class, 'home'])->name('home');
 
@@ -122,7 +124,6 @@ Route::prefix('customer')->middleware(CheckRoleCustomer::class)->group(function 
     Route::get('/checkout/fulfilment', [CheckoutController::class, 'fulfilment'])->name('customer.checkout.fulfilment');
     Route::post('/checkout/fulfilment', [CheckoutController::class, 'fulfilmentPost'])->name('customer.checkout.fulfilment.post');
 
-
     Route::delete('/address/{id}', [AddressController::class, 'destroy'])->name('customer.address.destroy');
 
     // Step 3a: Pickup location
@@ -147,7 +148,6 @@ Route::prefix('customer')->middleware(CheckRoleCustomer::class)->group(function 
 //Admin Dashboard routes
 Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('admin.dashboard');
-
 
     Route::get('profile', [AdminController::class, 'viewMyProfile'])->name('admin.view.myprofile');
     Route::get('profile/edit', [AdminController::class, 'editMyProfile'])->name('admin.myprofile.edit');
@@ -259,6 +259,8 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
         Route::post('users/store', [UserAdminController::class, 'store'])->name('admin.users.store');
         Route::put('users/{id}', [UserAdminController::class, 'update'])->name('admin.users.update');
         Route::delete('users/{id}', [UserAdminController::class, 'destroy'])->name('admin.users.destroy');
+        Route::post('/users/update-date', [UserAdminController::class, 'updateDate'])
+            ->name('admin.users.updateDate');
 
         //Admin Manage Users routes
         Route::get('roles', [RoleMasterController::class, 'index'])->name('admin.roles.index');
@@ -308,6 +310,13 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
 
         Route::delete('/today-menu/{id}', [MenuController::class, 'destroyTodayMenu'])
             ->name('today-menu.destroy');
+
+        Route::resource('company-parameters', CompanyParameterController::class)
+            ->names('company-parameters');
+
+        Route::get('company-parameters/get-by-location/{location}', [CompanyParameterController::class, 'getByLocation'])
+            ->name('company-parameters.getByLocation');
+    
     });
 
     // Attendance routes
@@ -315,11 +324,26 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
     Route::get('/mark-guest-attendance/{id}', [AttendanceController::class, 'markGuestAttendance'])->name('mark-guest-attendance');
     Route::get('/guests', [AttendanceController::class, 'index'])->name('admin.guests.index');
     Route::get('/guests/create/{id}', [AttendanceController::class, 'guestCreate'])->name('admin.guests.create');
-     Route::get('/guests/list/{id}', [AttendanceController::class, 'guestList'])->name('admin.guests.list');
+    Route::get('/guests/list/{id}', [AttendanceController::class, 'guestList'])->name('admin.guests.list');
     Route::post('/guests', [AttendanceController::class, 'guestStore'])->name('admin.guests.store');
     Route::get('/guests/{guest}/edit', [AttendanceController::class, 'guestEdit'])->name('admin.guests.edit');
     Route::put('/guests/{guest}', [AttendanceController::class, 'guestUpdate'])->name('admin.guests.update');
     Route::delete('/guests/{guest}', [AttendanceController::class, 'destroy'])->name('admin.guests.destroy');
     Route::post('/attendance/override', [AttendanceController::class, 'overrideAttendance'])
-    ->name('attendance.override');
+        ->name('attendance.override');
 });
+
+Route::post(
+    '/forgot-password/send-otp',
+    [ForgotPasswordController::class, 'sendOtp']
+)
+    ->name('password.sendOtp');
+
+Route::post('/password/verify-otp', [ForgotPasswordController::class, 'verifyOtp'])
+    ->name('password.verifyOtp');
+
+Route::post(
+    '/password/update-password',
+    [ForgotPasswordController::class, 'updatePassword']
+)
+    ->name('password.updatePassword');

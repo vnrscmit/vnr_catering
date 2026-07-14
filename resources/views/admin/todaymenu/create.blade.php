@@ -50,19 +50,49 @@
                 <form action="{{ route('today-menu.store') }}" method="POST">
                     @csrf
 
-                    <!-- Date Selection -->
                     <div class="row mb-3">
+
                         <div class="col-md-4">
                             <label><strong>Select Date <span class="text-danger">*</span></strong></label>
 
                             <input
                                 type="date"
                                 name="menu_date"
-                                class="form-control"
+                                class="form-control @error('menu_date') is-invalid @enderror"
+                                value="{{ old('menu_date') }}"
                                 min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}"
                                 max="{{ \Carbon\Carbon::today()->addDays(6)->format('Y-m-d') }}"
                                 required>
+
+                            @error('menu_date')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
+
+                        <div class="col-md-4">
+                            <label><strong>Select Location <span class="text-danger">*</span></strong></label>
+
+                            <select name="location_id"
+                                class="form-control @error('location_id') is-invalid @enderror"
+                                required>
+                                <option value="">-- Select Location --</option>
+
+                                @foreach($locations as $location)
+                                <option value="{{ $location->id }}"
+                                    {{ old('location_id') == $location->id ? 'selected' : '' }}>
+                                    {{ $location->name }}
+                                </option>
+                                @endforeach
+
+                            </select>
+
+                            @error('location_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+
+
                     </div>
 
                     <table class="table table-bordered">

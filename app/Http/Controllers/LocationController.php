@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Traits\AdminViewSharedDataTrait;
 use App\Models\Department;
 use Illuminate\Support\Facades\DB;
+use Yajra\DataTables\Facades\DataTables;
 
 class LocationController extends Controller
 {
@@ -21,10 +22,55 @@ class LocationController extends Controller
     {
         $this->shareAdminViewData();
     }
-    public function index()
+
+
+    public function index(Request $request)
     {
-        $locations = Location::orderBy('name', 'ASC')->paginate(10);
-        return view('admin.locations.index', compact('locations'));
+        if ($request->ajax()) {
+
+            $locations = Location::query();
+
+            return DataTables::of($locations)
+                ->addIndexColumn()
+
+                ->editColumn('status', function ($row) {
+                    if ($row->status == 1) {
+                        return '<span class="badge bg-primary">Active</span>';
+                    }
+
+                    return '<span class="badge bg-danger">Inactive</span>';
+                })
+
+                ->addColumn('action', function ($row) {
+
+                    $view = route('locations.show', $row->id);
+                    $edit = route('locations.edit', $row->id);
+                    $delete = route('locations.destroy', $row->id);
+
+                    return '
+                    <a href="' . $view . '" class="btn btn-info btn-sm">
+                        <i class="fa fa-eye"></i>
+                    </a>
+
+                    <a href="' . $edit . '" class="btn btn-warning btn-sm">
+                        <i class="fa fa-edit"></i>
+                    </a>
+
+                    <form action="' . $delete . '" method="POST" style="display:inline-block">
+                        ' . csrf_field() . '
+                        ' . method_field('DELETE') . '
+                        <button class="btn btn-danger btn-sm"
+                            onclick="return confirm(\'Are you sure?\')">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </form>
+                ';
+                })
+
+                ->rawColumns(['status', 'action'])
+                ->make(true);
+        }
+        return view('admin.locations.index');
     }
 
     /**

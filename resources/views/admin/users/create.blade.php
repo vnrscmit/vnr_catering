@@ -157,7 +157,7 @@
 
                         <!-- Mobile -->
                         <div class="col-md-6 mb-3">
-                            <label for="mobile" class="form-label">Mobile <span class="text-danger">*</span></label>
+                            <label for="mobile" class="form-label">Mobile Number <span class="text-danger">*</span></label>
                             <input type="text" class="form-control @error('mobile') is-invalid @enderror" id="mobile" name="mobile" value="{{ old('mobile') }}" placeholder="e.g., 9876543210" required>
                             @error('mobile')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -166,8 +166,8 @@
 
                         <!-- Email -->
                         <div class="col-md-6 mb-3">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email') }}">
+                            <label for="email" class="form-label">e-Mail ID <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email') }}" required>
                             @error('email')
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -201,7 +201,7 @@
 
                         <!-- Location Dropdown -->
                         <div class="col-md-6 mb-3">
-                            <label for="location_id" class="form-label">Base Location <span class="text-danger">*</span></label>
+                            <label for="location_id" class="form-label">Canteen Base Location <span class="text-danger">*</span></label>
                             <select class="form-control @error('location_id') is-invalid @enderror" id="location_id" name="location_id" required>
                                 <option value="">Select Base Location</option>
                             </select>
@@ -221,9 +221,6 @@
                                 </option>
                                 @endforeach
                             </select>
-                            @error('other_location_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
                         </div>
 
 
@@ -312,7 +309,7 @@
 
                         <div id="guest_limits_wrapper" class="row" style="display: none;">
                             <div class="col-md-6 mb-3">
-                                <label for="max_personal_guest_allowed" class="form-label">Personal Guest Count</label>
+                                <label for="max_personal_guest_allowed" class="form-label">Personal Guest Count in one day</label>
                                 <input type="number"
                                     class="form-control @error('max_personal_guest_allowed') is-invalid @enderror"
                                     id="max_personal_guest_allowed"
@@ -325,7 +322,7 @@
                             </div>
 
                             <div class="col-md-6 mb-3">
-                                <label for="max_office_guest_allowed" class="form-label">Office Guest Count</label>
+                                <label for="max_office_guest_allowed" class="form-label">Office Guest Count in one day</label>
                                 <input type="number"
                                     class="form-control @error('max_office_guest_allowed') is-invalid @enderror"
                                     id="max_office_guest_allowed"

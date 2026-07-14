@@ -3,11 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\MultipleLocation;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
@@ -59,17 +60,29 @@ class UserController extends Controller
             // Load relationships
             $user->load(['roles', 'department', 'location']);
 
+
+            $multiLocationData = MultipleLocation::with('location')
+                ->where('user_id', $user->id)
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'location_id'   => $item->location_id,
+                        'location_name' => optional($item->location)->name,
+                    ];
+                })
+                ->values();
+
             return response()->json([
                 'status' => true,
                 'message' => 'Login successful.',
 
                 'user' => [
                     'id' => $user->id,
-                     'name' => explode(' ', trim($user->first_name))[0],
+                    'name' => explode(' ', trim($user->first_name))[0],
                     'email' => $user->email,
                     'mobile' => $user->mobile,
                     'designation' => $user->designation,
-                    'role' => optional($user->roles->first())->name,
+                    'role' => $user->role,
                     'role_id' => $user->role_id,
                     'department' => optional($user->department)->name,
                     'department_id' => $user->department_id,
@@ -77,8 +90,10 @@ class UserController extends Controller
                     'location_id' => $user->location_id,
                     'status' => $user->status,
                     'profile_picture' => $user->profile_picture,
+                    'multilocation_flag' => $user->multilocation_flag,
                     'token' => $token,
                 ],
+                'multiLocationData' => $multiLocationData,
 
             ], 200);
         } catch (\Exception $e) {
@@ -98,6 +113,70 @@ class UserController extends Controller
             'status' => true,
             'message' => 'User list retrieved successfully.',
             'data' => $users
+        ], 200);
+    }
+
+    public function getUserProfile(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $user = User::select(
+            'id',
+            'first_name as name',
+            'designation',
+            'role',
+            'email',
+            'mobile',
+            'profile_picture as photo',
+            'department_id',
+            'location_id'
+        )
+            ->with([
+                'department:id,name',
+                'location:id,name'
+            ])
+            ->where('id', $request->user_id)
+            ->where('status', 1)
+            ->first();
+
+        if ($user) {
+            $user->department_name = optional($user->department)->name;
+            $user->location_name = optional($user->location)->name;
+
+            unset($user->department);
+            unset($user->location);
+        }
+
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'User not found.',
+                'data' => null,
+            ], 404);
+        }
+
+        if ($user) {
+            if (!empty($user->photo)) {
+                $user->photo = asset('storage/profile-picture/' . $user->photo);
+            } else {
+                $user->photo = asset('storage/profile-picture/default.png');
+            }
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'User profile fetched successfully.',
+            'data' => $user,
         ], 200);
     }
 }

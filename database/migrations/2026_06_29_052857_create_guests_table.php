@@ -17,7 +17,7 @@ return new class extends Migration
             $table->enum('guest_type', ['Office Guest', 'Personal Guest']);
 
             $table->unsignedBigInteger('location_id');
-             $table->unsignedBigInteger('department_id');
+            $table->unsignedBigInteger('department_id');
             $table->unsignedBigInteger('calendar_id');
 
             $table->string('guest_name');
@@ -27,6 +27,7 @@ return new class extends Migration
             $table->text('guest_remarks')->nullable();
 
             $table->unsignedBigInteger('attend_user_id')->nullable();
+            $table->boolean('late_flag')->default(0);
 
             $table->boolean('status')->default(1);
 

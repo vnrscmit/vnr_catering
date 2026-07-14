@@ -34,17 +34,32 @@ class AdminController extends Controller
         $this->shareOrderStatistics();
     }
 
-    public function index()
+    public function index($locationId = null)
     {
+        $UserData = Auth::user();
+        if ($locationId === null) {
+            $locationId = $UserData->location_id;
+        }
+
+        if (!$locationId) {
+            return redirect()->route('admin.dashboard')
+                ->with('error', 'The selected location was not found.');
+        }
+
         $formattedSalesData = [];
         $today = Carbon::today()->format('Y-m-d');
         $dayStatus = DayStatus::where('date', $today)->first();
 
-        $UserData = Auth::user();
-        $companyParameter = CompanyParameter::where('location_id', $UserData->location_id)->first();
+        $companyParameter = CompanyParameter::where('location_id', $locationId)->where('status', 1)->first();
 
         if (!$companyParameter) {
             return redirect()->route('admin.dashboard')->with('error', 'Company parameter is not configured for your location.');
+        }
+
+        $allLocked = false;
+
+        if ($UserData->start_calendar_id == null || $UserData->start_calendar_id > $dayStatus->id) {
+            $allLocked = true;
         }
 
         $currentTime = Carbon::now();
@@ -61,16 +76,17 @@ class AdminController extends Controller
         }
 
         $dailyMenuList = DailyMenu::with('items.submenu')
-            ->where('calendar_id', $dayStatus->id)->where('menu_date', $today)->first();
+            ->where('calendar_id', $dayStatus->id)->where('location_id', $locationId)->where('menu_date', $today)->first();
 
         $todayMenu = $dailyMenuList
             ? $dailyMenuList->items->pluck('submenu.name')->values()->toArray()
             : [];
 
         $upComingDays = DayStatus::where('day_statuses.date', '>', $today)
-            ->leftJoin('attendance_absents', function ($join) {
+            ->leftJoin('attendance_absents', function ($join) use ($locationId) {
                 $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
                     ->where('attendance_absents.user_id', auth()->id())
+                    ->where('attendance_absents.location_id', $locationId)
                     ->where('attendance_absents.absent_flag', 1);
             })
             ->select(
@@ -85,9 +101,10 @@ class AdminController extends Controller
             ->get();
 
         $todaysAttendance =  DayStatus::where('day_statuses.date', '=', $today)
-            ->leftJoin('attendance_absents', function ($join) {
+            ->leftJoin('attendance_absents', function ($join) use ($locationId) {
                 $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
                     ->where('attendance_absents.user_id', auth()->id())
+                    ->where('attendance_absents.location_id', $locationId)
                     ->where('attendance_absents.absent_flag', 1);
             })
             ->select(
@@ -105,18 +122,17 @@ class AdminController extends Controller
         $personalguestCount = 0;
         $officeguestCount   = 0;
 
-        $query = Guest::where('calendar_id', $dayStatus->id);
+        $query = Guest::where('calendar_id', $dayStatus->id)->where('location_id', $locationId);
         if ($UserData->personal_guest_flag == 1) {
             $guestAllowed = 1;
-
             if ($UserData->role == 'Admin' || $UserData->role == 'Super Admin') {
                 $allusers = User::where('status', 1)->get();
                 $overrideLock = true;
-            } elseif ($UserData->role == 'Canteen President') {
-                $userIds = User::where('location_id', $UserData->location_id)
+            } elseif ($UserData->role == 'Canteen President' || $UserData->role == 'Canteen Incharge') {
+                $userIds = User::where('location_id', $locationId)
                     ->pluck('id');
-                $query->whereIn('attend_user_id', $userIds);
-                $allusers = User::where('status', 1)->where('location_id', $UserData->location_id)->get();
+                // $query->whereIn('attend_user_id', $userIds);
+                $allusers = User::where('status', 1)->where('location_id', $locationId)->get();
                 $overrideLock = true;
             } else {
                 $query->where('attend_user_id', $UserData->id);
@@ -142,10 +158,10 @@ class AdminController extends Controller
                 $allusers = User::where('status', 1)->get();
                 $overrideLock = true;
             } elseif ($UserData->role == 'Canteen President') {
-                $userIds = User::where('location_id', $UserData->location_id)
+                $userIds = User::where('location_id', $locationId)
                     ->pluck('id');
                 $query->whereIn('attend_user_id', $userIds);
-                $allusers = User::where('status', 1)->where('location_id', $UserData->location_id)->get();
+                $allusers = User::where('status', 1)->where('location_id', $locationId)->get();
                 $overrideLock = true;
             } else {
                 $query->where('attend_user_id', $UserData->id);
@@ -153,11 +169,7 @@ class AdminController extends Controller
                 $overrideLock = false;
             }
         }
-
-
-
-
-
+ 
         return view('admin.dashboard', compact(
             'formattedSalesData',
             'todayMenu',
@@ -172,7 +184,9 @@ class AdminController extends Controller
             'guestAllowed',
             'personalguestCount',
             'officeguestCount',
-            'allusers'
+            'allusers',
+            'allLocked',
+            'todayMenu'
         ));
     }
 

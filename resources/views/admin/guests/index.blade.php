@@ -63,9 +63,9 @@
                                     <td>{{ $guest->guest_name }}</td>
                                     <td>{{ $guest->guest_type }}</td>
                                     <td>{{ $guest->guest_count }}</td>
-                                    <td>{{ $guest->location->name ?? '-' }}</td>
-                                    <td>{{ $guest->department->name ?? '-' }}</td>
-                                    <td>{{ $guest->attendUser->first_name ?? '-' }}</td>
+                                    <td>{{ $guest->location->name ?? ' ' }}</td>
+                                    <td>{{ $guest->department->name ?? ' ' }}</td>
+                                    <td>{{ $guest->attendUser->first_name ?? ' ' }}</td>
                                     <td>{{ optional($guest->calendar)->date }}</td>
                                     <td>{{ $guest->status ? 'Active' : 'Inactive' }}</td>
                                     <td>

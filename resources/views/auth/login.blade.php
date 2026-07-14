@@ -84,8 +84,41 @@
     });
 </script>
 
-@endpush
+@if(session('showOtpModal'))
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
 
+        document.getElementById('otp_email').value = "{{ session('email') }}";
+
+        var forgotModal = bootstrap.Modal.getInstance(document.getElementById('forgotPasswordModal'));
+        if (forgotModal) {
+            forgotModal.hide();
+        }
+
+        var otpModal = new bootstrap.Modal(document.getElementById('verifyOtpModal'));
+        otpModal.show();
+    });
+</script>
+@endif
+
+@if(session('showResetModal'))
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+
+        var otpModal = bootstrap.Modal.getInstance(document.getElementById('verifyOtpModal'));
+
+        if (otpModal) {
+            otpModal.hide();
+        }
+
+        var resetModal = new bootstrap.Modal(document.getElementById('resetPasswordModal'));
+
+        resetModal.show();
+    });
+</script>
+@endif
+
+@endpush
 
 @section('title', 'Create Account')
 
@@ -102,25 +135,25 @@
             url('{{ asset('assets/images/ahaar_bg_login.png') }}') center/cover no-repeat;
     } */
 
-            .login-page {
-    min-height: 100vh;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 15px;
+    .login-page {
+        min-height: 100vh;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 15px;
 
-    background-image: url('{{ asset("assets/images/ahaar_bg_login.png") }}');
-    background-repeat: no-repeat;
-    background-position: center center;
-    background-size: cover;
-    background-color: #f8f8f2;
-}
+        background-image: url('{{ asset("assets/images/ahaar_bg_login.png") }}');
+        background-repeat: no-repeat;
+        background-position: center center;
+        background-size: cover;
+        background-color: #f8f8f2;
+    }
 
 
 
     .login-card {
-        background: rgba(255, 255, 255, 0.97);  
+        background: rgba(255, 255, 255, 0.97);
         border-radius: 24px;
         padding: 36px 32px;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.24);
@@ -169,7 +202,7 @@
     .login-btn:hover {
         color: #fff;
         transform: translateY(-1px);
-     box-shadow: 0 10px 20px rgba(64, 103, 30, 0.35);
+        box-shadow: 0 10px 20px rgba(64, 103, 30, 0.35);
     }
 
     @media (max-width: 767px) {
@@ -191,9 +224,9 @@
                     <form method="post" action="{{ route('auth.login.process') }}">
                         @csrf
                         <div class="text-center mb-4">
-                            <img src="{{ asset('assets/images/ahaar_logo_login_3.png') }}"
+                            <img src="{{ url('assets/images/ahaar_logo_login_3.png') }}"
                                 alt="Logo"
-                                style="max-height:100px;">
+                                width="110">
                         </div>
 
                         <div class="text-center mb-4">
@@ -221,6 +254,15 @@
                                 </div>
                             </div>
 
+                            <div class="col-12 d-flex justify-content-end mt-2 mb-3">
+                                <a href="#"
+                                    class="text-primary text-decoration-none"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#forgotPasswordModal">
+                                    Forgot Password?
+                                </a>
+                            </div>
+
                             <div class="form-group mb-0 mt-3 col-md-12">
                                 <button type="submit" class="btn btn-block login-btn">Login</button>
                             </div>
@@ -228,6 +270,180 @@
                     </form>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Forgot Password Modal -->
+<div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="forgotPasswordModalLabel">
+                    Forgot Password
+                </h5>
+
+                <button type="button" class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+
+            <form method="POST" action="{{ route('password.sendOtp') }}">
+                @csrf
+
+                <div class="modal-body">
+
+                    <p class="text-muted">
+                        Enter your registered email address. We'll send you a OTP.
+                    </p>
+
+                    <div class="mb-3">
+                        <label>Email Address <span class="text-danger">*</span></label>
+
+                        <input
+                            type="email"
+                            name="email"
+                            class="form-control"
+                            placeholder="Enter your email"
+                            required>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <!-- <button type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                        Cancel
+                    </button> -->
+
+                    <button type="submit"
+                        class="btn login-btn">
+                        Send OTP
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<!-- Verify OTP Modal -->
+<div class="modal fade" id="verifyOtpModal" tabindex="-1" aria-labelledby="verifyOtpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="verifyOtpModalLabel">
+                    Verify OTP
+                </h5>
+
+                <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+
+            <form method="POST" action="{{ route('password.verifyOtp') }}">
+                @csrf
+
+                <div class="modal-body">
+
+                    <p class="text-muted">
+                        Enter the 6-digit OTP sent to your registered email.
+                    </p>
+
+                    <!-- Email -->
+                    <input type="hidden" name="email" id="otp_email">
+
+                    <!-- OTP -->
+                    <div class="mb-3">
+                        <label>OTP <span class="text-danger">*</span></label>
+                        <input
+                            type="text"
+                            name="otp"
+                            class="form-control"
+                            placeholder="Enter 6-digit OTP"
+                            maxlength="6"
+                            required>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer d-flex justify-content-end">
+
+                    <button type="submit"
+                        class="btn login-btn">
+                        Verify OTP
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- Reset Password Modal -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4">
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    Reset Password
+                </h5>
+
+                <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"></button>
+            </div>
+
+            <form method="POST" action="{{ route('password.updatePassword') }}">
+                @csrf
+
+                <input type="hidden"
+                    name="user_id"
+                    value="{{ session('user_id') }}">
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label>New Password <span class="text-danger">*</span></label>
+
+                        <input type="password"
+                            name="password"
+                            class="form-control"
+                            required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Confirm Password <span class="text-danger">*</span></label>
+                        <input type="password"
+                            name="password_confirmation"
+                            class="form-control"
+                            required>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="submit"
+                        class="btn login-btn">
+                        Update Password
+                    </button>
+
+                </div>
+
+            </form>
+
         </div>
     </div>
 </div>

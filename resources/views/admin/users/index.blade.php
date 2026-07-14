@@ -1,16 +1,15 @@
-
 @extends('layouts.admin')
 
 @push('styles')
-    <!-- base:css -->
-    <link rel="stylesheet" href="/admin_resources/vendors/typicons.font/font/typicons.css">
-    <link rel="stylesheet" href="/admin_resources/vendors/css/vendor.bundle.base.css">
-    <link rel="stylesheet" href="/admin_resources/css/vertical-layout-light/style.css">
-    
+<!-- base:css -->
+<link rel="stylesheet" href="/admin_resources/vendors/typicons.font/font/typicons.css">
+<link rel="stylesheet" href="/admin_resources/vendors/css/vendor.bundle.base.css">
+<link rel="stylesheet" href="/admin_resources/css/vertical-layout-light/style.css">
+
 @endpush
 
 @push('scripts')
- 
+
 <script src="/admin_resources/vendors/js/vendor.bundle.base.js"></script>
 <script src="/admin_resources/js/off-canvas.js"></script>
 <script src="/admin_resources/js/hoverable-collapse.js"></script>
@@ -28,7 +27,6 @@
 
 
 <script>
-
     function editUser(button) {
 
         let user = $(button).data(); // Extract all data-* attributes into an object
@@ -36,8 +34,8 @@
         let actionUrl = "{{ route('admin.users.update', ':id') }}".replace(':id', user.id);
         $('#editUserForm').attr('action', actionUrl);
 
-        $('#editFirstName').val(user.firstName);  
-        $('#editMiddleName').val(user.middleName || '');  
+        $('#editFirstName').val(user.firstName);
+        $('#editMiddleName').val(user.middleName || '');
         $('#editLastName').val(user.lastName);
         $('#editEmail').val(user.email);
         $('#editRole').val(user.role);
@@ -45,15 +43,15 @@
         if (user.notice === 'change_password_to_activate_account') {
             $('#banCheckboxDiv').hide();
         } else {
-         
+
             $('#banCheckboxDiv').show();
-            $('#banCheckbox').prop('checked', user.status === 0); 
+            $('#banCheckbox').prop('checked', user.status === 0);
         }
     }
 
 
     // Attach event listener to the modal
-    $('#viewUserModal').on('show.bs.modal', function (event) {
+    $('#viewUserModal').on('show.bs.modal', function(event) {
         // Button that triggered the modal
         var button = $(event.relatedTarget);
 
@@ -76,15 +74,24 @@
         modal.find('#viewLastName').text(last_name);
         modal.find('#viewEmail').text(email);
         modal.find('#viewRole').text(role);
-        modal.find('#viewStatus').html(status === 1 
-            ? '<span class="badge bg-primary"><i class="fa fa-check"></i> Active</span>' 
-            : '<span class="badge bg-danger"><i class="fa fa-exclamation"></i> Banned</span>');
+        modal.find('#viewStatus').html(status === 1 ?
+            '<span class="badge bg-primary"><i class="fa fa-check"></i> Active</span>' :
+            '<span class="badge bg-danger"><i class="fa fa-exclamation"></i> Banned</span>');
         modal.find('#viewPhoneNumber').text(phoneNumber || 'N/A');
         modal.find('#viewAddress').text(address || 'N/A');
     });
 
+
+    $(document).ready(function() {
+
+        $('.update-date-btn').on('click', function() {
+            let id = $(this).data('id');
+            $('#user_id').val(id);
+        });
+
+    });
 </script>
- 
+
 @endpush
 
 
@@ -93,233 +100,276 @@
 
 <div class="main-panel">
     <div class="content-wrapper">
- 
-      @include('partials.message-bag')
- 
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span>Manage Admin ({{ $users->count() }})</span>
-          <a href="{{ route('admin.users.create') }}" class="btn btn-primary btn-sm">
+
+        @include('partials.message-bag')
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Manage Admin ({{ $users->count() }})</span>
+                <a href="{{ route('admin.users.create') }}" class="btn btn-primary btn-sm">
                     <i class="fa fa-plus"></i> Add User
                 </a>
-        </div>
-        <div class="card-body">
-            @if($users->isEmpty())
+            </div>
+            <div class="card-body">
+                @if($users->isEmpty())
                 <div class="alert alert-warning" role="alert">
                     No admin records found.
                 </div>
-            @else
+                @else
                 <table class="table">
                     <thead>
                         <tr>
                             <th>#</th>
                             <th>Name</th>
-                              <th>Mobile</th>
-                            <th>Email</th>
+                            <th>Mobile</th>
                             <th>Role</th>
+                            <th>Start Date</th>
                             <th>Status</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($users as $user)
-                            <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td><i class='fa fa-user'></i>&nbsp; {{ $user->first_name }}  </td>
-                                <td>{{ $user->mobile }}</td>
-                                <td>{{ $user->email }}</td>
-                                <td>{{ ucwords(str_replace('_', ' ', $user->role)) }}</td>
-                                <td>
-                                    @if($user->status == 1)
-                                      <span class="badge bg-primary"><i class="fa fa-check"></i> Active</span>
-                                        @else
-                                            <span class="badge bg-danger"><i class="fa fa-times"></i> Inactive</span>
-                                        @endif
-                                </td>
-                            </tr>
+                        <tr>
+                            <td>{{ $loop->iteration }}</td>
+                            <td><i class='fa fa-user'></i>&nbsp; {{ $user->first_name }} </td>
+                            <td>{{ $user->mobile }}</td>
+                            <td>{{ ucwords(str_replace('_', ' ', $user->role)) }}</td>
+                            <td>
+                                {{ $user->start_date ? \Carbon\Carbon::parse($user->start_date)->format('d-m-Y') : '' }}
+                            </td>
+                            <td>
+                                @if($user->status == 1)
+                                <span class="badge bg-primary"><i class="fa fa-check"></i> Active</span>
+                                @else
+                                <span class="badge bg-danger"><i class="fa fa-times"></i> Inactive</span>
+                                @endif
+                            </td>
+
+                            <td>
+                                @if($user->start_date == null)
+                                <button type="button"
+                                    class="btn btn-warning btn-sm update-date-btn"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#updateDateModal"
+                                    data-id="{{ $user->id }}">
+                                    <i class="fa fa-calendar"></i> Start
+                                </button>
+                                @endif
+                            </td>
+                        </tr>
                         @endforeach
-                    </tbody>                    
+                    </tbody>
                 </table>
-            @endif
-        </div>
-    </div>
-    
-<!-- Create User Modal -->
-<div class="modal fade" id="createUserModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="POST" action="{{ route('admin.users.store') }}">
-                @csrf
-                <div class="modal-header">
-                    <h5 class="modal-title">Create User</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-danger" role="alert">
-                        <i class="fa fa-exclamation-triangle"></i> The password will be the user's email address. The user should log in with this credential and change their password to gain access to the admin panel.
-                    </div>
-                    <div class="mb-3">
-                        <label>First Name</label>
-                        <input type="text" name="first_name" id="FirstName" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label>Middle Name</label>
-                        <input type="text" name="middle_name" id="MiddleName" class="form-control">
-                    </div>
-                    <div class="mb-3">
-                        <label>Last Name</label>
-                        <input type="text" name="last_name" id="LastName" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label>Email</label>
-                        <input type="email" name="email" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label>Role</label>
-                        <select name="role" class="form-control form-control-sm" required>
-                            <option value="admin">Admin</option>
-                            <option value="Super Admin">Global Admin</option>
-                        </select>
-                    </div>
-                    
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Create</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-
-
-
-<!-- Edit User Modal -->
-<div class="modal fade" id="editUserModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="POST" id="editUserForm">
-                @csrf
-                @method('PUT')
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit User</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label>First Name</label>
-                        <input type="text" name="first_name" id="editFirstName" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label>Middle Name</label>
-                        <input type="text" name="middle_name" id="editMiddleName" class="form-control">
-                    </div>
-                    <div class="mb-3">
-                        <label>Last Name</label>
-                        <input type="text" name="last_name" id="editLastName" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label>Email</label>
-                        <input type="email" name="email" id="editEmail" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label>Role</label>
-                        <select name="role" id="editRole" class="form-control form-control-sm form-select" required>
-                            <option value="admin">Admin</option>
-                            <option value="Super Admin">Global Admin</option>
-                        </select>
-                    </div>
-                    <div class="form-check form-check-flat form-check-primary" id="banCheckboxDiv">
-                        <label class="form-check-label" for="banCheckbox">
-                            <input type="checkbox" class="form-check-input" id="banCheckbox" name="ban"> Ban User
-                            <i class="input-helper"></i>
-                        </label>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-
-
-
-
-<div class="modal fade" id="viewUserModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">View User Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="text-center mb-3">
-                    <!-- Profile Image -->
-                    <img id="viewProfilePicture" src="{{ asset('assets/images/user-icon.png') }}" 
-                         alt="Profile Image" 
-                         class="img-thumbnail" 
-                         style="width: 100px; height: 100px;">
-                </div>
-                <table class="table table-bordered">
-                    <tr>
-                        <th>First Name</th>
-                        <td id="viewFirstName"></td>
-                    </tr>
-                    <tr>
-                        <th>Middle Name</th>
-                        <td id="viewMiddleName"></td>
-                    </tr>
-                    <tr>
-                        <th>Last Name</th>
-                        <td id="viewLastName"></td>
-                    </tr>                    
-                    <tr>
-                        <th>Email</th>
-                        <td id="viewEmail"></td>
-                    </tr>
-                    <tr>
-                        <th>Role</th>
-                        <td id="viewRole"></td>
-                    </tr>
-                    <tr>
-                        <th>Status</th>
-                        <td id="viewStatus"></td>
-                    </tr>
-                    <tr>
-                        <th>Phone Number</th>
-                        <td id="viewPhoneNumber"></td>
-                    </tr>
-                    <tr>
-                        <th>Address</th>
-                        <td id="viewAddress"></td>
-                    </tr>
-
-                </table>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                @endif
             </div>
         </div>
-    </div>
-</div>
+
+        <!-- Create User Modal -->
+        <div class="modal fade" id="createUserModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="POST" action="{{ route('admin.users.store') }}">
+                        @csrf
+                        <div class="modal-header">
+                            <h5 class="modal-title">Create User</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-danger" role="alert">
+                                <i class="fa fa-exclamation-triangle"></i> The password will be the user's email address. The user should log in with this credential and change their password to gain access to the admin panel.
+                            </div>
+                            <div class="mb-3">
+                                <label>First Name</label>
+                                <input type="text" name="first_name" id="FirstName" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label>Middle Name</label>
+                                <input type="text" name="middle_name" id="MiddleName" class="form-control">
+                            </div>
+                            <div class="mb-3">
+                                <label>Last Name</label>
+                                <input type="text" name="last_name" id="LastName" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label>Email</label>
+                                <input type="email" name="email" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label>Role</label>
+                                <select name="role" class="form-control form-control-sm" required>
+                                    <option value="admin">Admin</option>
+                                    <option value="Super Admin">Global Admin</option>
+                                </select>
+                            </div>
+
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Create</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Update Date Modal -->
+        <div class="modal fade" id="updateDateModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form action="{{ route('admin.users.updateDate') }}" method="POST">
+                        @csrf
+                        <input id="user_id" type="hidden" value="0" name="user_id">
+
+                        <div class="modal-header">
+                            <h5 class="modal-title">Update Date</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label>Select Date</label>
+                                <input
+                                    type="date"
+                                    name="date"
+                                    class="form-control"
+                                    min="{{ date('Y-m-d') }}"
+                                    required>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                Cancel
+                            </button>
 
 
+                            <button type="submit"
+                                class="btn btn-primary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#updateDateModal"
+                                data-id="{{ $user->id }}">
+                                <i class="fa fa-calendar-plus-o"></i>Update
+                            </button>
+                        </div>
 
+                    </form>
+                </div>
+            </div>
+        </div>
 
+        <!-- Edit User Modal -->
+        <div class="modal fade" id="editUserModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="POST" id="editUserForm">
+                        @csrf
+                        @method('PUT')
+                        <div class="modal-header">
+                            <h5 class="modal-title">Edit User</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label>First Name</label>
+                                <input type="text" name="first_name" id="editFirstName" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label>Middle Name</label>
+                                <input type="text" name="middle_name" id="editMiddleName" class="form-control">
+                            </div>
+                            <div class="mb-3">
+                                <label>Last Name</label>
+                                <input type="text" name="last_name" id="editLastName" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label>Email</label>
+                                <input type="email" name="email" id="editEmail" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label>Role</label>
+                                <select name="role" id="editRole" class="form-control form-control-sm form-select" required>
+                                    <option value="admin">Admin</option>
+                                    <option value="Super Admin">Global Admin</option>
+                                </select>
+                            </div>
+                            <div class="form-check form-check-flat form-check-primary" id="banCheckboxDiv">
+                                <label class="form-check-label" for="banCheckbox">
+                                    <input type="checkbox" class="form-check-input" id="banCheckbox" name="ban"> Ban User
+                                    <i class="input-helper"></i>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Update</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
 
+        <div class="modal fade" id="viewUserModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">View User Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="text-center mb-3">
+                            <!-- Profile Image -->
+                            <img id="viewProfilePicture" src="{{ asset('assets/images/user-icon.png') }}"
+                                alt="Profile Image"
+                                class="img-thumbnail"
+                                style="width: 100px; height: 100px;">
+                        </div>
+                        <table class="table table-bordered">
+                            <tr>
+                                <th>First Name</th>
+                                <td id="viewFirstName"></td>
+                            </tr>
+                            <tr>
+                                <th>Middle Name</th>
+                                <td id="viewMiddleName"></td>
+                            </tr>
+                            <tr>
+                                <th>Last Name</th>
+                                <td id="viewLastName"></td>
+                            </tr>
+                            <tr>
+                                <th>Email</th>
+                                <td id="viewEmail"></td>
+                            </tr>
+                            <tr>
+                                <th>Role</th>
+                                <td id="viewRole"></td>
+                            </tr>
+                            <tr>
+                                <th>Status</th>
+                                <td id="viewStatus"></td>
+                            </tr>
+                            <tr>
+                                <th>Phone Number</th>
+                                <td id="viewPhoneNumber"></td>
+                            </tr>
+                            <tr>
+                                <th>Address</th>
+                                <td id="viewAddress"></td>
+                            </tr>
 
-   
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
     <!-- content-wrapper ends -->
     @include('partials.admin.footer')
-  </div>
-  <!-- main-panel ends -->
+</div>
+<!-- main-panel ends -->
 @endsection
-
-
-
- 

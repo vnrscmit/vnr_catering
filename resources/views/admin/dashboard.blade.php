@@ -41,6 +41,9 @@
 
     @include('partials.order-stats')
 
+    @if($allLocked)
+    <p style="color:red">Your start Date is not set please contact to your canteen incharge</p>
+    @else
     <div class="row">
       <div class="col-12 col-lg-6 mb-4">
         <div class="card lunch-card">
@@ -430,6 +433,7 @@
       </div>
       @endif
     </div>
+    @endif
 
 
   </div>
@@ -460,35 +464,12 @@
                     </thead>
 
                     <tbody>
+                      @foreach($todayMenu as $dailyMenudata)
                         <tr>
-                            <td>1</td>
-                            <td>Dal Fry</td>
+                            <td>{{ $loop->iteration }}</td>
+                            <td>{{ $dailyMenudata }}</td>
                         </tr>
-
-                        <tr>
-                            <td>2</td>
-                            <td>Jeera Rice</td>
-                        </tr>
-
-                        <tr>
-                            <td>3</td>
-                            <td>Mix Veg</td>
-                        </tr>
-
-                        <tr>
-                            <td>4</td>
-                            <td>Chapati</td>
-                        </tr>
-
-                        <tr>
-                            <td>5</td>
-                            <td>Salad</td>
-                        </tr>
-
-                        <tr>
-                            <td>6</td>
-                            <td>Sweet (Gulab Jamun)</td>
-                        </tr>
+                        @endforeach
                     </tbody>
                 </table>
 
@@ -509,36 +490,32 @@
 <!-- main-panel ends -->
 
 <script>
-  let remainingSeconds = {
-    {
-      (int)($remainingSeconds ?? 0)
+    let remainingSeconds = {{ (int)($remainingSeconds ?? 0) }};
+
+    function updateCountdown() {
+        const countdown = document.getElementById('countdown');
+
+        if (!countdown) return;
+
+        if (remainingSeconds <= 0) {
+            countdown.textContent = "00:00:00";
+            clearInterval(timer);
+            return;
+        }
+
+        const hours = Math.floor(remainingSeconds / 3600);
+        const minutes = Math.floor((remainingSeconds % 3600) / 60);
+        const seconds = remainingSeconds % 60;
+
+        countdown.textContent =
+            String(hours).padStart(2, '0') + ':' +
+            String(minutes).padStart(2, '0') + ':' +
+            String(seconds).padStart(2, '0');
+
+        remainingSeconds--;
     }
-  };
 
-  function updateCountdown() {
-    const countdown = document.getElementById('countdown');
-
-    if (!countdown) return;
-
-    if (remainingSeconds <= 0) {
-      countdown.textContent = "00:00:00";
-      clearInterval(timer);
-      return;
-    }
-
-    const hours = Math.floor(remainingSeconds / 3600);
-    const minutes = Math.floor((remainingSeconds % 3600) / 60);
-    const seconds = remainingSeconds % 60;
-
-    countdown.textContent =
-      String(hours).padStart(2, '0') + ':' +
-      String(minutes).padStart(2, '0') + ':' +
-      String(seconds).padStart(2, '0');
-
-    remainingSeconds--;
-  }
-
-  updateCountdown();
-  const timer = setInterval(updateCountdown, 1000);
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 1000);
 </script>
 @endsection
