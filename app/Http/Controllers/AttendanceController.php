@@ -55,16 +55,7 @@ class AttendanceController extends Controller
 
     public function guestCreate($id)
     {
-        $dayStatus = DayStatus::where('id', $id)
-            ->where('open_flag', 1)
-            ->where('lock_flag', 0)
-            ->where('sunday_flag', 0)
-            ->where('holiday_flag', 0)
-            ->first();
 
-        if (!$dayStatus) {
-            return back()->with('error', 'Selected day not found.');
-        }
         $userDataCheck = Auth::user();
 
         if (!$userDataCheck) {
@@ -75,8 +66,20 @@ class AttendanceController extends Controller
             return back()->with('error', 'You are not allowed to schedule guests.');
         }
 
+        $dayStatus = DayStatus::where('id', $id)
+            ->where('location_id', $userDataCheck->location_id)
+            ->where('open_flag', 1)
+            ->where('lock_flag', 0)
+            ->where('sunday_flag', 0)
+            ->where('holiday_flag', 0)
+            ->first();
+
+        if (!$dayStatus) {
+            return back()->with('error', 'Selected day not found.');
+        }
+
         // Check calendar id and date match
-        $calendar = DayStatus::where('id', $id)
+        $calendar = DayStatus::where('id', $id)->where('location_id', $userDataCheck->location_id)
             ->first();
 
         if (!$calendar) {
@@ -134,7 +137,7 @@ class AttendanceController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
-        $calendar = DayStatus::where('id', $request->calendar_id)->where('open_flag', 1)->first();
+        $calendar = DayStatus::where('id', $request->calendar_id)->where('location_id', $request->location_id)->where('open_flag', 1)->first();
         if (!$calendar) {
             return back()->with('error', 'Day status not found for the selected date.')->withInput();
         }
@@ -194,7 +197,10 @@ class AttendanceController extends Controller
 
     public function guestList($id)
     {
+        $user = Auth::user();
+
         $dayStatus = DayStatus::where('id', $id)
+            ->where('location_id', $user->location_id)
             ->where('open_flag', 1)
             ->where('lock_flag', 0)
             ->where('sunday_flag', 0)
@@ -204,8 +210,6 @@ class AttendanceController extends Controller
         if (!$dayStatus) {
             return back()->with('error', 'Selected day not found.');
         }
-
-        $user = Auth::user();
 
         $query = Guest::with([
             'location:id,name',
@@ -365,16 +369,6 @@ class AttendanceController extends Controller
 
     public function markAttendance($id)
     {
-        $dayStatus = DayStatus::where('id', $id)
-            ->where('open_flag', 1)
-            ->where('lock_flag', 0)
-            ->where('sunday_flag', 0)
-            ->where('holiday_flag', 0)
-            ->first();
-
-        if (!$dayStatus) {
-            return back()->with('error', 'Selected day not found.');
-        }
 
         $UserData = Auth::user();
 
@@ -386,8 +380,20 @@ class AttendanceController extends Controller
             ], 404);
         }
 
+        $dayStatus = DayStatus::where('id', $id)
+            ->where('location_id', $UserData->location_id)
+            ->where('open_flag', 1)
+            ->where('lock_flag', 0)
+            ->where('sunday_flag', 0)
+            ->where('holiday_flag', 0)
+            ->first();
+
+        if (!$dayStatus) {
+            return back()->with('error', 'Selected day not found.');
+        }
+
         // Check calendar id and date match
-        $calendar = DayStatus::where('id', $id)
+        $calendar = DayStatus::where('id', $id)->where('location_id', $UserData->location_id)
             ->first();
 
         if (!$calendar) {
@@ -447,16 +453,7 @@ class AttendanceController extends Controller
     }
     public function markGuestAttendance($id)
     {
-        $dayStatus = DayStatus::where('id', $id)
-            ->where('open_flag', 1)
-            ->where('lock_flag', 0)
-            ->where('sunday_flag', 0)
-            ->where('holiday_flag', 0)
-            ->first();
 
-        if (!$dayStatus) {
-            return back()->with('error', 'Selected day not found.');
-        }
         $userDataCheck = Auth::user();
 
         if (!$userDataCheck) {
@@ -467,9 +464,22 @@ class AttendanceController extends Controller
             return back()->with('error', 'You are not allowed to schedule guests.');
         }
 
+        $dayStatus = DayStatus::where('id', $id)
+            ->where('location_id', $userDataCheck->location_id)
+            ->where('open_flag', 1)
+            ->where('lock_flag', 0)
+            ->where('sunday_flag', 0)
+            ->where('holiday_flag', 0)
+            ->first();
+
+        if (!$dayStatus) {
+            return back()->with('error', 'Selected day not found.');
+        }
+
+
 
         // Check calendar id and date match
-        $calendar = DayStatus::where('id', $id)
+        $calendar = DayStatus::where('id', $id)->where('location_id', $userDataCheck->location_id)
             ->first();
 
         if (!$calendar) {
@@ -514,12 +524,6 @@ class AttendanceController extends Controller
             'remarks' => 'nullable|string|max:500',
         ]);
 
-        $dayStatus = DayStatus::where('date', $request->attendance_date)->where('open_flag', 1)->first();
-
-        if (!$dayStatus) {
-            return back()->with('error', 'Day status not found for the selected date.');
-        }
-
         $checkUser = User::find($request->user_id);
 
         if (!$checkUser) {
@@ -533,6 +537,14 @@ class AttendanceController extends Controller
         if (is_null($checkUser->start_calendar_id)) {
             return back()->with('error', 'Start date is not set for this user.');
         }
+
+        $dayStatus = DayStatus::where('date', $request->attendance_date)->where('location_id', $checkUser->location_id)->where('open_flag', 1)->first();
+
+        if (!$dayStatus) {
+            return back()->with('error', 'Day status not found for the selected date.');
+        }
+
+
 
         $companyParameter = CompanyParameter::where('location_id', $checkUser->location_id)->where('status', 1)->first();
 

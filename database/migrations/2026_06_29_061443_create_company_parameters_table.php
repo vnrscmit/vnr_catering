@@ -17,11 +17,13 @@ return new class extends Migration
             $table->unsignedBigInteger('location_id');
 
             $table->time('attendance_out_time');
+            $table->time('canteen_start_time');
+            $table->time('canteen_end_time');
             $table->time('lunch_out_time');
 
             $table->unsignedInteger('max_day_show')->default(5);
             $table->decimal('member_rate', 10, 2)->default(0.00);
-             $table->decimal('non_member_rate', 10, 2)->default(0.00);
+            $table->decimal('non_member_rate', 10, 2)->default(0.00);
             $table->decimal('guest_rate', 10, 2)->default(0.00);
 
             $table->boolean('status')->default(1);

@@ -100,6 +100,20 @@
                 <span class="menu-title">Canteen Setting</span>
               </a>
             </li>
+
+            <li class="nav-item {{ request()->route()->named('rate-masters.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('rate-masters.index') }}">
+                <i class="fa fa-money-bill-wave menu-icon"></i>
+                <span class="menu-title">Rate Master</span>
+              </a>
+            </li>
+
+            <li class="nav-item {{ request()->route()->named('holiday-settings.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('holiday-settings.index') }}">
+                <i class="fa fa-calendar-alt menu-icon"></i>
+                <span class="menu-title">Holiday Setting</span>
+              </a>
+            </li>
             @endif
 
             @if ($loggedInUser->role == "Canteen Incharge")

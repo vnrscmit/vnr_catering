@@ -48,7 +48,7 @@ class AdminController extends Controller
 
         $formattedSalesData = [];
         $today = Carbon::today()->format('Y-m-d');
-        $dayStatus = DayStatus::where('date', $today)->first();
+        $dayStatus = DayStatus::where('date', $today)->where('location_id', $locationId)->first();
 
         $companyParameter = CompanyParameter::where('location_id', $locationId)->where('status', 1)->first();
 
@@ -96,6 +96,7 @@ class AdminController extends Controller
             ->where('day_statuses.sunday_flag', 0)
             ->where('day_statuses.holiday_flag', 0)
             ->where('day_statuses.open_flag', 1)
+            ->where('day_statuses.location_id', $locationId)
             ->orderBy('day_statuses.date', 'asc')
             ->limit($companyParameter->max_day_show)
             ->get();
@@ -114,6 +115,7 @@ class AdminController extends Controller
             ->where('day_statuses.sunday_flag', 0)
             ->where('day_statuses.holiday_flag', 0)
             ->where('day_statuses.open_flag', 1)
+            ->where('day_statuses.location_id', $locationId)
             ->orderBy('day_statuses.date', 'asc')
             ->limit($companyParameter->max_day_show)
             ->first();
@@ -169,7 +171,7 @@ class AdminController extends Controller
                 $overrideLock = false;
             }
         }
- 
+
         return view('admin.dashboard', compact(
             'formattedSalesData',
             'todayMenu',

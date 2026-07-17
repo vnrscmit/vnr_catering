@@ -31,7 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //Canteen Incharge 
     Route::get('/manage-attendance', [ApiAttendanceController::class, 'manageAttendance']);
-    Route::get('/manage-override-attendance', [ApiAttendanceController::class, 'overrideAttendance']);
+    Route::post('/manage-override-attendance', [ApiAttendanceController::class, 'overrideAttendance']);
 });
 
 Route::post('/generate-year', [ApiAttendanceController::class, 'generateYear']);

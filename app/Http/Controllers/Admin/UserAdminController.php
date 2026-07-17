@@ -248,7 +248,7 @@ class UserAdminController extends Controller
 
             $user = User::findOrFail($request->user_id);
 
-            $dayStatus = DayStatus::where('date', $request->date)->first();
+            $dayStatus = DayStatus::where('date', $request->date)->where('location_id', $user->location_id)->first();
 
             if (!$dayStatus) {
                 return redirect()->back()->with('error', 'Selected date is not available.');
@@ -257,11 +257,11 @@ class UserAdminController extends Controller
             $user->start_calendar_id = $dayStatus->id;
             $user->save();
 
-            $yearDate =  DayStatus::where('id', '>=', $dayStatus->id)->where('open_flag', 1)->get();
+            $yearDate =  DayStatus::where('id', '>=', $dayStatus->id)->where('open_flag', 1)->where('location_id', $user->location_id)->get();
             if (in_array($user->role, ['Non Member'])) {
                 if ($user->role === 'Non Member') {
 
-                    $dayStatusesOld = DayStatus::where('id', '<', $user->start_calendar_id)
+                    $dayStatusesOld = DayStatus::where('id', '<', $user->start_calendar_id)->where('location_id', $user->location_id)
                         ->get();
 
                     foreach ($dayStatusesOld as $dayStatusesOldData) {
@@ -283,7 +283,7 @@ class UserAdminController extends Controller
                     }
 
 
-                    $dayStatuses = DayStatus::where('id', '>=', $user->start_calendar_id)
+                    $dayStatuses = DayStatus::where('id', '>=', $user->start_calendar_id)->where('location_id', $user->location_id)
                         ->get();
 
                     foreach ($dayStatuses as $dayStatus) {
@@ -305,7 +305,7 @@ class UserAdminController extends Controller
                 }
             } else {
 
-                $dayStatusesOld = DayStatus::where('id', '<', $user->start_calendar_id)
+                $dayStatusesOld = DayStatus::where('id', '<', $user->start_calendar_id)->where('location_id', $user->location_id)
                     ->get();
 
                 foreach ($dayStatusesOld as $dayStatusesOldData) {
@@ -327,7 +327,7 @@ class UserAdminController extends Controller
                 }
 
 
-                $dayStatuses = DayStatus::where('id', '>=', $user->start_calendar_id)
+                $dayStatuses = DayStatus::where('id', '>=', $user->start_calendar_id)->where('location_id', $user->location_id)
                     ->where(function ($query) {
                         $query->where('open_flag', 0)
                             ->orWhere('sunday_flag', 1)
@@ -362,7 +362,7 @@ class UserAdminController extends Controller
                 $locationIds = MultipleLocation::where('user_id', $user->id)
                     ->pluck('location_id');
 
-                $calendarIds = DayStatus::pluck('id');
+                $calendarIds = DayStatus::where('location_id', $user->location_id)->pluck('id');
 
                 foreach ($locationIds as $locationId) {
 

@@ -148,7 +148,6 @@
 
                             <tr>
                                 <th>Item Name</th>
-                                <th>Special Item</th>
                                 <th width="150">Action</th>
                             </tr>
 
@@ -164,14 +163,7 @@
                                         placeholder="Enter Item Name"
                                         required>
                                 </td>
-                                <td>
-                                 
-                                  <input type="checkbox"
-       name="special_items[]"
-       class="form-check-input"
-       style="width:22px !important; height:22px !important; transform:scale(1.3) !important; cursor:pointer !important;">
-                                    <!-- No delete button in first row -->
-                                </td>
+                              
                                 <td>
                                        <button type="button"
                                         class="btn btn-info btn-sm addRowBtn">

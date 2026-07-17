@@ -36,7 +36,7 @@
                 success: function(response) {
 
                     if (response.data) {
-                      
+
 
                         $('#member_rate').val(response.data.member_rate);
                         $('#non_member_rate').val(response.data.non_member_rate);
@@ -77,7 +77,7 @@
             </div>
 
             <div class="card-body">
-                        @include('partials.message-bag')
+                @include('partials.message-bag')
 
                 <form action="{{ route('company-parameters.store') }}" method="POST">
                     @csrf
@@ -133,7 +133,7 @@
                             <input type="number"
                                 step="0.01"
                                 min="1"
-                                id = "non_member_rate"
+                                id="non_member_rate"
                                 name="non_member_rate"
                                 class="form-control"
                                 value="{{ old('non_member_rate') }}"
@@ -185,6 +185,27 @@
                         </div>
 
                         <div class="col-md-6 mb-3">
+                            <label>Canteen Start Time <span class="text-danger">*</span></label>
+
+                            <input type="time"
+                                name="canteen_start_time"
+                                class="form-control"
+                                value="{{ old('canteen_start_time') }}"
+                                required>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label>Canteen End Time <span class="text-danger">*</span></label>
+
+                            <input type="time"
+                                name="canteen_end_time"
+                                class="form-control"
+                                value="{{ old('canteen_end_time') }}"
+                                required>
+                        </div>
+
+
+                        <div class="col-md-6 mb-3">
 
                             <label class="form-label">
                                 Max Day Show <span class="text-danger">*</span>
@@ -201,6 +222,11 @@
 
                         </div>
                     </div>
+
+
+
+
+
 
                     <div class="d-flex justify-content-end">
                         <div class="mb-3">

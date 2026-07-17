@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('day_statuses', function (Blueprint $table) {
             $table->id();
-
+            $table->unsignedBigInteger('location_id');
             $table->date('date');
             $table->string('day_name', 20);
             $table->string('month', 20);

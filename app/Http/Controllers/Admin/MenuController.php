@@ -209,7 +209,7 @@ class MenuController extends Controller
                 ->withInput();
         }
 
-        $dayStatus = DayStatus::where('date', $request->menu_date)->first();
+        $dayStatus = DayStatus::where('date', $request->menu_date)->where('location_id', $request->location_id)->first();
 
         if (!$dayStatus) {
             return back()->withErrors([
@@ -288,7 +288,6 @@ class MenuController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'location_id' => 'required|exists:locations,id',
-
             'menu_date' => [
                 'required',
                 'date',
@@ -312,7 +311,7 @@ class MenuController extends Controller
                 ->withInput();
         }
 
-        $dayStatus = DayStatus::where('date', $request->menu_date)->first();
+        $dayStatus = DayStatus::where('date', $request->menu_date)->where('location_id', $request->location_id)->first();
 
         if (!$dayStatus) {
             return back()->withErrors([

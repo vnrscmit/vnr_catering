@@ -81,6 +81,7 @@ a:focus {
 }
 img {
 	max-width: 100%;
+	width: 155px;
 }
 ul,li,ol {
 	margin: 0;
@@ -7228,6 +7229,9 @@ body.switch-open {
 	-webkit-transform: translateX(-270px);
 	transform: translateX(-270px);
 }
+
+
+
 
 
 }
