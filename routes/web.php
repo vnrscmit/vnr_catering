@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\HolidayController;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Middleware\CheckRoleAdmin;
@@ -283,6 +284,29 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
         Route::post('locations/link/store', [LocationController::class, 'storeLink'])
             ->name('locations.link.store');
 
+        // Rate Master
+        Route::get('rate-masters', [CompanyParameterController::class, 'rateMasterIndex'])->name('rate-masters.index');
+
+        Route::get('rate-masters/create', [CompanyParameterController::class, 'rateMasterCreate'])->name('rate-masters.create');
+
+        Route::post('rate-masters', [CompanyParameterController::class, 'rateMasterStore'])->name('rate-masters.store');
+
+        Route::get('rate-masters/{id}/edit', [CompanyParameterController::class, 'rateMasterEdit'])->name('rate-masters.edit');
+
+        Route::put('rate-masters/{id}', [CompanyParameterController::class, 'rateMasterUpdate'])->name('rate-masters.update');
+
+        Route::delete('rate-masters/{id}', [CompanyParameterController::class, 'rateMasterDestroy'])->name('rate-masters.destroy');
+
+        Route::post('rate-masters/{id}/status', [CompanyParameterController::class, 'rateMasterStatus'])->name('rate-masters.status');
+
+        Route::get('/rate-masters/{rateMaster}/feast_day', [CompanyParameterController::class, 'feastDay'])
+            ->name('rate-masters.feast_day');
+
+        Route::post('/feast-day-rates/store', [CompanyParameterController::class, 'feastDayStore'])
+            ->name('feast-day-rates.store');
+
+        Route::resource('holiday-settings', HolidayController::class);
+
         //Admin Settings Menu
         Route::get('menu', [MenuController::class, 'index'])->name('admin.menus.index');
         Route::get('menu/create', [MenuController::class, 'create'])->name('admin.menus.create');
@@ -316,7 +340,6 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
 
         Route::get('company-parameters/get-by-location/{location}', [CompanyParameterController::class, 'getByLocation'])
             ->name('company-parameters.getByLocation');
-    
     });
 
     // Attendance routes

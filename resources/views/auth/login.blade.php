@@ -97,7 +97,45 @@
 
         var otpModal = new bootstrap.Modal(document.getElementById('verifyOtpModal'));
         otpModal.show();
+        startOtpTimer();
     });
+
+    let duration = 120;
+    let timerInterval;
+
+    function startOtpTimer() {
+
+        clearInterval(timerInterval);
+
+        duration = 120;
+
+        timerInterval = setInterval(function() {
+
+            let minutes = Math.floor(duration / 60);
+            let seconds = duration % 60;
+
+            document.getElementById('otpTimer').innerHTML =
+                String(minutes).padStart(2, '0') + ":" +
+                String(seconds).padStart(2, '0');
+
+            if (duration <= 0) {
+
+                clearInterval(timerInterval);
+
+                document.getElementById('otpTimer').style.display = "none";
+
+                document.getElementById('otpExpired').style.display = "block";
+
+                document.querySelector("#verifyOtpModal button[type='submit']")
+                    .disabled = true;
+
+            }
+
+            duration--;
+
+        }, 1000);
+
+    }
 </script>
 @endif
 
@@ -370,6 +408,18 @@
                             placeholder="Enter 6-digit OTP"
                             maxlength="6"
                             required>
+                    </div>
+
+                    <div class="mb-3 text-center">
+                        <span id="otpTimer" class="fw-bold text-success">
+                            02:00
+                        </span>
+
+                        <div id="otpExpired"
+                            class="text-danger fw-bold mt-2"
+                            style="display:none;">
+                            OTP has expired.
+                        </div>
                     </div>
 
                 </div>

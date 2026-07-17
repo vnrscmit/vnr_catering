@@ -82,6 +82,7 @@ class ApiMenuController extends Controller
             })
             ->where('day_statuses.open_flag', 1)
             ->whereDate('day_statuses.date', '>=', $today)
+            ->where('day_statuses.location_id', $locationId)
             ->orderBy('day_statuses.date', 'asc')
             ->limit(7)
             ->get();
@@ -114,7 +115,9 @@ class ApiMenuController extends Controller
         $locationId = $request->location_id;
         $calendarId = $request->calendar_id;
 
-        $dayStatus = DayStatus::find($calendarId);
+        $dayStatus = DayStatus::where('location_id', $locationId)
+            ->where('id', $calendarId)
+            ->first();
 
         $dailyMenu = DailyMenu::with('items')
             ->where('calendar_id', $calendarId)
@@ -164,102 +167,101 @@ class ApiMenuController extends Controller
     }
 
 
-   public function storeOrUpdateMenu(Request $request)
-{
-    // Handle JSON string menus
-    if (is_string($request->menus)) {
-        $request->merge([
-            'menus' => json_decode($request->menus, true)
+    public function storeOrUpdateMenu(Request $request)
+    {
+        // Handle JSON string menus
+        if (is_string($request->menus)) {
+            $request->merge([
+                'menus' => json_decode($request->menus, true)
+            ]);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'location_id' => 'required|exists:locations,id',
+            'calendar_id' => 'required|exists:day_statuses,id',
+            'status'      => 'required|in:0,1',
+            'menus'       => 'required|array|min:1',
+            'menus.*.menu_id'     => 'required|exists:menus,id',
+            'menus.*.sub_menu_id' => 'required|exists:sub_menus,id',
+            'remarks' => 'nullable|string|max:500',
         ]);
-    }
 
-    $validator = Validator::make($request->all(), [
-        'location_id' => 'required|exists:locations,id',
-        'calendar_id' => 'required|exists:day_statuses,id',
-        'status'      => 'required|in:0,1',
-        'menus'       => 'required|array|min:1',
-        'menus.*.menu_id'     => 'required|exists:menus,id',
-        'menus.*.sub_menu_id' => 'required|exists:sub_menus,id',
-        'remarks' => 'nullable|string|max:500',
-    ]);
-
-    if ($validator->fails()) {
-        return response()->json([
-            'status'  => false,
-            'message' => 'Validation failed.',
-            'errors'  => $validator->errors(),
-        ], 422);
-    }
-
-    DB::beginTransaction();
-
-    try {
-
-        $dayStatus = DayStatus::find($request->calendar_id);
-
-        if (!$dayStatus) {
+        if ($validator->fails()) {
             return response()->json([
-                'status' => false,
-                'message' => 'Invalid calendar selected.',
-            ], 404);
+                'status'  => false,
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ], 422);
         }
 
-        // Create or Update Daily Menu
-        $dailyMenu = DailyMenu::updateOrCreate(
-            [
-                'calendar_id' => $request->calendar_id,
-                'location_id' => $request->location_id,
-            ],
-            [
-                'menu_date'  => $dayStatus->date,
-                'remarks'    => $request->remarks,
-                'status'     => $request->status,
-                'created_by' => auth()->id(),
-            ]
-        );
+        DB::beginTransaction();
 
-        // Delete old menu items
-        DailyMenuItem::where('daily_menu_id', $dailyMenu->id)->delete();
+        try {
 
-        // Prepare bulk insert data
-        $menuItems = [];
+            $dayStatus = DayStatus::where('location_id', $request->location_id)
+                ->where('id', $request->calendar_id)
+                ->first();
 
-        foreach ($request->menus as $menu) {
+            if (!$dayStatus) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Invalid calendar selected.',
+                ], 404);
+            }
 
-            $menuItems[] = [
-                'daily_menu_id' => $dailyMenu->id,
-                'menu_id'       => $menu['menu_id'],
-                'submenu_id'    => $menu['sub_menu_id'],
-                'quantity'      => 1,
-                'created_at'    => now(),
-                'updated_at'    => now(),
-            ];
+            // Create or Update Daily Menu
+            $dailyMenu = DailyMenu::updateOrCreate(
+                [
+                    'calendar_id' => $request->calendar_id,
+                    'location_id' => $request->location_id,
+                ],
+                [
+                    'menu_date'  => $dayStatus->date,
+                    'remarks'    => $request->remarks,
+                    'status'     => $request->status,
+                    'created_by' => auth()->id(),
+                ]
+            );
+
+            // Delete old menu items
+            DailyMenuItem::where('daily_menu_id', $dailyMenu->id)->delete();
+
+            // Prepare bulk insert data
+            $menuItems = [];
+
+            foreach ($request->menus as $menu) {
+
+                $menuItems[] = [
+                    'daily_menu_id' => $dailyMenu->id,
+                    'menu_id'       => $menu['menu_id'],
+                    'submenu_id'    => $menu['sub_menu_id'],
+                    'quantity'      => 1,
+                    'created_at'    => now(),
+                    'updated_at'    => now(),
+                ];
+            }
+
+            // Insert menu items
+            if (!empty($menuItems)) {
+                DailyMenuItem::insert($menuItems);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Daily menu saved successfully.',
+                'data'    => $dailyMenu,
+            ]);
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            return response()->json([
+                'status'  => false,
+                'message' => 'Something went wrong.',
+                'error'   => $e->getMessage(),
+            ], 500);
         }
-
-        // Insert menu items
-        if (!empty($menuItems)) {
-            DailyMenuItem::insert($menuItems);
-        }
-
-        DB::commit();
-
-        return response()->json([
-            'status'  => true,
-            'message' => 'Daily menu saved successfully.',
-            'data'    => $dailyMenu,
-        ]);
-
-    } catch (\Exception $e) {
-
-        DB::rollBack();
-
-        return response()->json([
-            'status'  => false,
-            'message' => 'Something went wrong.',
-            'error'   => $e->getMessage(),
-        ], 500);
     }
-}
-
-
 }

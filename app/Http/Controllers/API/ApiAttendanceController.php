@@ -16,10 +16,12 @@ use App\Models\AttendanceAbsent;
 use App\Models\AttendanceLog;
 use App\Models\CompanyParameter;
 use App\Models\Department;
+use App\Models\Location;
 use App\Models\MultipleLocation;
 
 class ApiAttendanceController extends Controller
 {
+
     public function generateYear(Request $request)
     {
         $request->validate([
@@ -28,44 +30,50 @@ class ApiAttendanceController extends Controller
 
         $year = $request->year;
 
-        if ($year) {
-            $checkExist = DayStatus::where('year', $year)->first();
-            if ($checkExist) {
-                return response()->json([
-                    'status'  => false,
-                    'message' => "Calendar for {$year} already generated."
-                ]);
-            }
+        // Check if calendar is already generated for any location
+        $checkExist = DayStatus::where('year', $year)->exists();
+
+        if ($checkExist) {
+            return response()->json([
+                'status'  => false,
+                'message' => "Calendar for {$year} already generated."
+            ]);
         }
 
+        $locations = Location::where('status', 1)->get();
+
         $startDate = Carbon::create($year, 1, 1);
-        $endDate = Carbon::create($year, 12, 31);
+        $endDate   = Carbon::create($year, 12, 31);
 
         $period = CarbonPeriod::create($startDate, $endDate);
 
         foreach ($period as $date) {
 
-            DayStatus::firstOrCreate(
-                [
-                    'date' => $date->format('Y-m-d')
-                ],
-                [
-                    'day_name'      => $date->format('l'),   // Monday
-                    'month'         => $date->format('F'),   // January
-                    'day'           => $date->day,
-                    'year'          => $date->year,
-                    'holiday_flag'  => 0,
-                    'sunday_flag'   => $date->isSunday() ? 1 : 0,
-                    'open_flag'     => 1,
-                    'closed_flag'   => 0,
-                    'status'        => 1,
-                ]
-            );
+            foreach ($locations as $location) {
+
+                DayStatus::firstOrCreate(
+                    [
+                        'date'        => $date->format('Y-m-d'),
+                        'location_id' => $location->id,
+                    ],
+                    [
+                        'day_name'      => $date->format('l'),
+                        'month'         => $date->format('F'),
+                        'day'           => $date->day,
+                        'year'          => $date->year,
+                        'holiday_flag'  => 0,
+                        'sunday_flag'   => $date->isSunday() ? 1 : 0,
+                        'open_flag'     => 1,
+                        'closed_flag'   => 0,
+                        'status'        => 1,
+                    ]
+                );
+            }
         }
 
         return response()->json([
             'status'  => true,
-            'message' => "Calendar for {$year} generated successfully."
+            'message' => "Calendar for {$year} generated successfully for all locations."
         ]);
     }
 
@@ -160,7 +168,7 @@ class ApiAttendanceController extends Controller
         }
         $date = Carbon::parse($request->date)->format('Y-m-d');
         $today = Carbon::today()->format('Y-m-d');
-        $calendarId = DayStatus::where('date', $date)->where('open_flag', 1)->value('id');
+        $calendarId = DayStatus::where('date', $date)->where('location_id', $request->location_id)->where('open_flag', 1)->value('id');
         if ($calendarId) {
         } else {
             return response()->json([
@@ -240,7 +248,7 @@ class ApiAttendanceController extends Controller
         $startDate = Carbon::now()->startOfMonth()->toDateString();
         $endDate   = Carbon::now()->endOfMonth()->toDateString();
 
-        $dayStatusId = DayStatus::whereBetween('date', [$startDate, $endDate])
+        $dayStatusId = DayStatus::whereBetween('date', [$startDate, $endDate])->where('location_id', $request->location_id)
             ->pluck('id');
 
         $guestList = Guest::with([
@@ -296,6 +304,7 @@ class ApiAttendanceController extends Controller
 
         // Check calendar id and date match
         $calendar = DayStatus::where('id', $request->calendar_id)
+            ->where('location_id', $request->location_id)
             ->whereDate('date', $request->date)
             ->first();
 
@@ -382,7 +391,7 @@ class ApiAttendanceController extends Controller
 
         $today = Carbon::today()->format('Y-m-d');
 
-        $dayStatus = DayStatus::where('date', $today)->first();
+        $dayStatus = DayStatus::where('date', $today)->where('location_id', $request->location_id)->first();
 
         if (!$dayStatus) {
             return response()->json([
@@ -391,33 +400,43 @@ class ApiAttendanceController extends Controller
             ], 404);
         }
 
-        $users = User::where('location_id', $authUser->location_id)
-            ->join('departments', 'user.department_id', '=', 'departments.id')
-            ->whereNotNull('start_calendar_id')
-            ->where('start_calendar_id', '<=', $dayStatus->id)
+        $users = User::where('users.location_id', $locationId)
+            ->join('departments', 'users.department_id', '=', 'departments.id')
+            ->whereNotNull('users.start_calendar_id')
+            ->where('users.start_calendar_id', '<=', $dayStatus->id)
             ->leftJoin('attendance_absents', function ($join) use ($dayStatus, $locationId) {
                 $join->on('users.id', '=', 'attendance_absents.user_id')
-                    ->where('attendance_absents.location_id',  $locationId)
+                    ->where('attendance_absents.location_id', $locationId)
                     ->where('attendance_absents.calendar_id', $dayStatus->id);
             })
             ->select(
                 'users.id',
                 'users.first_name',
                 'departments.name as department_name',
-                DB::raw('COALESCE(attendance_absents.absent_flag,0) as absent_flag'),
+                DB::raw('COALESCE(attendance_absents.absent_flag, 0) as absent_flag'),
                 DB::raw("
-                CASE
-                    WHEN COALESCE(attendance_absents.absent_flag,0) = 1
-                    THEN 'Absent'
-                    ELSE 'Present'
-                END as attendance_status
-            ")
+            CASE
+                WHEN COALESCE(attendance_absents.absent_flag, 0) = 1
+                THEN 'Absent'
+                ELSE 'Present'
+            END as attendance_status
+        ")
             )
             ->orderBy('users.first_name')
             ->get();
 
+
         $presentCount = $users->where('absent_flag', 0)->count();
         $absentCount  = $users->where('absent_flag', 1)->count();
+
+        $calendarId = DayStatus::where('date', Carbon::today()->toDateString())->where('location_id', $request->location_id)->where('open_flag', 1)->value('id');
+
+        if (!$calendarId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Attendance is closed or today\'s calendar is not available.',
+            ], 404);
+        }
 
         return response()->json([
             'status' => true,
@@ -427,6 +446,7 @@ class ApiAttendanceController extends Controller
                     'total_users' => $users->count(),
                     'present_count' => $presentCount,
                     'absent_count' => $absentCount,
+                    'calendarId' => $calendarId
                 ],
                 'users' => $users
             ]
@@ -455,7 +475,7 @@ class ApiAttendanceController extends Controller
         try {
             $locationId = $request->location_id;
 
-            $dayStatus = DayStatus::where('date', $request->attendance_date)->where('open_flag', 1)->first();
+            $dayStatus = DayStatus::where('date', $request->attendance_date)->where('location_id', $locationId)->where('open_flag', 1)->first();
 
             if (!$dayStatus) {
                 return response()->json([
@@ -464,7 +484,7 @@ class ApiAttendanceController extends Controller
                 ], 404);
             }
 
-            if ($request->status == 1) {
+            if ($request->status = 1) {
                 $absentFlag = 0;
             } else {
                 $absentFlag = 1;
@@ -570,7 +590,7 @@ class ApiAttendanceController extends Controller
 
         $today = Carbon::today()->format('Y-m-d');
 
-        $dayStatus = DayStatus::where('date', $today)->first();
+        $dayStatus = DayStatus::where('date', $today)->where('location_id', $locationId)->first();
 
         if (!$dayStatus) {
             return response()->json([
@@ -608,7 +628,7 @@ class ApiAttendanceController extends Controller
         ])
             ->where('calendar_id', $dayStatus->id)
             ->where('location_id', $locationId)
-            ->whereIn('attend_user_id', $allLinkedUserIds)
+            // ->whereIn('attend_user_id', $allLinkedUserIds)
             ->latest()
             ->get()
             ->map(function ($guest) {

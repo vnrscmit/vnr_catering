@@ -17,12 +17,16 @@ class CompanyParameter extends Model
         'guest_rate',
         'active_till_date',
         'active_till_calendar_id',
-        'inactive_user_id'
+        'inactive_user_id',
+        'canteen_start_time',
+        'canteen_end_time',
     ];
 
     protected $casts = [
         'attendance_out_time' => 'datetime:H:i:s',
         'lunch_out_time'      => 'datetime:H:i:s',
+        'canteen_start_time' => 'datetime:H:i:s',
+        'canteen_end_time'      => 'datetime:H:i:s',
         'max_day_show'        => 'integer',
         'status'              => 'boolean',
         'member_rate'         => 'decimal:2',
