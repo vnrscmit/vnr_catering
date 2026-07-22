@@ -149,11 +149,22 @@ class ApiDashboardController extends Controller
             ->where('day_statuses.location_id', $locationId)
             ->where('day_statuses.open_flag', 1)->count();
 
+        $summaryCurrentMonth->totalDays = $monthDayCount;
         $presentDays = ($monthDayCount - $summaryCurrentMonth->absent_days);
         $summaryCurrentMonth->presentDays = $presentDays;
+        $summaryCurrentMonth->totalPercentage = 100;
 
+        if ($monthDayCount > 0) {
+            $summaryCurrentMonth->presentPercentage = number_format(($presentDays / $monthDayCount) * 100, 2);
+            $summaryCurrentMonth->absentPercentage  = number_format(($summaryCurrentMonth->absent_days / $monthDayCount) * 100, 2);
+        } else {
+            $summaryCurrentMonth->presentPercentage = 0;
+            $summaryCurrentMonth->absentPercentage  = 0;
+        }
 
         // Previous Month Summary Data
+
+
         $summaryMealCount = DayStatus::whereBetween('day_statuses.date', [
             $previousStart->format('Y-m-d'),
             $previousEnd->format('Y-m-d')
@@ -175,7 +186,7 @@ class ApiDashboardController extends Controller
             ->where('day_statuses.open_flag', 1)
             ->where('day_statuses.location_id', $locationId)
             ->selectRaw("
-            SUM(CASE WHEN attendance_absents.absent_flag = 1 THEN 1 ELSE 0 END) as absent_days,
+ COALESCE(SUM(CASE WHEN attendance_absents.absent_flag = 1 THEN 1 ELSE 0 END), 0) AS absent_days,
              COALESCE(SUM(guests.guest_count), 0) AS guest_count
         ")
             ->first();
@@ -191,57 +202,85 @@ class ApiDashboardController extends Controller
             ->where('day_statuses.location_id', $locationId)
             ->count();
 
-        $PreviousPresentDays = ($previousMonthDayCount - $summaryMealCount->absent_days);
+        if ($previousMonthDayCount > 0) {
+            $PreviousPresentDays = ($previousMonthDayCount - $summaryMealCount->absent_days);
 
-        if ($userData->role == 'Non Member') {
-            $summaryMealCount->your_meal_count  = $PreviousPresentDays;
-            $summaryMealCount->your_meal_rate   = $CompanyParameter->non_member_rate;
-            $summaryMealCount->guest_meal_count = $summaryMealCount->guest_count;
-            $summaryMealCount->guest_meal_rate  = $CompanyParameter->guest_rate;
+            if ($userData->role == 'Non Member') {
+                $summaryMealCount->your_meal_count  = $PreviousPresentDays;
+                $summaryMealCount->your_meal_rate   = $CompanyParameter->non_member_rate;
+                $summaryMealCount->guest_meal_count = $summaryMealCount->guest_count;
+                $summaryMealCount->guest_meal_rate  = $CompanyParameter->guest_rate;
 
-            // Total Amounts
-            $summaryMealCount->your_meal_amount =
-                $summaryMealCount->your_meal_count * $summaryMealCount->your_meal_rate;
+                // Total Amounts
+                $summaryMealCount->your_meal_amount =
+                    $summaryMealCount->your_meal_count * $summaryMealCount->your_meal_rate;
 
-            $summaryMealCount->guest_meal_amount =
-                $summaryMealCount->guest_meal_count * $summaryMealCount->guest_meal_rate;
+                $summaryMealCount->guest_meal_amount =
+                    $summaryMealCount->guest_meal_count * $summaryMealCount->guest_meal_rate;
 
-            // Grand Total
-            $summaryMealCount->total_amount =
-                $summaryMealCount->your_meal_amount + $summaryMealCount->guest_meal_amount;
-        } elseif ($userData->role == 'Canteen President') {
-            $summaryMealCount->your_meal_count  = $PreviousPresentDays;
-            $summaryMealCount->your_meal_rate   = $CompanyParameter->non_member_rate;
-            $summaryMealCount->guest_meal_count = $summaryMealCount->guest_count;
-            $summaryMealCount->guest_meal_rate  = $CompanyParameter->guest_rate;
+                // Grand Total
+                $summaryMealCount->total_amount =
+                    $summaryMealCount->your_meal_amount + $summaryMealCount->guest_meal_amount;
+            } elseif ($userData->role == 'Member') {
+                $summaryMealCount->your_meal_count  = $PreviousPresentDays;
+                $summaryMealCount->your_meal_rate   = $CompanyParameter->member_rate;
+                $summaryMealCount->guest_meal_count = $summaryMealCount->guest_count;
+                $summaryMealCount->guest_meal_rate  = $CompanyParameter->guest_rate;
 
-            // Total Amounts
-            $summaryMealCount->your_meal_amount =
-                $summaryMealCount->your_meal_count * $summaryMealCount->your_meal_rate;
+                // Total Amounts
+                $summaryMealCount->your_meal_amount =
+                    $summaryMealCount->your_meal_count * $summaryMealCount->your_meal_rate;
 
-            $summaryMealCount->guest_meal_amount =
-                $summaryMealCount->guest_meal_count * $summaryMealCount->guest_meal_rate;
+                $summaryMealCount->guest_meal_amount =
+                    $summaryMealCount->guest_meal_count * $summaryMealCount->guest_meal_rate;
 
-            // Grand Total
+                // Grand Total
+                $summaryMealCount->total_amount =
+                    $summaryMealCount->your_meal_amount + $summaryMealCount->guest_meal_amount;
+            } elseif ($userData->role == 'Canteen President') {
+                $summaryMealCount->your_meal_count  = $PreviousPresentDays;
+                $summaryMealCount->your_meal_rate   = $CompanyParameter->non_member_rate;
+                $summaryMealCount->guest_meal_count = $summaryMealCount->guest_count;
+                $summaryMealCount->guest_meal_rate  = $CompanyParameter->guest_rate;
+
+                // Total Amounts
+                $summaryMealCount->your_meal_amount =
+                    $summaryMealCount->your_meal_count * $summaryMealCount->your_meal_rate;
+
+                $summaryMealCount->guest_meal_amount =
+                    $summaryMealCount->guest_meal_count * $summaryMealCount->guest_meal_rate;
+
+                // Grand Total
+                $summaryMealCount->total_amount = 0;
+
+                $summaryMealCount->your_meal_count  = $PreviousPresentDays;
+                $summaryMealCount->your_meal_rate   = $CompanyParameter->member_rate;
+                $summaryMealCount->guest_meal_count = $summaryMealCount->guest_count;
+                $summaryMealCount->guest_meal_rate  = $CompanyParameter->guest_rate;
+
+                // Total Amounts
+                $summaryMealCount->your_meal_amount =
+                    $summaryMealCount->your_meal_count * $summaryMealCount->your_meal_rate;
+
+                $summaryMealCount->guest_meal_amount =
+                    $summaryMealCount->guest_meal_count * $summaryMealCount->guest_meal_rate;
+
+                // Grand Total
+                $summaryMealCount->total_amount =
+                    $summaryMealCount->your_meal_amount + $summaryMealCount->guest_meal_amount;
+            }
+        } else {
+
+            $summaryMealCount->your_meal_count  = 0;
+            $summaryMealCount->your_meal_rate   = 0;
+            $summaryMealCount->guest_meal_count = 0;
+            $summaryMealCount->guest_meal_rate  = 0;
+
+            $summaryMealCount->your_meal_amount = 0;
+            $summaryMealCount->guest_meal_amount = 0;
+
             $summaryMealCount->total_amount = 0;
-
-            $summaryMealCount->your_meal_count  = $PreviousPresentDays;
-            $summaryMealCount->your_meal_rate   = $CompanyParameter->member_rate;
-            $summaryMealCount->guest_meal_count = $summaryMealCount->guest_count;
-            $summaryMealCount->guest_meal_rate  = $CompanyParameter->guest_rate;
-
-            // Total Amounts
-            $summaryMealCount->your_meal_amount =
-                $summaryMealCount->your_meal_count * $summaryMealCount->your_meal_rate;
-
-            $summaryMealCount->guest_meal_amount =
-                $summaryMealCount->guest_meal_count * $summaryMealCount->guest_meal_rate;
-
-            // Grand Total
-            $summaryMealCount->total_amount =
-                $summaryMealCount->your_meal_amount + $summaryMealCount->guest_meal_amount;
         }
-
         //End of Previous Month Summary Data
 
         $personalguestCount = 0;

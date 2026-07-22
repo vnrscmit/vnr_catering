@@ -20,6 +20,8 @@ class CompanyParameter extends Model
         'inactive_user_id',
         'canteen_start_time',
         'canteen_end_time',
+        'security_deposit_applicable', 
+        'security_deposit_amount',      
     ];
 
     protected $casts = [

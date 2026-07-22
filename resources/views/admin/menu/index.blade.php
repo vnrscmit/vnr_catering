@@ -37,6 +37,104 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
 
 <script>
+    var table;
+
+    $(function() {
+
+        table = $('.data-table').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: "{{ route('admin.menus.index') }}",
+
+            columns: [{
+                    data: 'DT_RowIndex',
+                    name: 'DT_RowIndex',
+                    searchable: false,
+                    orderable: false
+                },
+
+                {
+                    data: 'location',
+                    name: 'location'
+                },
+
+                {
+                    data: 'name',
+                    name: 'name'
+                },
+
+                {
+                    data: 'submenus',
+                    name: 'submenus',
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'status',
+                    name: 'status'
+                },
+                {
+                    data: 'action',
+                    name: 'action'
+                },
+
+
+            ],
+
+            pageLength: 10,
+
+            lengthMenu: [
+                [10, 25, 50, 100, -1],
+                [10, 25, 50, 100, "All"]
+            ],
+
+            dom: 'lBfrtip',
+
+            buttons: [
+                'excel',
+                'pdf'
+            ],
+
+            language: {
+                search: "Search:",
+                lengthMenu: "Show _MENU_ entries",
+                info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                infoEmpty: "Showing 0 to 0 of 0 entries",
+                infoFiltered: "(filtered from _MAX_ total entries)",
+                zeroRecords: "No records found"
+            }
+        });
+
+    });
+
+
+    $(document).on('click', '.editMenuBtn', function() {
+        $('#edit_id').val($(this).data('id'));
+        $('#edit_location_id').val($(this).data('location_id'));
+        $('#edit_name').val($(this).data('name'));
+        $('#edit_status').val($(this).data('status'));
+
+    });
+
+    $('#editMenuForm').submit(function(e) {
+        e.preventDefault();
+
+        let id = $('#edit_id').val();
+
+        console.log(id); // Check this first
+
+        $.ajax({
+            url: "/admin/menu/" + id,
+            type: "POST",
+            data: $(this).serialize(),
+            success: function(response) {
+                $('#editMenuModal').modal('hide');
+                $('#menus-table').DataTable().ajax.reload();
+            }
+        });
+    });
+
+
     $('#addMenuForm').submit(function(e) {
 
         e.preventDefault();
@@ -74,75 +172,11 @@
         });
 
     });
-
-
-
-    var table;
-
-    $(function() {
-
-        table = $('.data-table').DataTable({
-            processing: true,
-            serverSide: true,
-            ajax: "{{ route('admin.menus.index') }}",
-
-            columns: [{
-                    data: 'DT_RowIndex',
-                    name: 'DT_RowIndex',
-                    searchable: false,
-                    orderable: false
-                },
-                {
-                    data: 'name',
-                    name: 'name'
-                },
-
-                {
-                    data: 'submenus',
-                    name: 'submenus',
-                    orderable: false,
-                    searchable: false
-                },
-                {
-                    data: 'status',
-                    name: 'status'
-                },
-            
-             
-            ],
-
-            pageLength: 10,
-
-            lengthMenu: [
-                [10, 25, 50, 100, -1],
-                [10, 25, 50, 100, "All"]
-            ],
-
-            dom: 'lBfrtip',
-
-            buttons: [
-                'excel',
-                'pdf'
-            ],
-
-            language: {
-                search: "Search:",
-                lengthMenu: "Show _MENU_ entries",
-                info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                infoEmpty: "Showing 0 to 0 of 0 entries",
-                infoFiltered: "(filtered from _MAX_ total entries)",
-                zeroRecords: "No records found"
-            }
-        });
-
-    });
-
-
 </script>
 @endpush
 
 
-@section('title','Menu Category')
+@section('title','Menu Master')
 
 @section('content')
 
@@ -155,13 +189,13 @@
 
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
-                    Menu Category
+                    Menu Master
                 </h5>
 
                 <button class="btn btn-primary btn-sm"
                     data-bs-toggle="modal"
                     data-bs-target="#addMenuModal">
-                    <i class="fa fa-plus"></i> Add Menu Category
+                    <i class="fa fa-plus"></i> Add Menu Master
                 </button>
             </div>
 
@@ -174,10 +208,13 @@
                         <thead>
                             <tr>
                                 <th width="5%">#</th>
-                                <th width="25%">Menu Category</th>
-                                <th width="60%"></thwidth>Items</th>
+                                <th width="20%">Location</th>
+                                <th width="20%">Menu Master</th>
+                                <th width="60%">
+                                    </thwidth>Items</th>
                                 <th width="10%">Status</th>
-                            
+                                <th width="10%">Action</th>
+
                             </tr>
 
                         </thead>
@@ -254,10 +291,10 @@
 <div class="modal fade" id="addMenuModal" tabindex="-1">
     <div class="modal-dialog">
         <form id="addMenuForm">
-              @csrf
+            @csrf
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Add Menu Category</h5>
+                    <h5 class="modal-title">Add Menu Master</h5>
 
                     <button type="button"
                         class="btn-close"
@@ -266,8 +303,25 @@
                 </div>
 
                 <div class="modal-body">
+
                     <div class="mb-3">
-                        <label class="form-label">Menu Category Name <span class="text-danger">*</span></label>
+                        <label class="form-label">
+                            Location <span class="text-danger">*</span>
+                        </label>
+
+                        <select name="location_id" class="form-control" required>
+                            <option value="">-- Select Location --</option>
+
+                            @foreach($locationList as $location)
+                            <option value="{{ $location->id }}" selected>
+                                {{ $location->name }}
+                            </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Menu Master Name <span class="text-danger">*</span></label>
 
                         <input type="text"
                             name="name"
@@ -302,6 +356,63 @@
 
             </div>
 
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="editMenuModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form id="editMenuForm">
+            @csrf
+            @method('PUT')
+
+            <input type="hidden" name="id" id="edit_id">
+
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5>Edit Menu</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label>Location <span class="text-danger">*</span></label>
+                        <select name="location_id" id="edit_location_id" class="form-control">
+                            @foreach($locationList as $location)
+                            <option value="{{ $location->id }}">
+                                {{ $location->name }}
+                            </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Menu Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="edit_name" class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Status <span class="text-danger">*</span></label>
+                        <select name="status" id="edit_status" class="form-control">
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-primary">Update</button>
+                     <button type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal">
+                    Cancel
+                </button>
+                </div>
+               
+
+            </div>
         </form>
     </div>
 </div>

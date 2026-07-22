@@ -10,6 +10,7 @@ class DailyMenu extends Model
     protected $fillable = [
         'calendar_id',
         'location_id',
+        'special_flag',
         'menu_date',
         'remarks',
         'status',

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class HolidayList extends Model
 {
     protected $fillable = [
+        'year',
         'type',
         'location_id',
         'date',

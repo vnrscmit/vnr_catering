@@ -54,18 +54,13 @@
                     name: 'location'
                 },
                 {
-                    data: 'member_rate',
-                    name: 'member_rate'
+                    data: 'security_deposit_applicable',
+                    name: 'security_deposit_applicable'
                 },
                 {
-                    data: 'non_member_rate',
-                    name: 'non_member_rate'
+                    data: 'security_deposit_amount',
+                    name: 'security_deposit_amount'
                 },
-                {
-                    data: 'guest_rate',
-                    name: 'guest_rate'
-                },
-
                 {
                     data: 'attendance_out_time',
                     name: 'attendance_out_time'
@@ -81,7 +76,7 @@
                     orderable: false,
                     searchable: false
                 },
-                   {
+                {
                     data: 'active_till_date',
                     name: 'active_till_date',
                     orderable: false,
@@ -122,7 +117,7 @@
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Canteen Setting</h5>
+                <h5 class="card-title mb-0">Canteen Parameter</h5>
                 <a href="{{ route('company-parameters.create') }}" class="btn btn-primary btn-sm">
                     <i class="fa fa-plus"></i> Add New
                 </a>
@@ -131,17 +126,13 @@
             <div class="card-body">
 
                 <div class="table-responsive">
-
                     <table class="table table-bordered data-table">
-
                         <thead>
-
                             <tr>
                                 <th>#</th>
                                 <th>Location</th>
-                                <th>Member Rate</th>
-                                <th>Non Member Rate</th>
-                                <th>Guest Rate</th>
+                                <th>Security Deposit Applicable</th>
+                                <th>Security Deposit Amount</th>
                                 <th>Attendance Out Time</th>
                                 <th>Lunch Out Time</th>
                                 <th>Status</th>

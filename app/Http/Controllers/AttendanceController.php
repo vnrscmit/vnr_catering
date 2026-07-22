@@ -367,9 +367,8 @@ class AttendanceController extends Controller
         return redirect()->back()->with('success', 'Guest deleted successfully.');
     }
 
-    public function markAttendance($id)
+  public function markAttendance($id)
     {
-
         $UserData = Auth::user();
 
         if ($UserData) {
@@ -395,6 +394,8 @@ class AttendanceController extends Controller
         // Check calendar id and date match
         $calendar = DayStatus::where('id', $id)->where('location_id', $UserData->location_id)
             ->first();
+            
+          
 
         if (!$calendar) {
             return response()->json([
@@ -419,6 +420,7 @@ class AttendanceController extends Controller
 
         $attendance = AttendanceAbsent::where('calendar_id', $calendar->id)
             ->where('user_id', $UserData->id)
+            ->where('location_id', $UserData->location_id)
             ->first();
 
         if ($attendance) {
@@ -434,6 +436,7 @@ class AttendanceController extends Controller
                 'calendar_id' => $calendar->id,
                 'user_id'     => $UserData->id,
                 'absent_flag' => $newAbsentFlag,
+                 'location_id' => $UserData->location_id,
                 'status'      => 1,
             ]);
         }
@@ -451,71 +454,9 @@ class AttendanceController extends Controller
 
         return back()->with('success', "Attendance marked successfully.");
     }
-    public function markGuestAttendance($id)
-    {
-
-        $userDataCheck = Auth::user();
-
-        if (!$userDataCheck) {
-            return back()->with('error', 'User not found.');
-        }
-
-        if ($userDataCheck->personal_guest_flag != 1) {
-            return back()->with('error', 'You are not allowed to schedule guests.');
-        }
-
-        $dayStatus = DayStatus::where('id', $id)
-            ->where('location_id', $userDataCheck->location_id)
-            ->where('open_flag', 1)
-            ->where('lock_flag', 0)
-            ->where('sunday_flag', 0)
-            ->where('holiday_flag', 0)
-            ->first();
-
-        if (!$dayStatus) {
-            return back()->with('error', 'Selected day not found.');
-        }
 
 
-
-        // Check calendar id and date match
-        $calendar = DayStatus::where('id', $id)->where('location_id', $userDataCheck->location_id)
-            ->first();
-
-        if (!$calendar) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Invalid calendar or date.'
-            ], 404);
-        }
-
-        if ($userDataCheck->role == 'Member') {
-            $userData = User::where('status', 1)->where('id', $userDataCheck->id)->get();
-            $department = Department::where('id', $userDataCheck->department_id)->where('status', 1)->get();
-            $locatin = Location::where('id', $userDataCheck->location_id)->where('status', 1)->get();
-        } else {
-            $userData = User::where('status', 1)->get();
-            $department = Department::where('status', 1)->get();
-            if (!$department) {
-                return back()->with('error', 'No active department found. Please contact the administrator.');
-            }
-            $locatin = Location::where('status', 1)->get();
-            if (!$locatin) {
-                return back()->with('error', 'No active location found. Please contact the administrator.');
-            }
-        }
-
-        return view('admin.guests.create', [
-            'guest' => new Guest(),
-            'departments' => $department,
-            'locations' =>  $locatin,
-            'users' => $userData,
-            'selectedDate' => $calendar->date,
-            'dayStatus' => $dayStatus,
-        ]);
-    }
-
-    public function overrideAttendance(Request $request)
+  public function overrideAttendance(Request $request)
     {
         $request->validate([
             'user_id' => 'required|exists:users,id',
@@ -556,6 +497,7 @@ class AttendanceController extends Controller
 
         $attendance = AttendanceAbsent::where('calendar_id', $dayStatus->id)
             ->where('user_id', $request->user_id)
+             ->where('location_id', $checkUser->location_id)
             ->first();
 
         $currentTime = Carbon::now();
@@ -583,6 +525,7 @@ class AttendanceController extends Controller
             $attendance = AttendanceAbsent::create([
                 'calendar_id'      => $dayStatus->id,
                 'user_id'          => $request->user_id,
+                'location_id' =>     $checkUser->location_id,
                 'absent_flag'      => $absentFlag,
                 'late_flag'        => $lateFlag,
                 'status'           => 1,

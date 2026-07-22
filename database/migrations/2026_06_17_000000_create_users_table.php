@@ -49,6 +49,43 @@ return new class extends Migration
             $table->string('profile_picture')->nullable();
             $table->boolean('multilocation_flag')->default(0);
 
+
+            // President Flag
+            $table->boolean('president_flag')
+                ->default(0)
+                ->after('personal_guest_flag');
+
+            // Security Amount
+            $table->decimal('security_amount', 10, 2)
+                ->default(0.00)
+                ->after('max_office_guest_allowed');
+
+            // Payment Method
+            $table->string('payment_method')
+                ->nullable()
+                ->after('security_amount');
+
+            // Suspend Date
+            $table->date('suspend_date')
+                ->nullable()
+                ->after('payment_method');
+
+            // Suspend Calendar
+            $table->unsignedBigInteger('suspend_calendar_id')
+                ->nullable()
+                ->after('suspend_date');
+
+            // Foreign Key
+            $table->foreign('suspend_calendar_id')
+                ->references('id')
+                ->on('day_statuses')
+                ->nullOnDelete();
+
+            $table->text('suspend_remarks')
+                ->nullable()
+                ->after('suspend_calendar_id');
+
+
             $table->timestamps();
 
             // Foreign Key Constraints

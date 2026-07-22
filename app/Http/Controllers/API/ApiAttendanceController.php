@@ -77,13 +77,14 @@ class ApiAttendanceController extends Controller
         ]);
     }
 
-    public function calendar(Request $request)
+     public function calendar(Request $request)
     {
         $request->validate([
             'location_id' => 'required|exists:locations,id',
         ]);
 
         $userData = Auth::user();
+     
         $today = Carbon::today()->toDateString();
         $locationId = $request->location_id;
 
@@ -102,6 +103,7 @@ class ApiAttendanceController extends Controller
                     'day_statuses.*',
                     DB::raw('IFNULL(attendance_absents.absent_flag,0) as absent_flag')
                 )
+                ->where('day_statuses.location_id', $locationId)
                 ->orderBy('day_statuses.date')
                 ->get();
 
@@ -110,10 +112,9 @@ class ApiAttendanceController extends Controller
                 $type . 'Summary' => [
                     'present' => $days->where('absent_flag', 0)
                         ->where('open_flag', 1)
-                        ->where('date', '<=', $today)
                         ->count(),
 
-                    'absent' => $days->where('absent_flag', 1)->count(),
+                    'absent' => $days->where('absent_flag', 1)->where('open_flag', 1)->count(),
 
                     'locked' => $days->where('open_flag', 1)
                         ->where('date', '<', $today)
@@ -484,7 +485,7 @@ class ApiAttendanceController extends Controller
                 ], 404);
             }
 
-            if ($request->status = 1) {
+            if ($request->status == 1) {
                 $absentFlag = 0;
             } else {
                 $absentFlag = 1;

@@ -25,6 +25,8 @@ use Illuminate\Support\Facades\DB;
 use Exception;
 use Illuminate\Support\Facades\Log;
 use App\Mail\UserCredentialsMail;
+use App\Models\CompanyParameter;
+use Yajra\DataTables\DataTables;
 
 class UserAdminController extends Controller
 {
@@ -37,23 +39,116 @@ class UserAdminController extends Controller
     }
 
     // Show the admin management page
-    public function index()
+    public function index(Request $request)
     {
-        // Get all users except the logged-in user
-        $users = User::leftJoin('day_statuses', 'users.start_calendar_id', '=', 'day_statuses.id')
-            ->orderBy('users.first_name', 'asc')
-            ->select(
-                'users.*',
-                'day_statuses.date as start_date'
-            )
-            ->get();
-        return view('admin.users.index', compact('users'));
+        $user = Auth::user();
+        if ($request->ajax()) {
+
+            $users = User::leftJoin('day_statuses', 'users.start_calendar_id', '=', 'day_statuses.id')
+                ->leftJoin('roles as role_masters', 'users.role_id', '=', 'role_masters.id') // Adjust this based on your actual role relationship
+                ->orderBy('users.first_name', 'asc')
+                ->select(
+                    'users.*',
+                    'day_statuses.date as start_date',
+                    'role_masters.name as role_name' // Adjust based on your role column name
+                );
+
+            if ($user->role == 'Canteen Incharge') {
+                $users->where('users.location_id', $user->location_id);
+            } elseif ($user->role == 'Super Admin') {
+            } else {
+                return redirect()->back()->with('error', 'You do not have permission to access this page.');
+            }
+
+            return DataTables::of($users)
+                ->addIndexColumn()
+
+                ->addColumn('full_name', function ($row) {
+                    return $row->first_name;
+                })
+
+                ->addColumn('role', function ($row) {
+                    return $row->role_name ?? 'N/A';
+                })
+
+                ->addColumn('mobile', function ($row) {
+                    return $row->mobile ?? 'N/A';
+                })
+
+                ->addColumn('email', function ($row) {
+                    return $row->email;
+                })
+
+                ->editColumn('status', function ($row) {
+                    if ($row->status == 1) {
+                        return '<span class="badge bg-primary">Active</span>';
+                    } elseif ($row->status == 0) {
+                        return '<span class="badge bg-danger">Inactive</span>';
+                    } else {
+                        return '<span class="badge bg-warning">Pending</span>';
+                    }
+                })
+
+                ->addColumn('start_date', function ($row) {
+
+                    if (!empty($row->start_date)) {
+                        return \Carbon\Carbon::parse($row->start_date)->format('d-m-Y');
+                    }
+
+                    return '
+        <button type="button"
+            class="btn btn-warning btn-sm update-date-btn"
+            data-bs-toggle="modal"
+            data-bs-target="#updateDateModal"
+            data-id="' . $row->id . '">
+            <i class="fa fa-calendar"></i> Start
+        </button>
+    ';
+                })
+
+                ->addColumn('action', function ($row) {
+
+                    $view = route('admin.users.show', $row->id);
+                    $edit = route('admin.users.edit', $row->id);
+
+                    $buttons = '
+        <a href="' . $view . '" class="btn btn-info btn-sm">
+            <i class="fa fa-eye"></i>
+        </a>
+
+        <a href="' . $edit . '" class="btn btn-warning btn-sm">
+            <i class="fa fa-edit"></i>
+        </a>
+    ';
+
+                    // Show Suspend button only if Start Date exists
+                    if (!empty($row->start_date) && $row->status == 1) {
+                        $buttons .= '
+            <button type="button"
+                class="btn btn-danger btn-sm suspend-user-btn"
+                data-bs-toggle="modal"
+                data-bs-target="#suspendUserModal"
+                    title="Inactive"
+                data-id="' . $row->id . '">
+                <i class="fa fa-ban"></i>
+            </button>
+        ';
+                    }
+
+                    return $buttons;
+                })
+
+                ->rawColumns(['status', 'action', 'start_date'])
+                ->make(true);
+        }
+        return view('admin.users.index');
     }
     public function create()
     {
         // Fetch and order data for dropdowns
         $roles = RoleMaster::where('status', 1)
             ->orderBy('name', 'asc')
+            ->whereIn('name', ['Member', 'Non Member', 'Canteen Incharge'])
             ->get();
 
         $departments = Department::where('status', 1)
@@ -67,9 +162,23 @@ class UserAdminController extends Controller
         return view('admin.users.create', compact('roles', 'departments', 'locations'));
     }
 
-
     public function store(CreateUserRequest $request)
     {
+
+        $checkAlreadyPresident = User::where('location_id', $request->location_id)
+            ->where('president_flag', 1)
+            ->where('status', 1)
+            ->first();
+
+        if ($checkAlreadyPresident) {
+            return redirect()
+                ->back()
+                ->with(
+                    'error',
+                    'Canteen President already assigned for this location. Current President ' . $checkAlreadyPresident->first_name
+                );
+        }
+
         DB::beginTransaction();
 
         try {
@@ -86,6 +195,8 @@ class UserAdminController extends Controller
                 ? (int) $request->max_office_guest_allowed
                 : 0;
 
+
+
             $user = User::create([
                 'role_id'                    => $request->role_id,
                 'role'                       => $role->name,
@@ -99,6 +210,12 @@ class UserAdminController extends Controller
                 'personal_guest_flag'        => $personalGuestFlag,
                 'max_personal_guest_allowed' => $maxPersonalGuestAllowed,
                 'max_office_guest_allowed'   => $maxOfficeGuestAllowed,
+
+                // Security Details
+                'security_amount'            => $request->security_amount ?? 0.00,
+                'payment_method'             => $request->payment_method,
+
+                'president_flag'             => $request->president_flag ?? 0,
                 'password'                   => Hash::make($request->password),
                 'status'                     => $request->status,
                 'notice'                     => 'Account created successfully',
@@ -187,6 +304,13 @@ class UserAdminController extends Controller
         }
     }
 
+    public function show($id)
+    {
+        $user = User::leftJoin('day_statuses', 'users.start_calendar_id', '=', 'day_statuses.id')
+            ->where('users.id', $id)->select('users.*', 'day_statuses.date as start_date')->first();
+        return view('admin.users.show', compact('user'));
+    }
+
 
     // Update an admin
     public function update(UpdateUserRequest $request, $id)
@@ -217,8 +341,6 @@ class UserAdminController extends Controller
 
         return back()->with('success', 'User updated successfully.');
     }
-
-
     // Delete an admin
     public function destroy($id)
     {
@@ -247,6 +369,7 @@ class UserAdminController extends Controller
 
 
             $user = User::findOrFail($request->user_id);
+
 
             $dayStatus = DayStatus::where('date', $request->date)->where('location_id', $user->location_id)->first();
 
@@ -402,6 +525,73 @@ class UserAdminController extends Controller
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Something went wrong. ' . $e->getMessage());
+        }
+    }
+
+    public function getSecurityAmount($location)
+    {
+        $amount = CompanyParameter::where('location_id', $location)->where('status', 1)
+            ->value('security_deposit_amount');
+
+        return response()->json([
+            'security_amount' => $amount ?? 0
+        ]);
+    }
+
+
+
+    public function suspend(Request $request)
+    {
+        $request->validate([
+            'user_id'          => 'required|exists:users,id',
+            'suspend_date'     => 'required|date',
+            'suspend_remarks'  => 'required|string|max:1000',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+
+            $user = User::findOrFail($request->user_id);
+
+            // Check calendar date exists
+            $calendar = DayStatus::whereDate('date', $request->suspend_date)->first();
+
+            if (!$calendar) {
+                return back()->withInput()->with(
+                    'error',
+                    'Selected inactive date is not available in the calendar.'
+                );
+            }
+
+            // Prevent duplicate suspension
+            if (!empty($user->suspend_date)) {
+                return back()->with(
+                    'error',
+                    'This user is already suspended.'
+                );
+            }
+
+            $user->update([
+                'status'               => 0,
+                'suspend_date'         => $request->suspend_date,
+                'suspend_calendar_id'  => $calendar->id,
+                'suspend_remarks'      => $request->suspend_remarks,
+            ]);
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.users.index')
+                ->with('success', 'User Inactivated successfully.');
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            return back()->withInput()->with(
+                'error',
+                'Something went wrong. ' . $e->getMessage()
+            );
         }
     }
 }

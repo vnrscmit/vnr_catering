@@ -23,8 +23,8 @@
 
 <div class="main-panel">
     <div class="content-wrapper">
- @include('partials.message-bag')
         <div class="card">
+            @include('partials.message-bag')
             <div class="card-header">
                 <h5>Create Rate Master</h5>
             </div>
@@ -64,7 +64,7 @@
                     </div>
                     <div class="row">
 
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-3 mb-3">
                             <label>Member Rate <span class="text-danger">*</span></label>
 
                             <input type="number"
@@ -75,7 +75,17 @@
                                 value="0" required>
                         </div>
 
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-3 mb-3">
+                            <label>Non Member Rate <span class="text-danger">*</span></label>
+                            <input type="number"
+                                step="0.01"
+                                min="0"
+                                name="non_member_rate"
+                                class="form-control"
+                                value="0" required>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
                             <label>Guest Rate <span class="text-danger">*</span></label>
 
                             <input type="number"
@@ -86,13 +96,13 @@
                                 value="0" required>
                         </div>
 
-                        <div class="col-md-4 mb-3">
-                            <label>Non Member Rate <span class="text-danger">*</span></label>
+                        <div class="col-md-3 mb-3">
+                            <label>Minimum Days Rate <span class="text-danger">*</span></label>
 
                             <input type="number"
                                 step="0.01"
                                 min="0"
-                                name="non_member_rate"
+                                name="min_day_rate"
                                 class="form-control"
                                 value="0" required>
                         </div>

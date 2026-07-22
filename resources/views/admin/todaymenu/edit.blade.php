@@ -65,28 +65,65 @@
                                 required>
                         </div>
 
-                     <div class="col-md-4">
-    <label><strong>Select Location <span class="text-danger">*</span></strong></label>
+                        <div class="col-md-4">
+                            <label><strong>Select Location <span class="text-danger">*</span></strong></label>
 
-    <select name="location_id"
-        class="form-control @error('location_id') is-invalid @enderror"
-        required>
+                            <select name="location_id"
+                                class="form-control @error('location_id') is-invalid @enderror"
+                                required>
 
-        <option value="">-- Select Location --</option>
+                                <option value="">-- Select Location --</option>
 
-        @foreach($locations as $location)
-            <option value="{{ $location->id }}"
-                {{ old('location_id', $dailyMenu->location_id) == $location->id ? 'selected' : '' }}>
-                {{ $location->name }}
-            </option>
-        @endforeach
+                                @foreach($locations as $location)
+                                <option value="{{ $location->id }}"
+                                    {{ old('location_id', $dailyMenu->location_id) == $location->id ? 'selected' : '' }}>
+                                    {{ $location->name }}
+                                </option>
+                                @endforeach
 
-    </select>
+                            </select>
 
-    @error('location_id')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
+                            @error('location_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- Special -->
+                        <div class="col-md-4">
+                            <label><strong>Special <span class="text-danger">*</span></strong></label>
+
+                            <div class="d-flex align-items-center gap-4">
+                                <div class="form-check me-4">
+                                    <input class="form-check-input"
+                                        type="radio"
+                                        name="special_flag"
+                                        id="special_flag_no"
+                                        value="0"
+                                        {{ old('special_flag', $dailyMenu->special_flag) == 0 ? 'checked' : '' }}>
+
+                                    <label class="form-check-label" for="special_flag_no">
+                                        No
+                                    </label>
+                                </div>
+
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                        type="radio"
+                                        name="special_flag"
+                                        id="special_flag_yes"
+                                        value="1"
+                                        {{ old('special_flag', $dailyMenu->special_flag) == 1 ? 'checked' : '' }}>
+
+                                    <label class="form-check-label" for="special_flag_yes">
+                                        Yes
+                                    </label>
+                                </div>
+                            </div>
+
+                            @error('special_flag')
+                            <div class="text-danger">{{ $message }}</div>
+                            @enderror
+                        </div>
                     </div>
 
                     <table class="table table-bordered">

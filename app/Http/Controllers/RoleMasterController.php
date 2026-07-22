@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\RoleMaster;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Traits\AdminViewSharedDataTrait;
+use Yajra\DataTables\Facades\DataTables;
 
 class RoleMasterController extends Controller
 {
@@ -12,19 +13,63 @@ class RoleMasterController extends Controller
      * Display a listing of the resource.
      */
 
-     use AdminViewSharedDataTrait;
+    use AdminViewSharedDataTrait;
 
     public function __construct()
     {
         $this->shareAdminViewData();
-        
     }
-    public function index()
+    public function index(Request $request)
     {
-        $roles = RoleMaster::latest()->paginate(10);
-        return view('admin.roles.index', compact('roles'));
-    }
+        if ($request->ajax()) {
 
+         $roles = RoleMaster::orderBy('name', 'asc');
+
+            return DataTables::of($roles)
+                ->addIndexColumn()
+
+                ->addColumn('name', function ($row) {
+                    return $row->name;
+                })
+
+                ->addColumn('short_code', function ($row) {
+                    return $row->short_code;
+                })
+
+                ->editColumn('status', function ($row) {
+                    if ($row->status == 1) {
+                        return '<span class="badge bg-primary">Active</span>';
+                    }
+                    return '<span class="badge bg-danger">Inactive</span>';
+                })
+
+                ->addColumn('action', function ($row) {
+   
+                    $edit = route('admin.roles.edit', $row->id);
+                    $delete = route('admin.roles.destroy', $row->id);
+
+                    return '
+
+                <a href="' . $edit . '" class="btn btn-warning btn-sm">
+                    <i class="fa fa-edit"></i>
+                </a>
+
+                <form action="' . $delete . '" method="POST" style="display:inline-block">
+                    ' . csrf_field() . '
+                    ' . method_field('DELETE') . '
+                    <button class="btn btn-danger btn-sm"
+                        onclick="return confirm(\'Are you sure?\')">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                </form>
+            ';
+                })
+
+                ->rawColumns(['status', 'action'])
+                ->make(true);
+        }
+        return view('admin.roles.index');
+    }
     /**
      * Show the form for creating a new resource.
      */

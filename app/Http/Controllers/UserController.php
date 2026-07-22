@@ -48,9 +48,6 @@ class UserController extends Controller
                 ], 403);
             }
 
-            // Delete previous tokens
-            $user->tokens()->delete();
-
             // Create new Sanctum token
             $token = $user->createToken('auth_token')->plainTextToken;
 

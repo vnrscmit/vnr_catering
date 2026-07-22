@@ -21,6 +21,32 @@
 <script>
     $(function() {
 
+
+        $('#location_id').on('change', function() {
+
+            let locationId = $(this).val();
+
+            if (locationId != '') {
+
+                $.ajax({
+                    url: "{{ url('admin/get-security-amount') }}/" + locationId,
+                    type: "GET",
+                    success: function(response) {
+
+                        $('#security_amount').val(response.security_amount);
+
+                    }
+                });
+
+            } else {
+
+                $('#security_amount').val('');
+
+            }
+
+        });
+
+
         $('#department_id').on('change', function() {
 
             let departmentId = $(this).val();
@@ -146,6 +172,42 @@
                             @enderror
                         </div>
 
+                        <!-- President Flag -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Is Canteen President<span class="text-danger">*</span></label>
+                            <div class="d-flex align-items-center gap-4">
+                                <div class="form-check me-4">
+                                    <input class="form-check-input"
+                                        type="radio"
+                                        name="president_flag"
+                                        id="president_flag_no"
+                                        value="0"
+                                        {{ old('president_flag', 0) == 0 ? 'checked' : '' }}>
+
+                                    <label class="form-check-label" for="president_flag_no">
+                                        No
+                                    </label>
+                                </div>
+
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                        type="radio"
+                                        name="president_flag"
+                                        id="president_flag_yes"
+                                        value="1"
+                                        {{ old('president_flag') == 1 ? 'checked' : '' }}>
+
+                                    <label class="form-check-label" for="president_flag_yes">
+                                        Yes
+                                    </label>
+                                </div>
+                            </div>
+
+                            @error('president_flag')
+                            <div class="text-danger small">{{ $message }}</div>
+                            @enderror
+                        </div>
+
                         <!-- First Name -->
                         <div class="col-md-6 mb-3">
                             <label for="first_name" class="form-label">Name <span class="text-danger">*</span></label>
@@ -223,6 +285,29 @@
                             </select>
                         </div>
 
+                        <div class="col-md-6 mb-3">
+                            <label for="security_amount" class="form-label">
+                                Security Amount
+                            </label>
+                            <input type="number"
+                                class="form-control"
+                                id="security_amount"
+                                name="security_amount"
+                                value="0"
+                                step="0.01">
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="payment_method" class="form-label">
+                                Payment Method
+                            </label>
+
+                            <select class="form-control" id="payment_method" name="payment_method">
+                                <option value="">Select Payment Method</option>
+                                <option value="Cash">Cash</option>
+                                <option value="UPI">UPI</option>
+                            </select>
+                        </div>
 
 
                         <!-- Password -->
@@ -243,37 +328,7 @@
                             @enderror
                         </div>
 
-                        <!-- Guest Allowed -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Guest Allowed <span class="text-danger">*</span></label>
-                            <div class="d-flex align-items-center gap-4">
-                                <div class="form-check me-4">
-                                    <input class="form-check-input"
-                                        type="radio"
-                                        name="personal_guest_flag"
-                                        id="personal_guest_flag_no"
-                                        value="0"
-                                        {{ old('personal_guest_flag', 0) == 0 ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="personal_guest_flag_no">
-                                        No
-                                    </label>
-                                </div>
-
-                                <div class="form-check">
-                                    <input class="form-check-input"
-                                        type="radio"
-                                        name="personal_guest_flag"
-                                        id="personal_guest_flag_yes"
-                                        value="1"
-                                        {{ old('personal_guest_flag') == 1 ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="personal_guest_flag_yes">
-                                        Yes
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Status -->
+                              <!-- Status -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Status <span class="text-danger">*</span></label>
                             <div class="d-flex align-items-center gap-4">
@@ -306,6 +361,35 @@
                             @enderror
                         </div>
 
+                        <!-- Guest Allowed -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Guest Allowed <span class="text-danger">*</span></label>
+                            <div class="d-flex align-items-center gap-4">
+                                <div class="form-check me-4">
+                                    <input class="form-check-input"
+                                        type="radio"
+                                        name="personal_guest_flag"
+                                        id="personal_guest_flag_no"
+                                        value="0"
+                                        {{ old('personal_guest_flag', 0) == 0 ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="personal_guest_flag_no">
+                                        No
+                                    </label>
+                                </div>
+
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                        type="radio"
+                                        name="personal_guest_flag"
+                                        id="personal_guest_flag_yes"
+                                        value="1"
+                                        {{ old('personal_guest_flag') == 1 ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="personal_guest_flag_yes">
+                                        Yes
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
 
                         <div id="guest_limits_wrapper" class="row" style="display: none;">
                             <div class="col-md-6 mb-3">
