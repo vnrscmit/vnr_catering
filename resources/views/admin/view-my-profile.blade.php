@@ -1,16 +1,15 @@
-
 @extends('layouts.admin')
 
 @push('styles')
-    <!-- base:css -->
-    <link rel="stylesheet" href="/admin_resources/vendors/typicons.font/font/typicons.css">
-    <link rel="stylesheet" href="/admin_resources/vendors/css/vendor.bundle.base.css">
-    <link rel="stylesheet" href="/admin_resources/css/vertical-layout-light/style.css">
-    
+<!-- base:css -->
+<link rel="stylesheet" href="/admin_resources/vendors/typicons.font/font/typicons.css">
+<link rel="stylesheet" href="/admin_resources/vendors/css/vendor.bundle.base.css">
+<link rel="stylesheet" href="/admin_resources/css/vertical-layout-light/style.css">
+
 @endpush
 
 @push('scripts')
- 
+
 <script src="/admin_resources/vendors/js/vendor.bundle.base.js"></script>
 <script src="/admin_resources/js/off-canvas.js"></script>
 <script src="/admin_resources/js/hoverable-collapse.js"></script>
@@ -25,7 +24,7 @@
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
- 
+
 
 @endpush
 
@@ -36,134 +35,105 @@
 
 <div class="main-panel">
     <div class="content-wrapper">
- 
-      @include('partials.message-bag')
- 
 
-      <div class="card card-info">
-        <div class="card-header">
-            <i class="fa fa-user"></i> My Profile
-        </div>
-        <div class="card-body">
-            <div class="d-flex justify-content-center align-items-center">
-                <!-- Profile Photo Preview -->
-                <div class="mb-3 text-center">
-                    <img src="{{ $user->profile_picture ? asset('storage/profile-picture/' . $user->profile_picture) : asset('assets/images/user-icon.png') }}" 
-                         alt="Profile Preview" 
-                         class="img-thumbnail" 
-                         style="width: 150px; height: 150px;">
-                </div>
+        @include('partials.message-bag')
+
+
+        <div class="card card-info">
+            <div class="card-header">
+                <i class="fa fa-user"></i> My Profile
             </div>
-            <hr/>
-         <table class="table table-bordered table-striped">
-    <tbody>
-        <tr>
-            <th width="40%">First Name</th>
-            <td>{{ $user->first_name }}</td>
-        </tr>
+            <div class="card-body">
+                <div class="d-flex justify-content-center align-items-center">
+                    <!-- Profile Photo Preview -->
+                    <div class="mb-3 text-center">
+                        <img src="{{ $user->profile_picture ? asset('storage/profile-picture/' . $user->profile_picture) : asset('assets/images/user-icon.png') }}"
+                            alt="Profile Preview"
+                            class="img-thumbnail"
+                            style="width: 150px; height: 150px;">
+                    </div>
+                </div>
+                <hr />
+                <table class="table table-bordered table-striped">
+                    <tbody>
+                        <tr>
+                            <th width="40%">Name</th>
+                            <td>{{ $user->first_name }}</td>
+                        </tr>
 
-        <tr>
-            <th>Last Name</th>
-            <td>{{ $user->last_name }}</td>
-        </tr>
+                        <tr>
+                            <th>Mobile</th>
+                            <td>{{ $user->mobile }}</td>
+                        </tr>
+                        <tr>
+                            <th>Email</th>
+                            <td>{{ $user->email ?? ' ' }}</td>
+                        </tr>
 
-        <tr>
-            <th>Email</th>
-            <td>{{ $user->email ?? 'N/A' }}</td>
-        </tr>
+                        <tr>
+                            <th>Designation</th>
+                            <td>{{ $user->designation ?? 'N/A' }}</td>
+                        </tr>
 
-        <tr>
-            <th>Mobile</th>
-            <td>{{ $user->mobile }}</td>
-        </tr>
+                        <tr>
+                            <th>Role</th>
+                            <td>{{ $user->role ?? 'N/A' }}</td>
+                        </tr>
 
-        <tr>
-            <th>Designation</th>
-            <td>{{ $user->designation ?? 'N/A' }}</td>
-        </tr>
+                        <tr>
+                            <th>Department</th>
+                            <td>{{ optional($user->department)->name ?? 'N/A' }}</td>
+                        </tr>
 
-        <tr>
-            <th>Role</th>
-            <td>{{ $user->role ?? 'N/A' }}</td>
-        </tr>
+                        <tr>
+                            <th>Location</th>
+                            <td>{{ optional($user->location)->name ?? 'N/A' }}</td>
+                        </tr>
 
-        <tr>
-            <th>Department</th>
-            <td>{{ optional($user->department)->name ?? 'N/A' }}</td>
-        </tr>
+                        <tr>
+                            <th>Personal Guest Allowed</th>
+                            <td>{{ $user->personal_guest_flag ? 'Yes' : 'No' }}</td>
+                        </tr>
 
-        <tr>
-            <th>Location</th>
-            <td>{{ optional($user->location)->name ?? 'N/A' }}</td>
-        </tr>
+                        <tr>
+                            <th>Max Personal Guest</th>
+                            <td>{{ $user->max_personal_guest_allowed }}</td>
+                        </tr>
 
-        <tr>
-            <th>Personal Guest Allowed</th>
-            <td>{{ $user->personal_guest_flag ? 'Yes' : 'No' }}</td>
-        </tr>
+                        <tr>
+                            <th>Max Office Guest</th>
+                            <td>{{ $user->max_office_guest_allowed }}</td>
+                        </tr>
 
-        <tr>
-            <th>Max Personal Guest</th>
-            <td>{{ $user->max_personal_guest_allowed }}</td>
-        </tr>
 
-        <tr>
-            <th>Max Office Guest</th>
-            <td>{{ $user->max_office_guest_allowed }}</td>
-        </tr>
+                        <tr>
+                            <th>Status</th>
+                            <td>
+                                @if($user->status)
+                                <span class="badge bg-primary">Active</span>
+                                @else
+                                <span class="badge bg-danger">Inactive</span>
+                                @endif
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
 
-        <tr>
-            <th>Two Factor Authentication</th>
-            <td>{{ $user->two_factor_auth ? 'Enabled' : 'Disabled' }}</td>
-        </tr>
-
-        <tr>
-            <th>Status</th>
-            <td>
-                @if($user->status)
-                    <span class="badge bg-primary">Active</span>
-                @else
-                    <span class="badge bg-danger">Inactive</span>
-                @endif
-            </td>
-        </tr>
-
-        <tr>
-            <th>Email Verified At</th>
-            <td>{{ $user->email_verified_at ? $user->email_verified_at->format('d-m-Y H:i A') : 'Not Verified' }}</td>
-        </tr>
-
-        <tr>
-            <th>Created At</th>
-            <td>{{ $user->created_at ? $user->created_at->format('d-m-Y') : 'N/A' }}</td>
-        </tr>
-
-        <tr>
-            <th>Updated At</th>
-            <td>{{ $user->updated_at ? $user->updated_at->format('d-m-Y') : 'N/A' }}</td>
-        </tr>
-    </tbody>
-</table>
-            
+            </div>
+            <div class="card-footer">
+                <button type="button" onclick="window.location='{{ route('admin.myprofile.edit') }}'" class="btn btn-primary">Edit My Profile</button>
+                <button type="button" onclick="window.location='{{ route('admin.dashboard') }}'" class="btn btn-secondary float-right">Back</button>
+            </div>
         </div>
-        <div class="card-footer">
-            <button type="button" onclick="window.location='{{ route('admin.myprofile.edit') }}'" class="btn btn-primary">Edit My Profile</button>
-            <button type="button" onclick="window.location='{{ route('admin.dashboard') }}'" class="btn btn-secondary float-right">Back</button>
-        </div>
-    </div>
-
-    
-  
 
 
-   
+
+
+
+
     </div>
     <!-- content-wrapper ends -->
     @include('partials.admin.footer')
-  </div>
-  <!-- main-panel ends -->
+</div>
+<!-- main-panel ends -->
 @endsection
-
-
-
- 

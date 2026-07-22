@@ -155,6 +155,7 @@ class ApiMenuController extends Controller
             $data[] = [
                 'id'        => $menu->id,
                 'menu_name' => $menu->name,
+                'spcial_flag' => $menu->special_flag,
                 'sub_menu'  => $subMenus,
             ];
         }

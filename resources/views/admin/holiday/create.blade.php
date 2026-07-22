@@ -6,30 +6,48 @@
 <link rel="stylesheet" href="/admin_resources/css/vertical-layout-light/style.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
+    /* Main color scheme */
+    :root {
+        --primary-green: #2E6115;
+        --primary-green-light: #3d7a1e;
+        --primary-green-dark: #1f4210;
+        --primary-green-bg: #f0f7ea;
+        --primary-green-border: #c8dfb8;
+        --primary-green-hover: #3d7a1e;
+        --primary-green-soft: #e8f2e0;
+    }
+
     .weekly-checkbox-group {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
         gap: 10px;
         padding: 15px;
-        background: #f8f9fa;
-        border-radius: 5px;
-        border: 1px solid #dee2e6;
+        background: #ffffff;
+        border-radius: 8px;
+        border: 1px solid #e8ecef;
     }
 
     .weekly-checkbox-group .form-check {
-        padding-left: 25px;
+        padding-left: 28px;
     }
 
     .weekly-checkbox-group .form-check-input {
-        margin-left: -25px;
+        margin-left: -28px;
         width: 18px;
         height: 18px;
         cursor: pointer;
+        accent-color: var(--primary-green);
+    }
+
+    .weekly-checkbox-group .form-check-input:checked {
+        background-color: var(--primary-green);
+        border-color: var(--primary-green);
     }
 
     .weekly-checkbox-group .form-check-label {
         cursor: pointer;
         font-weight: 500;
+        color: #2d3748;
     }
 
     .holiday-type-selector {
@@ -42,17 +60,42 @@
 
     .holiday-type-selector .btn {
         flex: 1;
-        padding: 10px;
+        padding: 12px 10px;
         font-weight: 500;
+        border-radius: 0;
+        border: 2px solid #e8ecef;
+        background: #ffffff;
+        color: #4a5568;
+        transition: all 0.3s ease;
+    }
+
+    .holiday-type-selector .btn:first-child {
+        border-radius: 8px 0 0 8px;
+    }
+
+    .holiday-type-selector .btn:last-child {
+        border-radius: 0 8px 8px 0;
+    }
+
+    .holiday-type-selector .btn:hover {
+        background: var(--primary-green-bg);
+        border-color: var(--primary-green);
+        color: var(--primary-green);
+    }
+
+    .holiday-type-selector .btn-check:checked+.btn {
+        background: var(--primary-green);
+        border-color: var(--primary-green);
+        color: #ffffff;
     }
 
     .date-list-container {
         max-height: 200px;
         overflow-y: auto;
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
+        border: 1px solid #e8ecef;
+        border-radius: 8px;
         padding: 8px;
-        background: #fff;
+        background: #ffffff;
         min-height: 50px;
     }
 
@@ -60,143 +103,334 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 6px 12px;
+        padding: 8px 14px;
         margin-bottom: 4px;
-        background: #f8f9fa;
-        border-radius: 4px;
-        border-left: 3px solid #007bff;
+        background: #f8fafc;
+        border-radius: 6px;
+        border-left: 4px solid var(--primary-green);
+        transition: all 0.2s ease;
     }
 
     .date-item:hover {
-        background: #e9ecef;
+        background: var(--primary-green-bg);
+        transform: translateX(2px);
     }
 
     .date-item .date-text {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
+        flex: 1;
     }
 
     .date-item .date-text .day-badge {
-        background: #007bff;
+        background: var(--primary-green);
         color: white;
-        padding: 1px 8px;
-        border-radius: 10px;
+        padding: 2px 10px;
+        border-radius: 20px;
         font-size: 11px;
         font-weight: 600;
-        min-width: 40px;
+        min-width: 44px;
         text-align: center;
     }
 
+    .date-item .date-remark {
+        flex: 1;
+        margin: 0 10px;
+        font-size: 13px;
+        color: #4a5568;
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
     .date-item .remove-date {
-        color: #dc3545;
+        color: #e53e3e;
         cursor: pointer;
         border: none;
         background: none;
         font-size: 16px;
-        padding: 0 5px;
+        padding: 0 8px;
         transition: all 0.2s ease;
+        opacity: 0.6;
     }
 
     .date-item .remove-date:hover {
-        color: #bd2130;
-        transform: scale(1.1);
+        color: #c53030;
+        transform: scale(1.2);
+        opacity: 1;
     }
 
     .selected-dates-badge {
         display: inline-block;
-        background: #007bff;
         color: white;
-        padding: 2px 10px;
-        border-radius: 12px;
+        padding: 3px 14px;
+        border-radius: 20px;
         font-size: 12px;
         margin-left: 10px;
+        background: var(--primary-green);
+        font-weight: 500;
     }
 
     .date-input-group {
         display: flex;
         gap: 10px;
         align-items: center;
+        flex-wrap: wrap;
     }
 
     .date-input-group .form-control {
         flex: 1;
+        min-width: 150px;
+        border: 2px solid #e8ecef;
+        border-radius: 8px;
+        padding: 10px 14px;
+        transition: all 0.3s ease;
+    }
+
+    .date-input-group .form-control:focus {
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 3px rgba(46, 97, 21, 0.15);
+    }
+
+    .date-input-group .form-control.date-input {
+        flex: 0 0 180px;
+    }
+
+    .date-input-group .form-control.remark-input {
+        flex: 2;
+        min-width: 200px;
     }
 
     .btn-add-date {
         min-width: 80px;
+        white-space: nowrap;
+        background: var(--primary-green);
+        border: none;
+        border-radius: 8px;
+        padding: 10px 20px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .btn-add-date:hover {
+        background: var(--primary-green-light);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(46, 97, 21, 0.3);
     }
 
     .empty-dates-message {
         text-align: center;
-        color: #6c757d;
-        padding: 15px;
+        color: #a0aec0;
+        padding: 20px;
         font-style: italic;
         font-size: 14px;
     }
 
-    .quick-add-buttons {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-top: 8px;
-    }
-
-    .quick-add-buttons .btn {
-        font-size: 12px;
-        padding: 3px 10px;
+    .empty-dates-message i {
+        color: var(--primary-green);
+        margin-right: 8px;
+        opacity: 0.5;
     }
 
     .section-card {
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-        margin-bottom: 15px;
+        border: 1px solid #e8ecef;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        background: #ffffff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        overflow: hidden;
     }
 
     .section-card .card-header {
-        background: #f8f9fa;
-        padding: 10px 15px;
-        border-bottom: 1px solid #dee2e6;
+        background: #fafcf8;
+        padding: 14px 20px;
+        border-bottom: 1px solid #e8ecef;
         font-weight: 600;
-        color: #495057;
+        color: #2d3748;
+        display: flex;
+        align-items: center;
+    }
+
+    .section-card .card-header i {
+        color: var(--primary-green);
+        margin-right: 10px;
+        font-size: 16px;
     }
 
     .section-card .card-body {
-        padding: 15px;
+        padding: 20px;
     }
 
     .counter-badge {
-        background: #28a745;
+        background: var(--primary-green);
+        color: white;
+        padding: 2px 12px;
+        border-radius: 20px;
+        font-size: 12px;
     }
 
-    .btn-primary {
-        background-color: #007bff;
-        border-color: #007bff;
-    }
-
-    .btn-primary:hover {
-        background-color: #0069d9;
-        border-color: #0062cc;
-    }
-
-    .btn-success {
-        background-color: #28a745;
-        border-color: #28a745;
-    }
-
-    .btn-success:hover {
-        background-color: #218838;
-        border-color: #1e7e34;
-    }
 
     .btn-danger {
-        background-color: #dc3545;
-        border-color: #dc3545;
+        background-color: #fc8181;
+        border: none;
+        border-radius: 8px;
+        transition: all 0.3s ease;
     }
 
     .btn-danger:hover {
-        background-color: #c82333;
-        border-color: #bd2130;
+        background-color: #f56565;
+    }
+
+    .input-group-label {
+        font-weight: 500;
+        font-size: 14px;
+        color: #4a5568;
+        min-width: 50px;
+    }
+
+    /* Card styling */
+    .card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+        background: #ffffff;
+    }
+
+    .card-header {
+        background: #fafcf8 !important;
+        border-bottom: 2px solid var(--primary-green) !important;
+        border-radius: 12px 12px 0 0 !important;
+        padding: 18px 24px;
+    }
+
+    .card-header h5 {
+        color: var(--primary-green);
+        font-weight: 600;
+    }
+
+    .card-header h5 i {
+        margin-right: 10px;
+    }
+
+    .card-body {
+        padding: 24px;
+    }
+
+    /* Form labels */
+    label {
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 6px;
+        font-size: 14px;
+    }
+
+    .text-danger {
+        color: #e53e3e !important;
+    }
+
+    /* Select and input styling */
+    .form-control,
+    .form-select {
+        border: 2px solid #e8ecef;
+        border-radius: 8px;
+        padding: 10px 14px;
+        transition: all 0.3s ease;
+        background: #ffffff;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 3px rgba(46, 97, 21, 0.15);
+    }
+
+    /* Holiday buttons */
+    .holiday-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .holiday-btn {
+        background: #f8fafc;
+        border: 2px solid #e8ecef;
+        border-radius: 8px;
+        padding: 10px 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+        min-width: 90px;
+        color: #4a5568;
+        font-weight: 500;
+        line-height: 1.4;
+    }
+
+    .holiday-btn:hover {
+        background: var(--primary-green-bg);
+        border-color: var(--primary-green);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(46, 97, 21, 0.15);
+        color: var(--primary-green);
+    }
+
+    .holiday-btn strong {
+        display: block;
+        font-size: 15px;
+        color: #2d3748;
+    }
+
+    .holiday-btn small {
+        font-size: 11px;
+        color: #718096;
+        font-weight: normal;
+    }
+
+    .holiday-btn:hover small {
+        color: var(--primary-green);
+    }
+
+    /* Main panel */
+    .main-panel {
+        background: #f7fafc;
+    }
+
+    .content-wrapper {
+        background: #f7fafc;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .holiday-type-selector .btn {
+            font-size: 12px;
+            padding: 10px 6px;
+        }
+
+        .date-input-group {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .date-input-group .form-control.date-input,
+        .date-input-group .form-control.remark-input {
+            flex: 1;
+            min-width: 100%;
+        }
+
+        .btn-add-date {
+            width: 100%;
+        }
+
+        .holiday-buttons {
+            gap: 8px;
+        }
+
+        .holiday-btn {
+            min-width: 70px;
+            padding: 8px 12px;
+            font-size: 12px;
+        }
     }
 </style>
 @endpush
@@ -233,19 +467,22 @@
         $('#addHolidayDate').click(function(e) {
             e.preventDefault();
             var dateInput = $('#holidayDateInput');
+            var remarkInput = $('#holidayRemarkInput');
             var dateValue = dateInput.val();
+            var remarkValue = remarkInput.val().trim();
 
             if (!dateValue) {
                 alert('Please select a date first');
                 return;
             }
 
-            addHolidayDate(dateValue);
+            addHolidayDate(dateValue, remarkValue);
             dateInput.val('');
+            remarkInput.val('');
         });
 
         // Enter key support for adding holiday dates
-        $('#holidayDateInput').keypress(function(e) {
+        $('#holidayDateInput, #holidayRemarkInput').keypress(function(e) {
             if (e.which === 13) {
                 e.preventDefault();
                 $('#addHolidayDate').click();
@@ -256,78 +493,26 @@
         $('#addDate').click(function(e) {
             e.preventDefault();
             var dateInput = $('#specificDateInput');
+            var remarkInput = $('#specificRemarkInput');
             var dateValue = dateInput.val();
+            var remarkValue = remarkInput.val().trim();
 
             if (!dateValue) {
                 alert('Please select a date first');
                 return;
             }
 
-            addSpecificDate(dateValue);
+            addSpecificDate(dateValue, remarkValue);
             dateInput.val('');
+            remarkInput.val('');
         });
 
         // Enter key support for adding specific dates
-        $('#specificDateInput').keypress(function(e) {
+        $('#specificDateInput, #specificRemarkInput').keypress(function(e) {
             if (e.which === 13) {
                 e.preventDefault();
                 $('#addDate').click();
             }
-        });
-
-        // Clear all dates button
-        $('#clearAllHolidays').click(function(e) {
-            e.preventDefault();
-            if (confirm('Are you sure you want to clear all holiday dates?')) {
-                $('#selectedHolidayDatesList').empty();
-                updateHolidayDateCount();
-                checkEmptyList('holiday');
-            }
-        });
-
-        $('#clearAllSpecificDates').click(function(e) {
-            e.preventDefault();
-            if (confirm('Are you sure you want to clear all specific dates?')) {
-                $('#selectedDatesList').empty();
-                updateDateCount();
-                checkEmptyList('specific');
-            }
-        });
-
-        // Quick add buttons for common holidays
-        $('#quickAddNewYear').click(function(e) {
-            e.preventDefault();
-            var year = new Date().getFullYear();
-            addHolidayDate(year + '-01-01');
-        });
-
-        $('#quickAddRepublic').click(function(e) {
-            e.preventDefault();
-            var year = new Date().getFullYear();
-            addHolidayDate(year + '-01-26');
-        });
-
-        $('#quickAddIndependence').click(function(e) {
-            e.preventDefault();
-            var year = new Date().getFullYear();
-            addHolidayDate(year + '-08-15');
-        });
-
-        $('#quickAddChristmas').click(function(e) {
-            e.preventDefault();
-            var year = new Date().getFullYear();
-            addHolidayDate(year + '-12-25');
-        });
-
-        // Select/Deselect All for Weekly Off
-        $('#selectAllDays').click(function(e) {
-            e.preventDefault();
-            selectAllDays(true);
-        });
-
-        $('#deselectAllDays').click(function(e) {
-            e.preventDefault();
-            selectAllDays(false);
         });
 
         // FORM SUBMIT VALIDATION
@@ -372,7 +557,16 @@
 
     // ============ FUNCTIONS ============
 
-    function addHolidayDate(dateValue) {
+    $('.holiday-btn').click(function() {
+
+        $('#holidayDateInput').val($(this).data('date'));
+        $('#holidayRemarkInput').val($(this).data('remark'));
+
+        $('#addHolidayDate').trigger('click');
+    });
+
+
+    function addHolidayDate(dateValue, remarkValue) {
         // Check if date already exists
         var exists = false;
         $('#selectedHolidayDatesList .date-item').each(function() {
@@ -390,6 +584,7 @@
         // Format date to d-m-Y
         var formattedDate = formatDateDMY(dateValue);
         var dayName = getDayOfWeek(dateValue);
+        var remarkText = remarkValue || '';
 
         // Add date to list
         var dateHtml = `
@@ -397,11 +592,13 @@
             <div class="date-text">
                 <span class="day-badge">${dayName}</span>
                 <span>${formattedDate}</span>
+                <span class="date-remark">${remarkText}</span>
             </div>
             <button type="button" class="remove-date" onclick="removeHolidayDate(this)" title="Remove date">
                 <i class="fas fa-minus-circle"></i>
             </button>
             <input type="hidden" name="holiday_dates[]" value="${dateValue}">
+            <input type="hidden" name="holiday_remarks[]" value="${remarkText}">
         </div>
     `;
 
@@ -410,7 +607,7 @@
         removeEmptyMessage('holiday');
     }
 
-    function addSpecificDate(dateValue) {
+    function addSpecificDate(dateValue, remarkValue) {
         // Check if date already exists
         var exists = false;
         $('#selectedDatesList .date-item').each(function() {
@@ -428,6 +625,7 @@
         // Format date to d-m-Y
         var formattedDate = formatDateDMY(dateValue);
         var dayName = getDayOfWeek(dateValue);
+        var remarkText = remarkValue || '';
 
         // Add date to list
         var dateHtml = `
@@ -435,11 +633,13 @@
             <div class="date-text">
                 <span class="day-badge">${dayName}</span>
                 <span>${formattedDate}</span>
+                <span class="date-remark">${remarkText}</span>
             </div>
             <button type="button" class="remove-date" onclick="removeSpecificDate(this)" title="Remove date">
                 <i class="fas fa-minus-circle"></i>
             </button>
             <input type="hidden" name="specific_dates[]" value="${dateValue}">
+            <input type="hidden" name="specific_remarks[]" value="${remarkText}">
         </div>
     `;
 
@@ -525,11 +725,6 @@
         }
     }
 
-    function selectAllDays(select) {
-        $('.weekly-checkbox-group input[type="checkbox"]').prop('checked', select);
-        updateWeeklyCount();
-    }
-
     function updateWeeklyCount() {
         var count = $('.weekly-checkbox-group input[type="checkbox"]:checked').length;
         $('#weeklyCount').text(count + ' days');
@@ -556,7 +751,7 @@
 </script>
 @endpush
 
-@section('title', 'Create Holiday Setting')
+@section('title', 'Create Holiday Master')
 
 @section('content')
 <div class="main-panel">
@@ -564,7 +759,7 @@
         @include('partials.message-bag')
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-calendar-alt"></i> Create Holiday Setting</h5>
+                <h5><i class="fas fa-calendar-alt"></i> Create Holiday Master</h5>
             </div>
 
             <div class="card-body">
@@ -572,38 +767,62 @@
                     @csrf
 
                     <div class="row">
+
+                        <!-- Location -->
                         <div class="col-md-6 mb-3">
                             <label>Location <span class="text-danger">*</span></label>
                             <select name="location_id" class="form-control" required>
                                 <option value="">Select Location</option>
                                 @foreach($locations as $location)
-                                <option value="{{ $location->id }}" {{ old('location_id') == $location->id ? 'selected' : '' }}>
+                                <option value="{{ $location->id }}"
+                                    {{ old('location_id') == $location->id ? 'selected' : '' }}>
                                     {{ $location->name }}
                                 </option>
                                 @endforeach
                             </select>
+
                             @error('location_id')
                             <span class="text-danger">{{ $message }}</span>
                             @enderror
                         </div>
-                    </div>
 
+                        <!-- Year -->
+                        <div class="col-md-6 mb-3">
+                            <label>Year <span class="text-danger">*</span></label>
+                            <select name="year" class="form-control" required>
+                                <option value="">Select Year</option>
+
+                                @for($year = date('Y'); $year <= date('Y') + 1; $year++)
+                                    <option value="{{ $year }}"
+                                    {{ old('year', date('Y')) == $year ? 'selected' : '' }}>
+                                    {{ $year }}
+                                    </option>
+                                    @endfor
+                            </select>
+
+                            @error('year')
+                            <span class="text-danger">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                    </div>
                     <div class="row">
                         <div class="col-md-12 mb-4">
                             <label>Select Holiday Type <span class="text-danger">*</span></label>
                             <div class="holiday-type-selector">
+
                                 <div class="btn-group" role="group">
-                                    <input type="radio" class="btn-check" name="holiday_type" id="holidayType1" value="holiday" autocomplete="off">
+                                    <input type="radio" class="btn-check" name="holiday_type" id="holidayType1" value="holiday" autocomplete="off" hidden>
                                     <label class="btn btn-outline-primary" for="holidayType1">
                                         <i class="fas fa-calendar-day"></i> Holiday
                                     </label>
 
-                                    <input type="radio" class="btn-check" name="holiday_type" id="holidayType2" value="weekly_off" autocomplete="off">
+                                    <input type="radio" class="btn-check" name="holiday_type" id="holidayType2" value="weekly_off" autocomplete="off" hidden>
                                     <label class="btn btn-outline-primary" for="holidayType2">
                                         <i class="fas fa-calendar-week"></i> Weekly Off
                                     </label>
 
-                                    <input type="radio" class="btn-check" name="holiday_type" id="holidayType3" value="specific_date" autocomplete="off">
+                                    <input type="radio" class="btn-check" name="holiday_type" id="holidayType3" value="specific_date" autocomplete="off" hidden>
                                     <label class="btn btn-outline-primary" for="holidayType3">
                                         <i class="fas fa-calendar-alt"></i> Specific Dates
                                     </label>
@@ -616,62 +835,117 @@
                     </div>
 
                     <!-- Holiday Dates Section -->
-                    <div id="holidayDatesSection" style="display: none;">
+                    <div id="holidayDatesSection" style="display:none;">
                         <div class="section-card">
                             <div class="card-header">
-                                <i class="fas fa-list"></i> Holiday Dates
+                                <i class="fas fa-calendar-check"></i> Holiday Dates
                                 <span id="holidayDateCount" class="selected-dates-badge">0 dates</span>
                             </div>
+
                             <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <div class="date-input-group">
-                                            <input type="date"
-                                                id="holidayDateInput"
-                                                class="form-control"
-                                                min="{{ date('Y-m-d') }}">
-                                            <button type="button" id="addHolidayDate" class="btn btn-primary btn-add-date">
-                                                <i class="fas fa-plus"></i> Add
-                                            </button>
-                                        </div>
-                                        <small class="text-muted">Press Enter to add</small>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="quick-add-buttons">
-                                            <button type="button" class="btn btn-sm btn-success" id="quickAddNewYear">New Year</button>
-                                            <button type="button" class="btn btn-sm btn-success" id="quickAddRepublic">Republic</button>
-                                            <button type="button" class="btn btn-sm btn-success" id="quickAddIndependence">Independence</button>
-                                            <button type="button" class="btn btn-sm btn-success" id="quickAddChristmas">Christmas</button>
-                                        </div>
+
+                                <!-- Quick Holiday Selection -->
+                                <div class="mb-4">
+                                    <label class="font-weight-bold mb-2">
+                                        <i class="fas fa-bolt text-warning"></i>
+                                        Quick Holiday Selection
+                                    </label>
+
+                                    <div class="holiday-buttons">
+
+                                        <button type="button" class="holiday-btn"
+                                            data-date="2026-01-01"
+                                            data-remark="New Year's Day">
+                                            <br>
+                                            <strong>1 Jan</strong><br>
+                                            <small>New Year's Day</small>
+                                        </button>
+
+                                        <button type="button" class="holiday-btn"
+                                            data-date="2026-01-26"
+                                            data-remark="Republic Day">
+                                            <br>
+                                            <strong>26 Jan</strong><br>
+                                            <small>Republic Day</small>
+                                        </button>
+
+                                        <button type="button" class="holiday-btn"
+                                            data-date="2026-05-01"
+                                            data-remark="Labour Day">
+                                            <br>
+                                            <strong>1 May</strong><br>
+                                            <small>Labour Day</small>
+                                        </button>
+
+                                        <button type="button" class="holiday-btn"
+                                            data-date="2026-08-15"
+                                            data-remark="Independence Day">
+                                            <br>
+                                            <strong>15 Aug</strong><br>
+                                            <small>Independence Day</small>
+                                        </button>
+
+                                        <button type="button" class="holiday-btn"
+                                            data-date="2026-10-02"
+                                            data-remark="Gandhi Jayanti">
+                                            <br>
+                                            <strong>2 Oct</strong><br>
+                                            <small>Gandhi Jayanti</small>
+                                        </button>
+
                                     </div>
                                 </div>
 
-                                <div class="mt-3">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <label class="font-weight-bold">Selected Dates</label>
-                                        <button type="button" class="btn btn-sm btn-danger" id="clearAllHolidays">
-                                            <i class="fas fa-trash"></i> Clear All
+                                <hr>
+
+                                <!-- Manual Entry -->
+                                <label class="font-weight-bold mb-2">
+                                    <i class="fas fa-plus-circle text-primary"></i>
+                                    Add Custom Holiday
+                                </label>
+
+                                <div class="row">
+
+                                    <div class="col-md-4">
+                                        <label>Date</label>
+                                        <input type="date"
+                                            id="holidayDateInput"
+                                            class="form-control"
+                                            min="{{ date('Y-m-d') }}">
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label>Remarks</label>
+                                        <input type="text"
+                                            id="holidayRemarkInput"
+                                            class="form-control"
+                                            placeholder="Enter Holiday Name">
+                                    </div>
+
+                                    <div class="col-md-2 d-flex align-items-end">
+                                        <button type="button"
+                                            id="addHolidayDate"
+                                            class="btn btn-primary btn-block">
+                                            <i class="fas fa-plus"></i> Add
                                         </button>
                                     </div>
-                                    <div id="selectedHolidayDatesList" class="date-list-container">
-                                        @if(old('holiday_dates'))
-                                        @foreach(old('holiday_dates') as $date)
-                                        <div class="date-item" data-date="{{ $date }}">
-                                            <div class="date-text">
-                                                <span class="day-badge">{{ date('D', strtotime($date)) }}</span>
-                                                <span>{{ date('d-m-Y', strtotime($date)) }}</span>
-                                            </div>
-                                            <button type="button" class="remove-date" onclick="removeHolidayDate(this)">
-                                                <i class="fas fa-minus-circle"></i>
-                                            </button>
-                                            <input type="hidden" name="holiday_dates[]" value="{{ $date }}">
-                                        </div>
-                                        @endforeach
-                                        @endif
-                                    </div>
+
                                 </div>
+
+                                <hr>
+
+                                <label class="font-weight-bold">
+                                    <i class="fas fa-list"></i>
+                                    Selected Holidays
+                                </label>
+
+                                <div id="selectedHolidayDatesList" class="date-list-container mt-2">
+                                </div>
+
                             </div>
+
                         </div>
+
                     </div>
 
                     <!-- Weekly Off Section -->
@@ -707,18 +981,10 @@
                                         <input type="checkbox" class="form-check-input" name="weekly_days[]" value="Saturday" id="saturday" onchange="updateWeeklyCount()">
                                         <label class="form-check-label" for="saturday">Saturday</label>
                                     </div>
-                                        <div class="form-check">
+                                    <div class="form-check">
                                         <input type="checkbox" class="form-check-input" name="weekly_days[]" value="Sunday" id="sunday" onchange="updateWeeklyCount()">
                                         <label class="form-check-label" for="sunday">Sunday</label>
                                     </div>
-                                </div>
-                                <div class="mt-3">
-                                    <button type="button" class="btn btn-sm btn-secondary" id="selectAllDays">
-                                        <i class="fas fa-check-double"></i> Select All
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-secondary" id="deselectAllDays">
-                                        <i class="fas fa-times"></i> Deselect All
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -733,22 +999,25 @@
                             </div>
                             <div class="card-body">
                                 <div class="row">
-                                    <div class="col-md-10">
+                                    <div class="col-md-12">
                                         <div class="date-input-group">
+                                            <span class="input-group-label">Date</span>
                                             <input type="date"
                                                 id="specificDateInput"
-                                                class="form-control"
+                                                class="form-control date-input"
                                                 min="{{ date('Y-m-d') }}">
+
+                                            <span class="input-group-label">Remarks</span>
+                                            <input type="text"
+                                                id="specificRemarkInput"
+                                                class="form-control remark-input"
+                                                placeholder="Enter remarks (optional)">
+
                                             <button type="button" id="addDate" class="btn btn-primary btn-add-date">
                                                 <i class="fas fa-plus"></i> Add
                                             </button>
                                         </div>
                                         <small class="text-muted">Press Enter to add</small>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <button type="button" class="btn btn-sm btn-danger w-100" id="clearAllSpecificDates">
-                                            <i class="fas fa-trash"></i> Clear
-                                        </button>
                                     </div>
                                 </div>
 
@@ -756,39 +1025,45 @@
                                     <label class="font-weight-bold">Selected Dates</label>
                                     <div id="selectedDatesList" class="date-list-container">
                                         @if(old('specific_dates'))
-                                        @foreach(old('specific_dates') as $date)
-                                        <div class="date-item" data-date="{{ $date }}">
+                                        @php
+                                        $specificDates = old('specific_dates', []);
+                                        $specificRemarks = old('specific_remarks', []);
+                                        $specificCount = count($specificDates);
+                                        @endphp
+                                        @for($i = 0; $i < $specificCount; $i++)
+                                            <div class="date-item" data-date="{{ $specificDates[$i] }}">
                                             <div class="date-text">
-                                                <span class="day-badge">{{ date('D', strtotime($date)) }}</span>
-                                                <span>{{ date('d-m-Y', strtotime($date)) }}</span>
+                                                <span class="day-badge">{{ date('D', strtotime($specificDates[$i])) }}</span>
+                                                <span>{{ date('d-m-Y', strtotime($specificDates[$i])) }}</span>
+                                                <span class="date-remark">{{ $specificRemarks[$i] ?? '' }}</span>
                                             </div>
                                             <button type="button" class="remove-date" onclick="removeSpecificDate(this)">
                                                 <i class="fas fa-minus-circle"></i>
                                             </button>
-                                            <input type="hidden" name="specific_dates[]" value="{{ $date }}">
-                                        </div>
-                                        @endforeach
-                                        @endif
+                                            <input type="hidden" name="specific_dates[]" value="{{ $specificDates[$i] }}">
+                                            <input type="hidden" name="specific_remarks[]" value="{{ $specificRemarks[$i] ?? '' }}">
                                     </div>
+                                    @endfor @endif
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Form Actions -->
-                    <div class="d-flex justify-content-end mt-3">
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Submit
-                            </button>
-                            <a href="{{ route('holiday-settings.index') }}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Back
-                            </a>
-                        </div>
-                    </div>
-                </form>
             </div>
+
+            <!-- Form Actions -->
+            <div class="d-flex justify-content-end mt-3">
+                <div class="mb-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Submit
+                    </button>
+                    <a href="{{ route('holiday-settings.index') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </a>
+                </div>
+            </div>
+            </form>
         </div>
     </div>
+</div>
 </div>
 @endsection

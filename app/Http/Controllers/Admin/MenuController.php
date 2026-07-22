@@ -30,11 +30,30 @@ class MenuController extends Controller
 
     public function index(Request $request)
     {
+
+        $user = Auth::user();
+
+        if ($user->role == 'Canteen Incharge') {
+            $locationList = Location::where('status', 1)->where('id',  $user->location_id)->get();
+        } elseif ($user->role == 'Super Admin') {
+            $locationList = Location::where('status', 1)->get();
+        } else {
+            return redirect()->back()->with('error', 'You do not have permission to access this page.');
+        }
+
         if ($request->ajax()) {
 
-            $data = Menu::with('subMenus')
-                ->orderBy('name', 'ASC')
-                ->get();
+            $query = Menu::with('subMenus', 'location')
+                ->orderBy('name', 'ASC');
+
+            if ($user->role == 'Canteen Incharge') {
+                $query->where('location_id', $user->location_id);
+            } elseif ($user->role == 'Super Admin') {
+                $locationList = Location::where('status', 1)->get();
+            } else {
+                return redirect()->back()->with('error', 'You do not have permission to access this page.');
+            }
+            $data = $query->get();
 
             return DataTables::of($data)
                 ->addIndexColumn()
@@ -50,27 +69,46 @@ class MenuController extends Controller
                         Add New
                     </a>';
                 })
+                ->addColumn('location', function ($row) {
+                    return $row->location->name ?? '';
+                })
                 ->addColumn('status', function ($row) {
                     return $row->status == 1
                         ? '<span class="badge bg-primary"><i class="fa fa-check"></i> Active</span>'
                         : '<span class="badge bg-danger"><i class="fa fa-times"></i> Inactive</span>';
                 })
 
-                ->rawColumns(['submenus', 'status', 'action'])
+                ->addColumn('action', function ($row) {
+                    return '
+        <button type="button"
+            class="btn btn-warning btn-sm editMenuBtn"
+            data-bs-toggle="modal"
+            data-bs-target="#editMenuModal"
+            data-id="' . $row->id . '"
+            data-location_id="' . $row->location_id . '"
+            data-name="' . e($row->name) . '"
+            data-status="' . $row->status . '">
+            <i class="fa fa-edit"></i>
+        </button>';
+                })
+
+                ->rawColumns(['submenus', 'status', 'action', 'location'])
                 ->make(true);
         }
 
-        return view('admin.menu.index');
+        return view('admin.menu.index', compact('locationList'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
             'name' => 'required|unique:menus,name',
+            'location_id' => 'required|exists:locations,id',
             'status' => 'required'
         ]);
 
         Menu::create([
+            'location_id' => $request->location_id,
             'name' => $request->name,
             'status' => $request->status,
         ]);
@@ -201,6 +239,7 @@ class MenuController extends Controller
             'submenu_id.*' => 'array',
             'submenu_id.*.*' => 'exists:sub_menus,id',
             'location_id' => 'required|exists:locations,id',
+            'special_flag' => 'required|in:0,1',
         ]);
 
         if ($validator->fails()) {
@@ -228,6 +267,7 @@ class MenuController extends Controller
         $dailyMenu = DailyMenu::create([
             'calendar_id' => $dayStatus->id,
             'location_id' => $request->location_id,
+            'special_flag' => $request->special_flag,
             'menu_date' => $request->menu_date,
             'remarks' => $request->remarks,
             'created_by' => auth()->id(),
@@ -301,6 +341,8 @@ class MenuController extends Controller
             'submenu_id' => 'required|array',
             'submenu_id.*' => 'array',
             'submenu_id.*.*' => 'exists:sub_menus,id',
+            'special_flag' => 'required|in:0,1',
+
         ], [
             'menu_date.unique' => 'Menu already exists for the selected location and date.',
         ]);
@@ -326,6 +368,7 @@ class MenuController extends Controller
             'location_id' => $request->location_id,
             'menu_date' => $request->menu_date,
             'remarks' => $request->remarks,
+            'special_flag' => $request->special_flag,
         ]);
 
         // Delete old items

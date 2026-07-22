@@ -26,6 +26,10 @@ return new class extends Migration
             $table->decimal('non_member_rate', 10, 2)->default(0.00);
             $table->decimal('guest_rate', 10, 2)->default(0.00);
 
+            // Security Deposit Columns
+            $table->enum('security_deposit_applicable', ['yes', 'no'])->default('no');
+            $table->decimal('security_deposit_amount', 10, 2)->nullable();
+
             $table->boolean('status')->default(1);
 
             $table->timestamps();

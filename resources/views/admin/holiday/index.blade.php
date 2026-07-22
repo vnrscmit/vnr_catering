@@ -43,34 +43,30 @@
                 },
 
                 {
+                    data: 'year',
+                    name: 'year'
+                },
+                {
                     data: 'location_name',
                     name: 'location_name',
                     searchable: true,
                     orderable: true
                 },
-                {
-                    data: 'type',
-                    name: 'type',
-                    searchable: true,
-                    orderable: true
-                },
 
                 {
-                    data: 'holiday_date',
-                    name: 'holiday_date',
-                    searchable: true,
-                    orderable: true
+                    data: 'holiday_count',
+                    name: 'holiday_count'
                 },
 
 
                 {
-                    data: 'status',
-                    name: 'status',
+                    data: 'week_off_count',
+                    name: 'week_off_count',
                     searchable: true
                 },
                 {
-                    data: 'action',
-                    name: 'action',
+                    data: 'special_day_count',
+                    name: 'special_day_count',
                     searchable: false,
                     orderable: false
                 }
@@ -107,7 +103,7 @@
 </script>
 @endpush
 
-@section('title', 'Holiday Settings')
+@section('title', 'Holiday Masters')
 
 @section('content')
 <div class="main-panel">
@@ -117,7 +113,7 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="typcn typcn-calendar-outline mr-2"></i>
-                    Holiday Settings
+                    Holiday Masters
                 </h5>
                 <a href="{{ route('holiday-settings.create') }}" class="btn btn-primary btn-sm">
                     <i class="fa fa-plus"></i>
@@ -131,11 +127,11 @@
                         <thead>
                             <tr>
                                 <th width="5%">#</th>
+                                <th>Year</th>
                                 <th>Location</th>
-                                <th>Holiday Type</th>
-                                <th>Holiday Date</th>
-                                <th>Status</th>
-                                <th width="15%">Action</th>
+                                <th>Holiday</th>
+                                <th>Week Off</th>
+                                <th>Special Day</th>
                             </tr>
                         </thead>
                     </table>
@@ -157,7 +153,7 @@
                     <div class="modal-body">
                         <div class="alert alert-warning">
                             <i class="typcn typcn-info-large"></i>
-                            Are you sure you want to delete this Holiday Setting?
+                            Are you sure you want to delete this Holiday Master?
                         </div>
                         <p class="text-muted">This action cannot be undone.</p>
                     </div>

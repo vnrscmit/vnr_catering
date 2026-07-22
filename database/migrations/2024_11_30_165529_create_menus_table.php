@@ -13,13 +13,13 @@ return new class extends Migration
     {
         Schema::create('menus', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('location_id');
             $table->string('name');
             $table->text('description');
             $table->decimal('price', 10, 2);
             $table->string('image');
             $table->timestamps();
         });
-        
     }
 
     /**

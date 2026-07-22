@@ -23,67 +23,39 @@
               </a>
             </li>
 
-            <!-- <li class="nav-item {{ request()->route()->named('admin.pos.index') ? 'active-nav' : '' }}">
-              <a class="nav-link" href="{{ route('admin.pos.index') }}">
-                <i class="fa fa-shopping-cart menu-icon" ></i>
-                  <span class="menu-title">Point of Sale</span>
-              </a>
-          </li>
-      
-          <li class="nav-item {{ Request::is('admin/order*') ? 'active-nav' : '' }}">
-            <a class="nav-link" href="{{ route('admin.orders.index') }}">
-                <i class="fa fa-file menu-icon"></i>
-                <span class="menu-title">Manage Orders</span>
-            </a>
-        </li>
-        <li class="nav-item {{ request()->route()->named('admin.table-bookings') ? 'active-nav' : '' }}">
-          <a class="nav-link" href="{{ route('admin.table-bookings') }}">
-              <i class="fa fa-folder-open menu-icon"></i>
-              <span class="menu-title">Manage Bookings</span>
-          </a>
-        </li>        
-        <li class="nav-item {{ Request::is('admin/blog*') ? 'active-nav' : '' }}">
-            <a class="nav-link" href="{{ route('admin.blog.index') }}">
-                <i class="far fa-newspaper menu-icon"></i>
-                <span class="menu-title">Manage Blog</span>
-            </a>
-        </li>
-         -->
-
             @if ($loggedInUser->role == "Super Admin")
-
             <li class="nav-item {{ request()->route()->named('locations.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('locations.index') }}">
                 <i class="fa fa-map-marker-alt menu-icon"></i>
-                <span class="menu-title">Locations</span>
+                <span class="menu-title">Location Master</span>
               </a>
             </li>
 
             <li class="nav-item {{ request()->route()->named('departments.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('departments.index') }}">
                 <i class="fa fa-building menu-icon"></i>
-                <span class="menu-title">Departments</span>
+                <span class="menu-title">Department Master</span>
               </a>
             </li>
 
             <li class="nav-item {{ request()->route()->named('admin.roles.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('admin.roles.index') }}">
                 <i class="fa fa-user-shield menu-icon"></i>
-                <span class="menu-title">Master Roles</span>
+                <span class="menu-title">Role Master</span>
               </a>
             </li>
 
             <li class="nav-item {{ request()->route()->named('admin.users.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('admin.users.index') }}">
                 <i class="fa fa-users menu-icon"></i>
-                <span class="menu-title">Master Users</span>
+                <span class="menu-title">User Master</span>
               </a>
             </li>
 
             <li class="nav-item {{ request()->route()->named('admin.menus.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('admin.menus.index') }}">
                 <i class="fa fa-utensils menu-icon"></i>
-                <span class="menu-title">Menu Category</span>
+                <span class="menu-title">Menu Master</span>
               </a>
             </li>
 
@@ -94,12 +66,7 @@
               </a>
             </li>
 
-            <li class="nav-item {{ request()->route()->named('company-parameters.*') ? 'active-nav' : '' }}">
-              <a class="nav-link" href="{{ route('company-parameters.index') }}">
-                <i class="fa fa-cogs menu-icon"></i>
-                <span class="menu-title">Canteen Setting</span>
-              </a>
-            </li>
+
 
             <li class="nav-item {{ request()->route()->named('rate-masters.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('rate-masters.index') }}">
@@ -111,25 +78,60 @@
             <li class="nav-item {{ request()->route()->named('holiday-settings.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('holiday-settings.index') }}">
                 <i class="fa fa-calendar-alt menu-icon"></i>
-                <span class="menu-title">Holiday Setting</span>
-              </a>
-            </li>
-            @endif
-
-            @if ($loggedInUser->role == "Canteen Incharge")
-            <li class="nav-item {{ request()->route()->named('admin.menus.*') ? 'active-nav' : '' }}">
-              <a class="nav-link" href="{{ route('admin.menus.index') }}">
-                <i class="fa fa-utensils menu-icon"></i>
-                <span class="menu-title">Mess Menu</span>
+                <span class="menu-title">Holiday Master</span>
               </a>
             </li>
             <li class="nav-item {{ request()->route()->named('company-parameters.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('company-parameters.index') }}">
                 <i class="fa fa-cogs menu-icon"></i>
-                <span class="menu-title">Canteen Setting</span>
+                <span class="menu-title">Canteen Parameter</span>
+              </a>
+            </li>
+            @endif
+
+            @if ($loggedInUser->role == "Canteen Incharge" || $loggedInUser->president_flag == 1)
+            <li class="nav-item {{ request()->route()->named('admin.users.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('admin.users.index') }}">
+                <i class="fa fa-users menu-icon"></i>
+                <span class="menu-title">User Master</span>
               </a>
             </li>
 
+            <li class="nav-item {{ request()->route()->named('admin.menus.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('admin.menus.index') }}">
+                <i class="fa fa-utensils menu-icon"></i>
+                <span class="menu-title">Menu Master</span>
+              </a>
+            </li>
+
+            <li class="nav-item {{ request()->route()->named('today-menu.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('today-menu.index') }}">
+                <i class="fa fa-utensils menu-icon"></i>
+                <span class="menu-title">Daily Menu</span>
+              </a>
+            </li>
+
+
+
+            <li class="nav-item {{ request()->route()->named('rate-masters.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('rate-masters.index') }}">
+                <i class="fa fa-money-bill-wave menu-icon"></i>
+                <span class="menu-title">Rate Master</span>
+              </a>
+            </li>
+
+            <li class="nav-item {{ request()->route()->named('holiday-settings.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('holiday-settings.index') }}">
+                <i class="fa fa-calendar-alt menu-icon"></i>
+                <span class="menu-title">Holiday Master</span>
+              </a>
+            </li>
+            <li class="nav-item {{ request()->route()->named('company-parameters.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('company-parameters.index') }}">
+                <i class="fa fa-cogs menu-icon"></i>
+                <span class="menu-title">Canteen Parameter</span>
+              </a>
+            </li>
             @endif
 
             <li class="nav-item {{ request()->route()->named('admin.view.myprofile') ? 'active-nav' : '' }}">

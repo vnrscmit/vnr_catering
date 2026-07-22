@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('remarks')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->boolean('status')->default(1);
+            $table->boolean('special_flag')->default(0);
             $table->timestamps();
 
             // Uncomment if users table exists

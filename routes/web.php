@@ -257,11 +257,20 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
         //Admin Manage Users routes
         Route::get('users', [UserAdminController::class, 'index'])->name('admin.users.index');
         Route::get('users/create', [UserAdminController::class, 'create'])->name('admin.users.create');
+        Route::get('users/{id}', [UserAdminController::class, 'show'])
+            ->name('admin.users.show');
+        Route::post('/users/suspend', [UserAdminController::class, 'suspend'])
+            ->name('admin.users.suspend');
+        Route::get('users/{user}/edit', [UserAdminController::class, 'edit'])
+            ->name('admin.users.edit');
         Route::post('users/store', [UserAdminController::class, 'store'])->name('admin.users.store');
         Route::put('users/{id}', [UserAdminController::class, 'update'])->name('admin.users.update');
         Route::delete('users/{id}', [UserAdminController::class, 'destroy'])->name('admin.users.destroy');
         Route::post('/users/update-date', [UserAdminController::class, 'updateDate'])
             ->name('admin.users.updateDate');
+
+        Route::get('/get-security-amount/{location}', [UserAdminController::class, 'getSecurityAmount'])
+            ->name('security.amount');
 
         //Admin Manage Users routes
         Route::get('roles', [RoleMasterController::class, 'index'])->name('admin.roles.index');
@@ -307,10 +316,14 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
 
         Route::resource('holiday-settings', HolidayController::class);
 
+        Route::get('/holiday-details/{location}/{year}/{type}', [HolidayController::class, 'details'])
+            ->name('holiday.details');
+
         //Admin Settings Menu
         Route::get('menu', [MenuController::class, 'index'])->name('admin.menus.index');
         Route::get('menu/create', [MenuController::class, 'create'])->name('admin.menus.create');
         Route::post('menu', [MenuController::class, 'store'])->name('admin.menus.store');
+        Route::put('menu/{id}', [MenuController::class, 'update'])->name('admin.menus.update');
 
         Route::get('submenu/create/{id}', [SubMenuController::class, 'create'])->name('admin.submenus.create');
         Route::post('submenu', [SubMenuController::class, 'store'])->name('admin.submenus.store');

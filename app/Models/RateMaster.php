@@ -18,6 +18,7 @@ class RateMaster extends Model
         'effective_to_calendar_id',
         'member_rate',
         'non_member_rate',
+        'min_day_rate',
         'guest_rate',
         'created_by',
         'status',

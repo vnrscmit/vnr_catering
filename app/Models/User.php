@@ -12,30 +12,36 @@ class User extends Authenticatable implements CanResetPassword
 {
     use  HasApiTokens,  HasFactory, Notifiable;
 
-    protected $fillable = [
-        'role_id',           // Changed from 'role' to 'role_id' for foreign key
-        'role',
-        'first_name',
-        'last_name',
-        'email',
-        'mobile',            // Added mobile field
-        'designation',       // Added designation field
-        'department_id',     // Added department foreign key
-        'location_id',       // Added location foreign key
-        'other_location_id',
-        'personal_guest_flag',
-        'max_personal_guest_allowed',
-        'max_office_guest_allowed',
-        'start_calendar_id',
-        'password',
-        'status',
-        'multilocation_flag',
-        'notice',
-        'phone_number',
-        'address',
-        'activation_token',
-        'two_factor_auth',
-    ];
+protected $fillable = [
+    'role_id',
+    'role',
+    'first_name',
+    'last_name',
+    'email',
+    'mobile',
+    'designation',
+    'department_id',
+    'location_id',
+    'other_location_id',
+    'personal_guest_flag',
+    'president_flag',
+    'max_personal_guest_allowed',
+    'max_office_guest_allowed',
+    'security_amount',
+    'payment_method',
+    'start_calendar_id',
+    'suspend_date',
+    'suspend_calendar_id',
+    'suspend_remarks',
+    'password',
+    'status',
+    'multilocation_flag',
+    'notice',
+    'phone_number',
+    'address',
+    'activation_token',
+    'two_factor_auth',
+];
 
     protected $hidden = [
         'password',

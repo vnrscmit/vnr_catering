@@ -91,6 +91,37 @@
                             @enderror
                         </div>
 
+                        <!-- Guest Allowed -->
+                        <div class="col-md-4">
+                             <label><strong>Special<span class="text-danger"> *</span></strong></label>
+                            <div class="d-flex align-items-center gap-4">
+                                <div class="form-check me-4">
+                                    <input class="form-check-input"
+                                        type="radio"
+                                        name="special_flag"
+                                        id="special_flag_no"
+                                        value="0"
+                                        {{ old('special_flag', 0) == 0 ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="special_flag_no">
+                                        No
+                                    </label>
+                                </div>
+
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                        type="radio"
+                                        name="special_flag"
+                                        id="special_flag_yes"
+                                        value="1"
+                                        {{ old('special_flag') == 1 ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="special_flag_yes">
+                                        Yes
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+
 
 
                     </div>

@@ -24,6 +24,7 @@ return new class extends Migration
             $table->decimal('member_rate', 10, 2)->default(0.00);
             $table->decimal('non_member_rate', 10, 2)->default(0.00);
             $table->decimal('guest_rate', 10, 2)->default(0.00);
+            $table->decimal('min_day_rate', 10, 2)->default(0.00);
 
             $table->enum('type', ['Monthly', 'Fixed'])->default('Monthly');
 

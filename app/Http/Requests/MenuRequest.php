@@ -14,6 +14,7 @@ class MenuRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'location_id' => 'required',
             'name' => 'required|string|max:255',
             'status' => 'required|string|max:50',
         ];
