@@ -25543,6 +25543,7 @@ body.avgrund-active {
 
 .sidebar .sidebar-profile {
   padding: 1.75rem 1.125rem;
+    margin-bottom: -16px;
 }
 
 .sidebar .sidebar-profile .sidebar-profile-image {
@@ -25841,6 +25842,7 @@ body.avgrund-active {
 
 .sidebar-light .sidebar .sidebar-profile {
   padding: 1.75rem 1.125rem;
+      margin-bottom: -16px;
 }
 
 .sidebar-light .sidebar .sidebar-profile .sidebar-profile-image {
@@ -25956,6 +25958,7 @@ body.avgrund-active {
 }
 
 .navbar .navbar-brand-wrapper {
+  background: #ffffff;
   transition: width 0.25s ease, background 0.25s ease;
   -webkit-transition: width 0.25s ease, background 0.25s ease;
   -moz-transition: width 0.25s ease, background 0.25s ease;
@@ -26080,10 +26083,8 @@ body.avgrund-active {
 
 .navbar .navbar-menu-wrapper .navbar-nav .nav-item .nav-link {
   color: #001737;
-  font-size: 0.875rem;
+  font-size: 0.895rem;
   font-style: normal;
-  padding: 1.2rem 1.2rem;
-  font-weight: 300;
 }
 
 .navbar .navbar-menu-wrapper .navbar-nav .nav-item .nav-link.active {
@@ -28301,4 +28302,3 @@ div.dt-buttons {
   background: #095B31;
   color: #fff;
 }
-

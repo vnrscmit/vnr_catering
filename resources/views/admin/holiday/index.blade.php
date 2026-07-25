@@ -111,9 +111,9 @@
         @include('partials.message-bag')
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
+                <h5 class="card-title mb-0">
                     <i class="typcn typcn-calendar-outline mr-2"></i>
-                    Holiday Masters
+                    Holiday Master - {{ auth()->user()->location->name ?? 'N/A' }}
                 </h5>
                 <a href="{{ route('holiday-settings.create') }}" class="btn btn-primary btn-sm">
                     <i class="fa fa-plus"></i>
@@ -131,7 +131,7 @@
                                 <th>Location</th>
                                 <th>Holiday</th>
                                 <th>Week Off</th>
-                                <th>Special Day</th>
+                                <th>Specific Date</th>
                             </tr>
                         </thead>
                     </table>

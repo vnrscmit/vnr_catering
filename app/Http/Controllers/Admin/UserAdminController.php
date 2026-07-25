@@ -67,7 +67,7 @@ class UserAdminController extends Controller
                     return $row->first_name;
                 })
 
-                ->addColumn('role', function ($row) {
+                ->addColumn('role_name', function ($row) {
                     return $row->role_name ?? 'N/A';
                 })
 
@@ -145,6 +145,25 @@ class UserAdminController extends Controller
     }
     public function create()
     {
+
+        $user = Auth::user();
+
+        if ($user->role == 'Super Admin') {
+            $locations = Location::orderBy('name')->get();
+            $presidentLock = false;
+        } elseif ($user->role == 'Canteen Incharge' || $user->president_flag == 1) {
+
+            $locations = Location::where('id', $user->location_id)
+                ->orderBy('name')
+                ->get();
+            // Check if a president exists for this location
+            $presidentLock = User::where('location_id', $user->location_id)
+                ->where('president_flag', 1)
+                ->exists();
+        } else {
+            return redirect()->back()->with('error', 'You are not authorized to access this page.');
+        }
+
         // Fetch and order data for dropdowns
         $roles = RoleMaster::where('status', 1)
             ->orderBy('name', 'asc')
@@ -159,7 +178,7 @@ class UserAdminController extends Controller
             ->orderBy('name', 'asc')
             ->get();
 
-        return view('admin.users.create', compact('roles', 'departments', 'locations'));
+        return view('admin.users.create', compact('roles', 'departments', 'locations', 'presidentLock'));
     }
 
     public function store(CreateUserRequest $request)
@@ -178,6 +197,21 @@ class UserAdminController extends Controller
                     'Canteen President already assigned for this location. Current President ' . $checkAlreadyPresident->first_name
                 );
         }
+
+        $checkAlreadyExistEmployeeCode = User::where('user_code', $request->user_code)
+            ->first();
+
+        if ($checkAlreadyExistEmployeeCode) {
+            return redirect()
+                ->back()
+                ->with(
+                    'error',
+                    'Employee ID already exist'
+                );
+        }
+
+
+
 
         DB::beginTransaction();
 
@@ -201,6 +235,7 @@ class UserAdminController extends Controller
                 'role_id'                    => $request->role_id,
                 'role'                       => $role->name,
                 'first_name'                 => $request->first_name,
+                'user_code'                 => $request->user_code,
                 'last_name'                  => $request->first_name,
                 'email'                      => $request->email,
                 'mobile'                     => $request->mobile,
@@ -214,6 +249,7 @@ class UserAdminController extends Controller
                 // Security Details
                 'security_amount'            => $request->security_amount ?? 0.00,
                 'payment_method'             => $request->payment_method,
+                'payment_date'                => $request->payment_date,
 
                 'president_flag'             => $request->president_flag ?? 0,
                 'password'                   => Hash::make($request->password),
@@ -367,9 +403,7 @@ class UserAdminController extends Controller
 
         try {
 
-
             $user = User::findOrFail($request->user_id);
-
 
             $dayStatus = DayStatus::where('date', $request->date)->where('location_id', $user->location_id)->first();
 
@@ -426,7 +460,7 @@ class UserAdminController extends Controller
                         );
                     }
                 }
-            } else {
+            } elseif (in_array($user->role, ['Member'])) {
 
                 $dayStatusesOld = DayStatus::where('id', '<', $user->start_calendar_id)->where('location_id', $user->location_id)
                     ->get();
@@ -476,35 +510,37 @@ class UserAdminController extends Controller
                         ]
                     );
                 }
+            } else {
             }
 
             // Multilocation Logic
+            if (in_array($user->role, ['Non Member', 'Member'])) {
+                if ($user->multilocation_flag == 1) {
 
-            if ($user->multilocation_flag == 1) {
+                    $locationIds = MultipleLocation::where('user_id', $user->id)
+                        ->pluck('location_id');
 
-                $locationIds = MultipleLocation::where('user_id', $user->id)
-                    ->pluck('location_id');
+                    $calendarIds = DayStatus::where('location_id', $user->location_id)->pluck('id');
 
-                $calendarIds = DayStatus::where('location_id', $user->location_id)->pluck('id');
+                    foreach ($locationIds as $locationId) {
 
-                foreach ($locationIds as $locationId) {
+                        foreach ($calendarIds as $calendarId) {
 
-                    foreach ($calendarIds as $calendarId) {
-
-                        AttendanceAbsent::firstOrCreate(
-                            [
-                                'calendar_id' => $calendarId,
-                                'user_id'     => $user->id,
-                                'location_id' => $locationId,
-                            ],
-                            [
-                                'absent_flag'      => 1,
-                                'absent_remarks'   => null,
-                                'override_flag'    => 0,
-                                'override_remarks' => null,
-                                'status'           => 1,
-                            ]
-                        );
+                            AttendanceAbsent::firstOrCreate(
+                                [
+                                    'calendar_id' => $calendarId,
+                                    'user_id'     => $user->id,
+                                    'location_id' => $locationId,
+                                ],
+                                [
+                                    'absent_flag'      => 1,
+                                    'absent_remarks'   => null,
+                                    'override_flag'    => 0,
+                                    'override_remarks' => null,
+                                    'status'           => 1,
+                                ]
+                            );
+                        }
                     }
                 }
             }

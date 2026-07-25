@@ -10,6 +10,7 @@ use App\Models\SubMenu;
 use Illuminate\Http\RedirectResponse;
 use App\Http\Controllers\Traits\AdminViewSharedDataTrait;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class SubMenuController extends Controller
 {
@@ -76,12 +77,32 @@ class SubMenuController extends Controller
             ->route('admin.menus.index')
             ->with('success', "{$createdCount} submenu created successfully!");
     }
-    public function update(SubMenuRequest $request, $id): RedirectResponse
+    public function update(Request $request, $id)
     {
-        $submenu = SubMenu::findOrFail($id);
-        $submenu->update($request->validated());
+        $validated = $request->validate([
+            'menu_id' => 'required|exists:menus,id',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('sub_menus', 'name')
+                    ->where(function ($query) use ($request) {
+                        return $query->where('menu_id', $request->menu_id);
+                    })
+                    ->ignore($id),
+            ],
+            'status' => 'required|in:0,1',
+        ]);
 
-        return back()->with('success', 'Submenu updated successfully!');
+        $submenu = SubMenu::findOrFail($id);
+
+        $submenu->update($validated);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Submenu updated successfully.',
+            'data' => $submenu
+        ]);
     }
 
     public function destroy($id): RedirectResponse

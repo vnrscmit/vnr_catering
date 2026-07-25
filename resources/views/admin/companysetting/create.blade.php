@@ -54,7 +54,6 @@
                         $('#non_member_rate').val(response.data.non_member_rate);
                         $('#guest_rate').val(response.data.guest_rate);
                         $('#attendance_out_time').val(response.data.attendance_out_time);
-                        $('#lunch_out_time').val(response.data.lunch_out_time);
                         $('#max_day_show').val(response.data.max_day_show);
 
                         $('#canteen_start_time').val(response.data.canteen_start_time);
@@ -79,7 +78,6 @@
                         $('#non_member_rate').val('');
                         $('#guest_rate').val('');
                         $('#attendance_out_time').val('');
-                        $('#lunch_out_time').val('');
                         $('#max_day_show').val(5);
 
                         $('#canteen_start_time').val('');
@@ -183,7 +181,7 @@
 
                         <div class="col-md-6 mb-3">
                             <label class="form-label">
-                                Attendance Out Time <span class="text-danger">*</span>
+                                Attendance Cut-Off Time <span class="text-danger">*</span>
                             </label>
 
                             <input
@@ -195,19 +193,6 @@
                                 required>
                         </div>
 
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">
-                                Lunch Out Time <span class="text-danger">*</span>
-                            </label>
-
-                            <input
-                                type="time"
-                                id="lunch_out_time"
-                                name="lunch_out_time"
-                                class="form-control"
-                                value="{{ old('lunch_out_time') }}"
-                                required>
-                        </div>
 
                         <div class="col-md-6 mb-3">
                             <label>Canteen Start Time <span class="text-danger">*</span></label>
@@ -247,7 +232,7 @@
                         <!-- Security Deposit Section -->
                         <div class="col-md-12 mb-3">
                             <label class="form-label">
-                                Security Deposit Applicable <span class="text-danger">*</span>
+                                Security Deposit <span class="text-danger">*</span>
                             </label>
 
                             <div class="radio-group">
@@ -257,7 +242,7 @@
                                         id="security_deposit_yes"
                                         value="yes"
                                         {{ old('security_deposit_applicable') == 'yes' ? 'checked' : '' }}>
-                                    <label for="security_deposit_yes">Yes</label>
+                                    <label for="security_deposit_yes">Applicable</label>
                                 </div>
                                 <div class="form-check">
                                     <input type="radio"
@@ -266,7 +251,7 @@
                                         value="no"
                                         {{ old('security_deposit_applicable') == 'no' ? 'checked' : '' }}
                                         checked>
-                                    <label for="security_deposit_no">No</label>
+                                    <label for="security_deposit_no">Not Applicable</label>
                                 </div>
                             </div>
 

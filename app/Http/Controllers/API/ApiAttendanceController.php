@@ -77,14 +77,14 @@ class ApiAttendanceController extends Controller
         ]);
     }
 
-     public function calendar(Request $request)
+    public function calendar(Request $request)
     {
         $request->validate([
             'location_id' => 'required|exists:locations,id',
         ]);
 
         $userData = Auth::user();
-     
+
         $today = Carbon::today()->toDateString();
         $locationId = $request->location_id;
 
@@ -112,6 +112,7 @@ class ApiAttendanceController extends Controller
                 $type . 'Summary' => [
                     'present' => $days->where('absent_flag', 0)
                         ->where('open_flag', 1)
+                        ->where('date', '<=', Carbon::today()->toDateString())
                         ->count(),
 
                     'absent' => $days->where('absent_flag', 1)->where('open_flag', 1)->count(),
@@ -410,6 +411,7 @@ class ApiAttendanceController extends Controller
                     ->where('attendance_absents.location_id', $locationId)
                     ->where('attendance_absents.calendar_id', $dayStatus->id);
             })
+            ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge'])
             ->select(
                 'users.id',
                 'users.first_name',
@@ -424,6 +426,7 @@ class ApiAttendanceController extends Controller
         ")
             )
             ->orderBy('users.first_name')
+            ->where('users.status', 1)
             ->get();
 
 
@@ -482,6 +485,15 @@ class ApiAttendanceController extends Controller
                 return response()->json([
                     'status' => false,
                     'message' => 'Day status not found for the selected date.',
+                ], 404);
+            }
+
+            $userCheck = User::where('id', $request->user_id)->first();
+
+            if (!$userCheck) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User not found.',
                 ], 404);
             }
 
@@ -606,8 +618,10 @@ class ApiAttendanceController extends Controller
             ->where('status', 1)
             ->pluck('id');
 
-        $multiLinkedUserIds = MultipleLocation::where('location_id', $locationId)
-            ->pluck('user_id');
+        $multiLinkedUserIds = MultipleLocation::join('users', 'multiple_locations.user_id', '=', 'users.id')
+            ->where('multiple_locations.location_id', $locationId)
+            ->where('users.status', 1)
+            ->pluck('multiple_locations.user_id');
 
         $allLinkedUserIds = $singleLinkedUserIds
             ->merge($multiLinkedUserIds)

@@ -111,7 +111,7 @@
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Daily Menu Master</h5>
+                <h5 class="card-title mb-0">Daily Menu Master - {{ auth()->user()->location->name ?? 'N/A' }}</h5>
                 <a href="{{ route('today-menu.create') }}" class="btn btn-primary btn-sm">
                     <i class="fa fa-plus"></i> Add Daily Menu
                 </a>

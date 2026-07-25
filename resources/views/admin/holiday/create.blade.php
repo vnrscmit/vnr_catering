@@ -271,7 +271,6 @@
         font-size: 12px;
     }
 
-
     .btn-danger {
         background-color: #fc8181;
         border: none;
@@ -354,17 +353,21 @@
     }
 
     .holiday-btn {
-        background: #f8fafc;
-        border: 2px solid #e8ecef;
-        border-radius: 8px;
-        padding: 10px 16px;
-        cursor: pointer;
-        transition: all 0.3s ease;
+        flex: 1 1 180px;
+        max-width: 180px;
+        min-width: 180px;
+        min-height: 100px;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        background: #fff;
         text-align: center;
-        min-width: 90px;
-        color: #4a5568;
-        font-weight: 500;
-        line-height: 1.4;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        transition: all .2s ease;
     }
 
     .holiday-btn:hover {
@@ -444,6 +447,7 @@
 <script src="/admin_resources/js/todolist.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
     $(document).ready(function() {
@@ -472,7 +476,12 @@
             var remarkValue = remarkInput.val().trim();
 
             if (!dateValue) {
-                alert('Please select a date first');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Date Required',
+                    text: 'Please select a date first.',
+                    confirmButtonText: 'OK'
+                });
                 return;
             }
 
@@ -489,7 +498,7 @@
             }
         });
 
-        // Add date for specific dates
+        // Add date for Specific Off Dates
         $('#addDate').click(function(e) {
             e.preventDefault();
             var dateInput = $('#specificDateInput');
@@ -498,7 +507,12 @@
             var remarkValue = remarkInput.val().trim();
 
             if (!dateValue) {
-                alert('Please select a date first');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Date Required',
+                    text: 'Please select a date first.',
+                    confirmButtonText: 'OK'
+                });
                 return;
             }
 
@@ -507,12 +521,19 @@
             remarkInput.val('');
         });
 
-        // Enter key support for adding specific dates
+        // Enter key support for adding Specific Off Dates
         $('#specificDateInput, #specificRemarkInput').keypress(function(e) {
             if (e.which === 13) {
                 e.preventDefault();
                 $('#addDate').click();
             }
+        });
+
+        // Quick holiday buttons
+        $('.holiday-btn').click(function() {
+            $('#holidayDateInput').val($(this).data('date'));
+            $('#holidayRemarkInput').val($(this).data('remark'));
+            $('#addHolidayDate').trigger('click');
         });
 
         // FORM SUBMIT VALIDATION
@@ -523,7 +544,12 @@
 
             if (!holidayType) {
                 e.preventDefault();
-                alert('Please select a holiday type');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Date Required',
+                    text: 'Please select a holiday type.',
+                    confirmButtonText: 'OK'
+                });
                 return false;
             }
 
@@ -531,41 +557,54 @@
                 var dates = $('#selectedDatesList .date-item').length;
                 if (dates === 0) {
                     e.preventDefault();
-                    alert('Please add at least one specific date');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Date Required',
+                        text: 'Please add at least one specific date.',
+                        confirmButtonText: 'OK'
+                    });
                     return false;
                 }
             } else if (holidayType === 'holiday') {
                 var holidayDates = $('#selectedHolidayDatesList .date-item').length;
                 if (holidayDates === 0) {
                     e.preventDefault();
-                    alert('Please add at least one holiday date');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Date Required',
+                        text: 'Please add at least one holiday date.',
+                        confirmButtonText: 'OK'
+                    });
                     return false;
                 }
             } else if (holidayType === 'weekly_off') {
                 var selectedDays = getSelectedDays();
                 if (selectedDays.length === 0) {
                     e.preventDefault();
-                    alert('Please select at least one weekly off day');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Date Required',
+                        text: 'Please select at least one weekly off day.',
+                        confirmButtonText: 'OK'
+                    });
                     return false;
                 }
             }
 
-            // If all validation passes, form will submit
             return true;
         });
+
+        // Initialize empty messages
+        checkEmptyList('holiday');
+        checkEmptyList('specific');
+
+        // Set min date for date inputs
+        var today = getTodayDate();
+        $('#specificDateInput, #holidayDateInput').attr('min', today);
     });
 
-    // ============ FUNCTIONS ============
-
-    $('.holiday-btn').click(function() {
-
-        $('#holidayDateInput').val($(this).data('date'));
-        $('#holidayRemarkInput').val($(this).data('remark'));
-
-        $('#addHolidayDate').trigger('click');
-    });
-
-
+    // ============ HOLIDAY DATES FUNCTIONS ============
+    
     function addHolidayDate(dateValue, remarkValue) {
         // Check if date already exists
         var exists = false;
@@ -577,7 +616,12 @@
         });
 
         if (exists) {
-            alert('This date is already added to the holiday list');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Date Required',
+                text: 'This date is already added to the holiday list.',
+                confirmButtonText: 'OK'
+            });
             return;
         }
 
@@ -586,66 +630,47 @@
         var dayName = getDayOfWeek(dateValue);
         var remarkText = remarkValue || '';
 
-        // Add date to list
+        // Create date item HTML
         var dateHtml = `
-        <div class="date-item" data-date="${dateValue}">
-            <div class="date-text">
-                <span class="day-badge">${dayName}</span>
-                <span>${formattedDate}</span>
-                <span class="date-remark">${remarkText}</span>
+            <div class="date-item" data-date="${dateValue}">
+                <div class="date-text">
+                    <span class="day-badge">${dayName}</span>
+                    <span>${formattedDate}</span>
+                    <span class="date-remark">${remarkText}</span>
+                </div>
+                <button type="button" class="remove-date" onclick="removeHolidayDate(this)" title="Remove date">
+                    <i class="fas fa-minus-circle"></i>
+                </button>
+                <input type="hidden" name="holiday_dates[]" value="${dateValue}">
+                <input type="hidden" name="holiday_remarks[]" value="${remarkText}">
             </div>
-            <button type="button" class="remove-date" onclick="removeHolidayDate(this)" title="Remove date">
-                <i class="fas fa-minus-circle"></i>
-            </button>
-            <input type="hidden" name="holiday_dates[]" value="${dateValue}">
-            <input type="hidden" name="holiday_remarks[]" value="${remarkText}">
-        </div>
-    `;
+        `;
 
+        // Add the new item
         $('#selectedHolidayDatesList').append(dateHtml);
+        
+        // Sort all items by date
+        sortHolidayDates();
+        
         updateHolidayDateCount();
         removeEmptyMessage('holiday');
     }
 
-    function addSpecificDate(dateValue, remarkValue) {
-        // Check if date already exists
-        var exists = false;
-        $('#selectedDatesList .date-item').each(function() {
-            if ($(this).data('date') === dateValue) {
-                exists = true;
-                return false;
-            }
+    function sortHolidayDates() {
+        var container = $('#selectedHolidayDatesList');
+        var items = container.children('.date-item').get();
+        
+        // Sort items by date
+        items.sort(function(a, b) {
+            var dateA = new Date($(a).data('date'));
+            var dateB = new Date($(b).data('date'));
+            return dateA - dateB;
         });
-
-        if (exists) {
-            alert('This date is already added to the specific dates list');
-            return;
-        }
-
-        // Format date to d-m-Y
-        var formattedDate = formatDateDMY(dateValue);
-        var dayName = getDayOfWeek(dateValue);
-        var remarkText = remarkValue || '';
-
-        // Add date to list
-        var dateHtml = `
-        <div class="date-item" data-date="${dateValue}">
-            <div class="date-text">
-                <span class="day-badge">${dayName}</span>
-                <span>${formattedDate}</span>
-                <span class="date-remark">${remarkText}</span>
-            </div>
-            <button type="button" class="remove-date" onclick="removeSpecificDate(this)" title="Remove date">
-                <i class="fas fa-minus-circle"></i>
-            </button>
-            <input type="hidden" name="specific_dates[]" value="${dateValue}">
-            <input type="hidden" name="specific_remarks[]" value="${remarkText}">
-        </div>
-    `;
-
-        $('#selectedDatesList').append(dateHtml);
-        updateDateCount();
-        removeEmptyMessage('specific');
+        
+        // Re-append sorted items
+        $.each(items, function(index, item) {
+            container.append(item);
+        });
     }
 
     function removeHolidayDate(element) {
@@ -653,29 +678,6 @@
             $(this).remove();
             updateHolidayDateCount();
             checkEmptyList('holiday');
-        });
-    }
-
-    function removeSpecificDate(element) {
-        $(element).closest('.date-item').fadeOut(200, function() {
-            $(this).remove();
-            updateDateCount();
-            checkEmptyList('specific');
-        });
-    }
-
-    function formatDateDMY(dateString) {
-        var date = new Date(dateString);
-        var day = String(date.getDate()).padStart(2, '0');
-        var month = String(date.getMonth() + 1).padStart(2, '0');
-        var year = date.getFullYear();
-        return day + '-' + month + '-' + year;
-    }
-
-    function getDayOfWeek(dateString) {
-        var date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            weekday: 'short'
         });
     }
 
@@ -689,6 +691,84 @@
         }
     }
 
+    // ============ SPECIFIC DATES FUNCTIONS ============
+    
+    function addSpecificDate(dateValue, remarkValue) {
+        // Check if date already exists
+        var exists = false;
+        $('#selectedDatesList .date-item').each(function() {
+            if ($(this).data('date') === dateValue) {
+                exists = true;
+                return false;
+            }
+        });
+
+        if (exists) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Date Required',
+                text: 'This date is already added to the Specific Off Dates list.',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+
+        // Format date to d-m-Y
+        var formattedDate = formatDateDMY(dateValue);
+        var dayName = getDayOfWeek(dateValue);
+        var remarkText = remarkValue || '';
+
+        // Create date item HTML
+        var dateHtml = `
+            <div class="date-item" data-date="${dateValue}">
+                <div class="date-text">
+                    <span class="day-badge">${dayName}</span>
+                    <span>${formattedDate}</span>
+                    <span class="date-remark">${remarkText}</span>
+                </div>
+                <button type="button" class="remove-date" onclick="removeSpecificDate(this)" title="Remove date">
+                    <i class="fas fa-minus-circle"></i>
+                </button>
+                <input type="hidden" name="specific_dates[]" value="${dateValue}">
+                <input type="hidden" name="specific_remarks[]" value="${remarkText}">
+            </div>
+        `;
+
+        // Add the new item
+        $('#selectedDatesList').append(dateHtml);
+        
+        // Sort all items by date
+        sortSpecificDates();
+        
+        updateDateCount();
+        removeEmptyMessage('specific');
+    }
+
+    function sortSpecificDates() {
+        var container = $('#selectedDatesList');
+        var items = container.children('.date-item').get();
+        
+        // Sort items by date
+        items.sort(function(a, b) {
+            var dateA = new Date($(a).data('date'));
+            var dateB = new Date($(b).data('date'));
+            return dateA - dateB;
+        });
+        
+        // Re-append sorted items
+        $.each(items, function(index, item) {
+            container.append(item);
+        });
+    }
+
+    function removeSpecificDate(element) {
+        $(element).closest('.date-item').fadeOut(200, function() {
+            $(this).remove();
+            updateDateCount();
+            checkEmptyList('specific');
+        });
+    }
+
     function updateDateCount() {
         var count = $('#selectedDatesList .date-item').length;
         $('#dateCount').text(count + ' dates');
@@ -697,6 +777,23 @@
         } else {
             $('#dateCount').removeClass('counter-badge');
         }
+    }
+
+    // ============ UTILITY FUNCTIONS ============
+    
+    function formatDateDMY(dateString) {
+        var date = new Date(dateString);
+        var day = String(date.getDate()).padStart(2, '0');
+        var month = String(date.getMonth() + 1).padStart(2, '0');
+        var year = date.getFullYear();
+        return day + '-' + month + '-' + year;
+    }
+
+    function getDayOfWeek(dateString) {
+        var date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            weekday: 'short'
+        });
     }
 
     function getSelectedDays() {
@@ -717,10 +814,10 @@
         var count = $(container + ' .date-item').length;
         if (count === 0) {
             var message = `
-            <div class="empty-dates-message">
-                <i class="fas fa-calendar-plus"></i> No dates added yet
-            </div>
-        `;
+                <div class="empty-dates-message">
+                    <i class="fas fa-calendar-plus"></i> No dates added yet
+                </div>
+            `;
             $(container).append(message);
         }
     }
@@ -730,7 +827,6 @@
         $('#weeklyCount').text(count + ' days');
     }
 
-    // Get current date for min attribute
     function getTodayDate() {
         var today = new Date();
         var dd = String(today.getDate()).padStart(2, '0');
@@ -738,16 +834,6 @@
         var yyyy = today.getFullYear();
         return yyyy + '-' + mm + '-' + dd;
     }
-
-    // Set min date for date inputs
-    $(document).ready(function() {
-        var today = getTodayDate();
-        $('#specificDateInput, #holidayDateInput').attr('min', today);
-
-        // Add empty messages
-        checkEmptyList('holiday');
-        checkEmptyList('specific');
-    });
 </script>
 @endpush
 
@@ -759,7 +845,7 @@
         @include('partials.message-bag')
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-calendar-alt"></i> Create Holiday Master</h5>
+                <h5 class="card-title mb-0"><i class="fas fa-calendar-alt"></i> Create Holiday Master</h5>
             </div>
 
             <div class="card-body">
@@ -775,7 +861,7 @@
                                 <option value="">Select Location</option>
                                 @foreach($locations as $location)
                                 <option value="{{ $location->id }}"
-                                    {{ old('location_id') == $location->id ? 'selected' : '' }}>
+                                    {{ old('location_id') == $location->id ? 'selected' : '' }} selected>
                                     {{ $location->name }}
                                 </option>
                                 @endforeach
@@ -788,9 +874,9 @@
 
                         <!-- Year -->
                         <div class="col-md-6 mb-3">
-                            <label>Year <span class="text-danger">*</span></label>
+                            <label>Calendar Year <span class="text-danger">*</span></label>
                             <select name="year" class="form-control" required>
-                                <option value="">Select Year</option>
+                                <option value="">Select Calendar Year</option>
 
                                 @for($year = date('Y'); $year <= date('Y') + 1; $year++)
                                     <option value="{{ $year }}"
@@ -824,7 +910,7 @@
 
                                     <input type="radio" class="btn-check" name="holiday_type" id="holidayType3" value="specific_date" autocomplete="off" hidden>
                                     <label class="btn btn-outline-primary" for="holidayType3">
-                                        <i class="fas fa-calendar-alt"></i> Specific Dates
+                                        <i class="fas fa-calendar-alt"></i> Specific Off Dates
                                     </label>
                                 </div>
                             </div>
@@ -852,7 +938,6 @@
                                     </label>
 
                                     <div class="holiday-buttons">
-
                                         <button type="button" class="holiday-btn"
                                             data-date="2026-01-01"
                                             data-remark="New Year's Day">
@@ -915,7 +1000,7 @@
                                     </div>
 
                                     <div class="col-md-6">
-                                        <label>Remarks</label>
+                                        <label>Holiday Occassion</label>
                                         <input type="text"
                                             id="holidayRemarkInput"
                                             class="form-control"
@@ -990,11 +1075,11 @@
                         </div>
                     </div>
 
-                    <!-- Specific Dates Section -->
+                    <!-- Specific Off Dates Section -->
                     <div id="specificDateSection" style="display: none;">
                         <div class="section-card">
                             <div class="card-header">
-                                <i class="fas fa-calendar-check"></i> Specific Dates
+                                <i class="fas fa-calendar-check"></i> Specific Off Dates
                                 <span id="dateCount" class="selected-dates-badge">0 dates</span>
                             </div>
                             <div class="card-body">
@@ -1007,11 +1092,11 @@
                                                 class="form-control date-input"
                                                 min="{{ date('Y-m-d') }}">
 
-                                            <span class="input-group-label">Remarks</span>
+                                            <span class="input-group-label">Reason</span>
                                             <input type="text"
                                                 id="specificRemarkInput"
                                                 class="form-control remark-input"
-                                                placeholder="Enter remarks (optional)">
+                                                placeholder="Enter Reason (optional)">
 
                                             <button type="button" id="addDate" class="btn btn-primary btn-add-date">
                                                 <i class="fas fa-plus"></i> Add

@@ -51,11 +51,11 @@
                 },
                 {
                     data: 'full_name',
-                    name: 'full_name'
+                    name: 'first_name'
                 },
 
                 {
-                    data: 'role',
+                    data: 'role_name',
                     name: 'role'
                 },
 
@@ -189,7 +189,7 @@
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span>Master Users</span>
+                <h5 class="card-title mb-0">User Master - {{ auth()->user()->location->name ?? 'N/A' }}</h5>
                 <a href="{{ route('admin.users.create') }}" class="btn btn-primary btn-sm">
                     <i class="fa fa-plus"></i> Add User
                 </a>

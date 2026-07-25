@@ -158,7 +158,7 @@
 
 @endpush
 
-@section('title', 'Create Account')
+@section('title', 'Login')
 
 @section('content')
 
