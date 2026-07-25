@@ -167,8 +167,8 @@
 
             <div class="card-header d-flex justify-content-between align-items-center">
 
-                <h5 class="mb-0">
-                    Rate Master
+                <h5 class="card-title mb-0">
+                    Rate Master - {{ auth()->user()->location->name ?? 'N/A' }}
                 </h5>
 
                 <a href="{{ route('rate-masters.create') }}" class="btn btn-primary btn-sm">

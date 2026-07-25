@@ -120,7 +120,7 @@ class HolidayController extends Controller
                     'year',
                     DB::raw("SUM(CASE WHEN holiday_lists.type = 'Holiday' THEN 1 ELSE 0 END) as holiday_count"),
                     DB::raw("SUM(CASE WHEN holiday_lists.type = 'Week Off' THEN 1 ELSE 0 END) as week_off_count"),
-                    DB::raw("SUM(CASE WHEN holiday_lists.type = 'Special Day' THEN 1 ELSE 0 END) as special_day_count")
+                    DB::raw("SUM(CASE WHEN holiday_lists.type = 'Specific Date' THEN 1 ELSE 0 END) as special_day_count")
                 )
                 ->groupBy('locations.id', 'locations.name', 'holiday_lists.year');
 
@@ -165,7 +165,7 @@ class HolidayController extends Controller
                     return '<a href="' . route('holiday.details', [
                         'location' => $row->id,
                         'year'     => $row->year,
-                        'type'     => 'Special Day'
+                        'type'     => 'Specific Date'
                     ]) . '" class="fw-bold text-info">
         ' . $row->special_day_count . '
     </a>';
@@ -266,7 +266,17 @@ class HolidayController extends Controller
 
     public function create()
     {
-        $locations = Location::orderBy('name')->get();
+        $user = Auth::user();
+
+        if ($user->role == 'Super Admin') {
+            $locations = Location::orderBy('name')->get();
+        } elseif ($user->role == 'Canteen Incharge' || $user->president_flag == 1) {
+            $locations = Location::where('id', $user->location_id)
+                ->orderBy('name')
+                ->get();
+        } else {
+            return redirect()->back()->with('error', 'You are not authorized to access this page.');
+        }
 
         $calendars = DayStatus::orderBy('date')->get();
 
@@ -279,6 +289,7 @@ class HolidayController extends Controller
     public function store(Request $request)
     {
 
+       
         $request->validate([
             'year' => 'required',
             'location_id' => 'required|exists:locations,id',
@@ -443,7 +454,7 @@ class HolidayController extends Controller
                         [
                             'location_id' => $request->location_id,
                             'calendar_id' => $calendar->id,
-                            'type' => 'Special Day',
+                            'type' => 'Specific Date',
                             'year' => $request->year,
                         ],
                         [

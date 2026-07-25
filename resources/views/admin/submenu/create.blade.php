@@ -12,6 +12,7 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <!-- Load Bootstrap 5 JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
     $(document).ready(function() {
@@ -24,7 +25,7 @@
                 <input type="text"
                        name="submenu_name[]"
                        class="form-control"
-                       placeholder="Enter Sub Menu Name"
+                       placeholder="Enter Menu Item Name"
                        required>
             </td>
             <td>
@@ -49,7 +50,13 @@
             if ($('#submenuTable tbody tr').length > 1) {
                 $(this).closest('tr').remove();
             } else {
-                alert('You must have at least one row!');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Error',
+                    text: 'You must have at least one row!',
+                    confirmButtonText: 'OK'
+                });
+                return;
             }
         });
 
@@ -61,7 +68,7 @@
                 <input type="text"
                        name="submenu_name[]"
                        class="form-control"
-                       placeholder="Enter Sub Menu Name"
+                       placeholder="Enter Menu Item Name"
                        required>
             </td>
             <td>
@@ -115,8 +122,17 @@
                     editModal.hide();
 
                     // Show success message
-                    alert('Sub menu updated successfully!');
-                    location.reload();
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: 'Sub menu updated successfully!',
+                        confirmButtonText: 'OK'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            location.reload();
+                        }
+                    });
                 },
                 error: function(xhr) {
                     // Handle errors
@@ -128,7 +144,12 @@
                         });
                         alert('Validation Error:\n' + errorMessage);
                     } else {
-                        alert('Something went wrong! Please try again.');
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Something went wrong!',
+                            confirmButtonText: 'OK'
+                        });
                     }
                 }
             });
@@ -146,15 +167,15 @@
         <!-- Item Details Section -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0">Item Details</h5>
+                <h5 class="card-title mb-0">Menu Item Details</h5>
             </div>
             <div class="card-body">
-                <table class="table table-bordered">
-                    <thead>
+                <table class="table table-bordered table-striped">
+                    <thead style="background-color:#F7F7F7;">
                         <tr>
                             <th>#</th>
-                            <th>Menu Master</th>
-                            <th>Items</th>
+                            <th>Menu Section</th>
+                            <th>Menu Items</th>
                             <th>Status</th>
                             <th>Action</th>
                         </tr>
@@ -186,7 +207,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="4" class="text-center">
+                            <td colspan="5" class="text-center">
                                 No Items Linked
                             </td>
                         </tr>
@@ -198,8 +219,9 @@
 
         <!-- Add Items Section -->
         <div class="card">
-            <div class="card-header d-flex justify-content-between">
-                <h5>Add Items</h5>
+            <div class="card-header">
+                <h5 class="card-title mb-1">Add Menu Items</h5>
+                <h6 class="mt-2">Menu Section - {{ $menu->name }}</h6>
             </div>
             <div class="card-body">
                 <form action="{{ route('admin.submenus.store') }}" method="POST">
@@ -208,10 +230,10 @@
                         name="menu_id"
                         value="{{ $menu->id }}">
 
-                    <table class="table table-bordered" id="submenuTable">
-                        <thead>
+                    <table class="table table-bordered table-striped" id="submenuTable">
+                        <thead style="background-color:#F7F7F7;">
                             <tr>
-                                <th>Item Name</th>
+                                <th>Menu Item Name</th>
                                 <th width="150">Action</th>
                             </tr>
                         </thead>
@@ -222,7 +244,7 @@
                                     <input type="text"
                                         name="submenu_name[]"
                                         class="form-control"
-                                        placeholder="Enter Item Name"
+                                        placeholder="Enter Menu Item Name"
                                         required>
                                 </td>
                                 <td>
@@ -257,7 +279,7 @@
     <div class="modal-dialog">
         <form id="editSubMenuForm" method="POST">
             @csrf
-            @method('PUT')
+            @method('patch')
 
             <input type="hidden" name="id" id="edit_submenu_id">
             <input type="hidden"

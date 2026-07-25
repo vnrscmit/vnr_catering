@@ -4,7 +4,6 @@
 <link rel="stylesheet" href="/admin_resources/vendors/typicons.font/font/typicons.css">
 <link rel="stylesheet" href="/admin_resources/vendors/css/vendor.bundle.base.css">
 <link rel="stylesheet" href="/admin_resources/css/vertical-layout-light/style.css">
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="/admin_resources/vendors/select2/select2.min.css">
 @endpush
 
@@ -20,7 +19,13 @@
 <script src="/admin_resources/vendors/select2/select2.min.js"></script>
 <script>
     $(function() {
+        $('.select2').select2({
+            placeholder: 'Select Locations',
+            allowClear: true
+        });
+    });
 
+    $(function() {
 
         $('#location_id').on('change', function() {
 
@@ -98,12 +103,6 @@
 
     });
 
-    $(function() {
-        $('.select2').select2({
-            placeholder: 'Select Locations',
-            allowClear: true
-        });
-    });
 </script>
 @endpush
 
@@ -115,7 +114,7 @@
     <div class="content-wrapper">
         <div class="card">
             <div class="card-header">
-                <h5>Create New User</h5>
+                <h5 class="card-title mb-0">Create New User</h5>
             </div>
             <div class="card-body">
 
@@ -172,22 +171,15 @@
                             @enderror
                         </div>
 
+
+
                         <!-- President Flag -->
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Is Canteen President<span class="text-danger">*</span></label>
-                            <div class="d-flex align-items-center gap-4">
-                                <div class="form-check me-4">
-                                    <input class="form-check-input"
-                                        type="radio"
-                                        name="president_flag"
-                                        id="president_flag_no"
-                                        value="0"
-                                        {{ old('president_flag', 0) == 0 ? 'checked' : '' }}>
+                            <label class="form-label">
+                                Canteen President <span class="text-danger">*</span>
+                            </label>
 
-                                    <label class="form-check-label" for="president_flag_no">
-                                        No
-                                    </label>
-                                </div>
+                            <div class="d-flex align-items-center gap-4">
 
                                 <div class="form-check">
                                     <input class="form-check-input"
@@ -195,22 +187,65 @@
                                         name="president_flag"
                                         id="president_flag_yes"
                                         value="1"
-                                        {{ old('president_flag') == 1 ? 'checked' : '' }}>
+                                        {{ old('president_flag') == 1 ? 'checked' : '' }}
+                                        {{ $presidentLock ? 'disabled' : '' }}>
 
                                     <label class="form-check-label" for="president_flag_yes">
                                         Yes
                                     </label>
                                 </div>
+
+                                <div class="form-check me-4">
+                                    <input class="form-check-input"
+                                        type="radio"
+                                        name="president_flag"
+                                        id="president_flag_no"
+                                        value="0"
+                                        {{ old('president_flag', 0) == 0 ? 'checked' : '' }}
+                                        {{ $presidentLock ? 'disabled' : '' }}>
+
+                                    <label class="form-check-label" for="president_flag_no">
+                                        No
+                                    </label>
+                                </div>
+
+
                             </div>
+
+                            @if($presidentLock)
+                            <input type="hidden" name="president_flag" value="{{ old('president_flag', 0) }}">
+                            @endif
 
                             @error('president_flag')
                             <div class="text-danger small">{{ $message }}</div>
                             @enderror
                         </div>
 
+                        <div class="col-md-6 mb-3">
+                            <label for="user_code" class="form-label">
+                                Employee ID <span class="text-danger">*</span>
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control @error('user_code') is-invalid @enderror"
+                                id="user_code"
+                                name="user_code"
+                                value="{{ old('user_code') }}"
+                                maxlength="5"
+                                minlength="1"
+                                pattern="[A-Za-z0-9]{1,5}"
+                                oninput="this.value=this.value.replace(/[^A-Za-z0-9]/g,'').toUpperCase()"
+                                required>
+
+                            @error('user_code')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
                         <!-- First Name -->
                         <div class="col-md-6 mb-3">
-                            <label for="first_name" class="form-label">Name <span class="text-danger">*</span></label>
+                            <label for="first_name" class="form-label">Full Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control @error('first_name') is-invalid @enderror" id="first_name" name="first_name" value="{{ old('first_name') }}" required>
                             @error('first_name')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -235,14 +270,6 @@
                             @enderror
                         </div>
 
-                        <!-- Designation -->
-                        <div class="col-md-6 mb-3">
-                            <label for="designation" class="form-label">Designation</label>
-                            <input type="text" class="form-control @error('designation') is-invalid @enderror" id="designation" name="designation" value="{{ old('designation') }}" placeholder="e.g., Senior Developer">
-                            @error('designation')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
 
                         <!-- Department Dropdown -->
                         <div class="col-md-6 mb-3">
@@ -260,6 +287,16 @@
                             @enderror
                         </div>
 
+                        <!-- Designation -->
+                        <div class="col-md-6 mb-3">
+                            <label for="designation" class="form-label">Designation</label>
+                            <input type="text" class="form-control @error('designation') is-invalid @enderror" id="designation" name="designation" value="{{ old('designation') }}" placeholder="e.g., Senior Developer">
+                            @error('designation')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+
 
                         <!-- Location Dropdown -->
                         <div class="col-md-6 mb-3">
@@ -274,7 +311,7 @@
 
                         <!-- Location Dropdown -->
                         <div class="col-md-6 mb-3">
-                            <label for="other_location_id" class="form-label">Other Locations </label>
+                            <label for="other_location_id" class="form-label">Additional Canteen Locations </label>
                             <select class="form-control select2 @error('other_location_id') is-invalid @enderror" id="location_id" name="other_location_id[]" multiple>
                                 <option value="">Select Location</option>
                                 @foreach($locations as $location)
@@ -298,15 +335,36 @@
                         </div>
 
                         <div class="col-md-6 mb-3">
-                            <label for="payment_method" class="form-label">
-                                Payment Method
-                            </label>
+                            <div class="row">
+                                <!-- Payment Method -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="payment_method" class="form-label">
+                                        Payment Method
+                                    </label>
 
-                            <select class="form-control" id="payment_method" name="payment_method">
-                                <option value="">Select Payment Method</option>
-                                <option value="Cash">Cash</option>
-                                <option value="UPI">UPI</option>
-                            </select>
+                                    <select class="form-control" id="payment_method" name="payment_method">
+                                        <option value="">Select Payment Method</option>
+                                        <option value="Cash">Cash</option>
+                                        <option value="UPI">UPI</option>
+                                        <option value="Both">Both</option>
+                                    </select>
+                                </div>
+
+                                <!-- Deposit Date -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="deposit_date" class="form-label">
+                                        Security Deposit Collection Date
+                                    </label>
+
+                                    <input type="date"
+                                        class="form-control"
+                                        id="deposit_date"
+                                        name="deposit_date"
+                                        min="{{ \Carbon\Carbon::today()->subDays(15)->format('Y-m-d') }}"
+                                        max="{{ date('Y-m-d') }}"
+                                        value="{{ old('deposit_date') }}">
+                                </div>
+                            </div>
                         </div>
 
 
@@ -328,7 +386,41 @@
                             @enderror
                         </div>
 
-                              <!-- Status -->
+
+
+                        <!-- Guest Allowed -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Guest Allowed <span class="text-danger">*</span></label>
+                            <div class="d-flex align-items-center gap-4">
+
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                        type="radio"
+                                        name="personal_guest_flag"
+                                        id="personal_guest_flag_yes"
+                                        value="1"
+                                        {{ old('personal_guest_flag') == 1 ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="personal_guest_flag_yes">
+                                        Yes
+                                    </label>
+                                </div>
+
+
+                                <div class="form-check me-4">
+                                    <input class="form-check-input"
+                                        type="radio"
+                                        name="personal_guest_flag"
+                                        id="personal_guest_flag_no"
+                                        value="0"
+                                        {{ old('personal_guest_flag', 0) == 0 ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="personal_guest_flag_no">
+                                        No
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Status <span class="text-danger">*</span></label>
                             <div class="d-flex align-items-center gap-4">
@@ -359,36 +451,6 @@
                             @error('status')
                             <div class="text-danger small">{{ $message }}</div>
                             @enderror
-                        </div>
-
-                        <!-- Guest Allowed -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Guest Allowed <span class="text-danger">*</span></label>
-                            <div class="d-flex align-items-center gap-4">
-                                <div class="form-check me-4">
-                                    <input class="form-check-input"
-                                        type="radio"
-                                        name="personal_guest_flag"
-                                        id="personal_guest_flag_no"
-                                        value="0"
-                                        {{ old('personal_guest_flag', 0) == 0 ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="personal_guest_flag_no">
-                                        No
-                                    </label>
-                                </div>
-
-                                <div class="form-check">
-                                    <input class="form-check-input"
-                                        type="radio"
-                                        name="personal_guest_flag"
-                                        id="personal_guest_flag_yes"
-                                        value="1"
-                                        {{ old('personal_guest_flag') == 1 ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="personal_guest_flag_yes">
-                                        Yes
-                                    </label>
-                                </div>
-                            </div>
                         </div>
 
                         <div id="guest_limits_wrapper" class="row" style="display: none;">

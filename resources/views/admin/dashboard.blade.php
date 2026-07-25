@@ -38,13 +38,14 @@
 <div class="main-panel">
   <div class="content-wrapper">
     @include('partials.message-bag')
-
     @include('partials.order-stats')
 
     @if($allLocked)
     <p style="color:red">Your start Date is not set please contact to your canteen incharge</p>
     @else
     <div class="row">
+
+    @if($UserData->role !== 'Canteen Incharge')
       <div class="col-12 col-lg-6 mb-4">
         <div class="card lunch-card">
           <div class="card-body">
@@ -90,7 +91,6 @@
             </div>
 
             @else
-
             {{-- LOCKED + ABSENT --}}
             <div class="d-flex align-items-center mt-4">
               <div class="status-icon bg-danger-subtle text-danger">
@@ -105,7 +105,6 @@
                 </div>
               </div>
             </div>
-
             @endif
 
             @else
@@ -256,6 +255,8 @@
           </div>
         </div>
       </div>
+
+      @endif
 
       @if($guestAllowed)
       <!-- ================= Guest Card ================= -->
@@ -434,8 +435,6 @@
       @endif
     </div>
     @endif
-
-
   </div>
 
 <!-- Today's Menu Modal -->

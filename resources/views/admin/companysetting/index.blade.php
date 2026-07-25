@@ -66,8 +66,13 @@
                     name: 'attendance_out_time'
                 },
                 {
-                    data: 'lunch_out_time',
-                    name: 'lunch_out_time'
+                    data: 'canteen_start_time',
+                    name: 'canteen_start_time'
+                },
+
+                {
+                    data: 'canteen_end_time',
+                    name: 'canteen_end_time'
                 },
 
                 {
@@ -117,7 +122,7 @@
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Canteen Parameter</h5>
+                <h5 class="card-title mb-0">Canteen Parameter - {{ auth()->user()->location->name ?? 'N/A' }}</h5>
                 <a href="{{ route('company-parameters.create') }}" class="btn btn-primary btn-sm">
                     <i class="fa fa-plus"></i> Add New
                 </a>
@@ -131,10 +136,11 @@
                             <tr>
                                 <th>#</th>
                                 <th>Location</th>
-                                <th>Security Deposit Applicable</th>
+                                <th>Security Deposit</th>
                                 <th>Security Deposit Amount</th>
-                                <th>Attendance Out Time</th>
-                                <th>Lunch Out Time</th>
+                                <th>Attendance Cut-Off Time</th>
+                                <th>Canteen Start Time</th>
+                                <th>Canteen End Time</th>
                                 <th>Status</th>
                                 <th width="120">Till Date</th>
                             </tr>

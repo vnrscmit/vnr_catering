@@ -41,7 +41,7 @@
 
         <div class="card card-info">
             <div class="card-header">
-                <i class="fa fa-user"></i> My Profile
+               <h5 class="card-title mb-0">  <i class="fa fa-user"></i> My Profile</h5>
             </div>
             <div class="card-body">
                 <div class="d-flex justify-content-center align-items-center">
@@ -91,7 +91,7 @@
                         </tr>
 
                         <tr>
-                            <th>Personal Guest Allowed</th>
+                            <th>Guest Allowed</th>
                             <td>{{ $user->personal_guest_flag ? 'Yes' : 'No' }}</td>
                         </tr>
 

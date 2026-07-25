@@ -62,7 +62,7 @@
             <li class="nav-item {{ request()->route()->named('today-menu.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('today-menu.index') }}">
                 <i class="fa fa-utensils menu-icon"></i>
-                <span class="menu-title">Daily Menu</span>
+                <span class="menu-title">Daily Menu Master</span>
               </a>
             </li>
 
@@ -107,7 +107,7 @@
             <li class="nav-item {{ request()->route()->named('today-menu.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('today-menu.index') }}">
                 <i class="fa fa-utensils menu-icon"></i>
-                <span class="menu-title">Daily Menu</span>
+                <span class="menu-title">Daily Menu Master</span>
               </a>
             </li>
 

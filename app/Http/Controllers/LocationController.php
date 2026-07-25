@@ -7,6 +7,7 @@ use App\Models\Location;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Traits\AdminViewSharedDataTrait;
 use App\Models\Department;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -215,7 +216,17 @@ class LocationController extends Controller
 
     public function getLocations($departmentId)
     {
+        $user = Auth::user();
+
         $departments = Department::getByLocation($departmentId);
+
+
+        if ($user->role == 'Super Admin') {
+        } elseif ($user->role == 'Canteen Incharge' || $user->president_flag == 1) {
+            $departments = $departments->where('location_id', $user->location_id);
+        } else {
+        }
+
         return response()->json($departments);
     }
 }

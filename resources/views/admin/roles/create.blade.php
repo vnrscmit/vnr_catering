@@ -24,7 +24,7 @@
     <div class="content-wrapper">
         <div class="card">
             <div class="card-header">
-                <h5>Create New Role</h5>
+                <h5 class="card-title mb-0">Create New Role</h5>
             </div>
             <div class="card-body">
                 <form action="{{ route('admin.roles.store') }}" method="POST">

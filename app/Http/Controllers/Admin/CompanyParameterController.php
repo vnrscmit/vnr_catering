@@ -60,7 +60,9 @@ class CompanyParameterController extends Controller
                 })
 
                 ->addColumn('security_deposit_applicable', function ($row) {
-                    return $row->security_deposit_applicable;
+                    return $row->security_deposit_applicable == 'yes'
+                        ? 'Applicable'
+                        : 'Not Applicable';
                 })
 
                 ->addColumn('security_deposit_amount', function ($row) {
@@ -71,8 +73,12 @@ class CompanyParameterController extends Controller
                     return Carbon::parse($row->attendance_out_time)->format('h:i A');
                 })
 
-                ->addColumn('lunch_out_time', function ($row) {
-                    return Carbon::parse($row->lunch_out_time)->format('h:i A');
+                ->addColumn('canteen_start_time', function ($row) {
+                    return Carbon::parse($row->canteen_start_time)->format('h:i A');
+                })
+
+                ->addColumn('canteen_end_time', function ($row) {
+                    return Carbon::parse($row->canteen_end_time)->format('h:i A');
                 })
 
                 ->addColumn('active_till_date', function ($row) {
@@ -140,75 +146,74 @@ class CompanyParameterController extends Controller
         ]);
     }
 
-   public function store(Request $request)
-{
-    $user = Auth::user();
+    public function store(Request $request)
+    {
+        $user = Auth::user();
 
-    $request->validate([
-        'location_id'          => 'required|exists:locations,id',
-        'attendance_out_time'  => 'required',
-        'lunch_out_time'       => 'required',
-        'canteen_start_time'   => 'required',
-        'canteen_end_time'     => 'required|after:canteen_start_time',
-        'max_day_show'         => 'required|integer|min:1',
-        'security_deposit_applicable' => 'required|in:yes,no',
-        'security_deposit_amount' => 'required_if:security_deposit_applicable,yes|nullable|numeric|min:0',
-    ]);
-
-    DB::beginTransaction();
-
-    try {
-
-        $lastDate = Carbon::now()->subMonth()->endOfMonth()->format('Y-m-d');
-
-        $calendarId = DayStatus::where('date', $lastDate)
-            ->where('location_id', $request->location_id)
-            ->value('id');
-
-        // Previous Active Record Inactive
-        CompanyParameter::where('location_id', $request->location_id)
-            ->where('status', 1)
-            ->update([
-                'status'                  => 0,
-                'active_till_calendar_id' => $calendarId,
-                'inactive_user_id'        => $user->id,
-                'active_till_date'        => Carbon::today()->format('Y-m-d'),
-            ]);
-
-        // New Record
-        CompanyParameter::create([
-            'location_id'          => $request->location_id,
-            'attendance_out_time'  => $request->attendance_out_time,
-            'lunch_out_time'       => $request->lunch_out_time,
-            'canteen_start_time'   => $request->canteen_start_time,
-            'canteen_end_time'     => $request->canteen_end_time,
-            'max_day_show'         => $request->max_day_show,
-            'security_deposit_applicable' => $request->security_deposit_applicable,
-            'security_deposit_amount' => $request->security_deposit_applicable == 'yes' 
-                ? $request->security_deposit_amount 
-                : null,
-            'status'               => 1,
-            'active_till_date'     => null,
-            'active_till_calendar_id' => null,
-            'inactive_user_id'     => null,
+        $request->validate([
+            'location_id'          => 'required|exists:locations,id',
+            'attendance_out_time'  => 'required',
+            'lunch_out_time'       => 'required',
+            'canteen_start_time'   => 'required',
+            'canteen_end_time'     => 'required|after:canteen_start_time',
+            'max_day_show'         => 'required|integer|min:1',
+            'security_deposit_applicable' => 'required|in:yes,no',
+            'security_deposit_amount' => 'required_if:security_deposit_applicable,yes|nullable|numeric|min:0',
         ]);
 
-        DB::commit();
+        DB::beginTransaction();
 
-        return redirect()
-            ->route('company-parameters.index')
-            ->with('success', 'Company Parameter saved successfully.');
-            
-    } catch (\Exception $e) {
+        try {
 
-        DB::rollBack();
+            $lastDate = Carbon::now()->subMonth()->endOfMonth()->format('Y-m-d');
 
-        return redirect()
-            ->back()
-            ->withInput()
-            ->with('error', $e->getMessage());
+            $calendarId = DayStatus::where('date', $lastDate)
+                ->where('location_id', $request->location_id)
+                ->value('id');
+
+            // Previous Active Record Inactive
+            CompanyParameter::where('location_id', $request->location_id)
+                ->where('status', 1)
+                ->update([
+                    'status'                  => 0,
+                    'active_till_calendar_id' => $calendarId,
+                    'inactive_user_id'        => $user->id,
+                    'active_till_date'        => Carbon::today()->format('Y-m-d'),
+                ]);
+
+            // New Record
+            CompanyParameter::create([
+                'location_id'          => $request->location_id,
+                'attendance_out_time'  => $request->attendance_out_time,
+                'lunch_out_time'       => $request->lunch_out_time,
+                'canteen_start_time'   => $request->canteen_start_time,
+                'canteen_end_time'     => $request->canteen_end_time,
+                'max_day_show'         => $request->max_day_show,
+                'security_deposit_applicable' => $request->security_deposit_applicable,
+                'security_deposit_amount' => $request->security_deposit_applicable == 'yes'
+                    ? $request->security_deposit_amount
+                    : null,
+                'status'               => 1,
+                'active_till_date'     => null,
+                'active_till_calendar_id' => null,
+                'inactive_user_id'     => null,
+            ]);
+
+            DB::commit();
+
+            return redirect()
+                ->route('company-parameters.index')
+                ->with('success', 'Company Parameter saved successfully.');
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', $e->getMessage());
+        }
     }
-}
 
     public function edit(CompanyParameter $companyParameter)
     {

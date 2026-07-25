@@ -130,6 +130,7 @@ class ApiDashboardController extends Controller
                     ->where('attendance_absents.location_id', $locationId)
                     ->where('attendance_absents.user_id', $userData->id);
             })
+            ->where('date', '<=', Carbon::today()->toDateString())
             ->where('day_statuses.sunday_flag', 0)
             ->where('day_statuses.holiday_flag', 0)
             ->where('day_statuses.open_flag', 1)
@@ -368,11 +369,15 @@ class ApiDashboardController extends Controller
 
         $singleLinkedUserIds = User::where('location_id', $userData->location_id)
             ->whereNotNull('start_calendar_id')
+            ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge'])
             ->where('status', 1)
             ->pluck('id');
 
-        $multiLinkedUserIds = MultipleLocation::where('location_id', $userData->location_id)
-            ->pluck('user_id');
+        $multiLinkedUserIds = MultipleLocation::join('users', 'multiple_locations.user_id', '=', 'users.id')
+            ->where('multiple_locations.location_id', $userData->location_id)
+            ->where('users.status', 1)
+            ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge'])
+            ->pluck('multiple_locations.user_id');
 
         $allLinkedUserIds = $singleLinkedUserIds
             ->merge($multiLinkedUserIds)

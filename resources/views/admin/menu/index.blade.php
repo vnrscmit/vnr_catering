@@ -189,7 +189,7 @@
 
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
-                    Menu Master
+                    Menu Master - {{ auth()->user()->location->name ?? 'N/A' }}
                 </h5>
 
                 <button class="btn btn-primary btn-sm"
@@ -209,9 +209,8 @@
                             <tr>
                                 <th width="5%">#</th>
                                 <th width="20%">Location</th>
-                                <th width="20%">Menu Master</th>
-                                <th width="60%">
-                                    </thwidth>Items</th>
+                                <th width="20%">Menu Section</th>
+                                <th width="60%">Menu Items</th>
                                 <th width="10%">Status</th>
                                 <th width="10%">Action</th>
 

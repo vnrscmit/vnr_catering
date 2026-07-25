@@ -88,6 +88,7 @@ class UserController extends Controller
                     'status' => $user->status,
                     'profile_picture' => $user->profile_picture,
                     'multilocation_flag' => $user->multilocation_flag,
+                    'personal_guest_flag' => $user->personal_guest_flag,
                     'token' => $token,
                 ],
                 'multiLocationData' => $multiLocationData,
@@ -175,5 +176,64 @@ class UserController extends Controller
             'message' => 'User profile fetched successfully.',
             'data' => $user,
         ], 200);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required',
+            'new_password' => [
+                'required',
+                'string',
+                'min:8',
+                'different:current_password',
+            ],
+            'confirm_password' => [
+                'required',
+                'same:new_password',
+            ],
+        ], [
+            'current_password.required' => 'Current password is required.',
+            'new_password.required' => 'New password is required.',
+            'new_password.min' => 'New password must be at least 8 characters.',
+            'new_password.different' => 'New password must be different from the current password.',
+            'confirm_password.required' => 'Confirm password is required.',
+            'confirm_password.same' => 'Confirm password does not match the new password.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $user = auth()->user();
+
+        // Verify current password
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Current password is incorrect.',
+            ], 400);
+        }
+
+        // Extra security check
+        if (Hash::check($request->new_password, $user->password)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'New password cannot be the same as the current password.',
+            ], 400);
+        }
+
+        // Update password
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Password changed successfully.',
+        ]);
     }
 }

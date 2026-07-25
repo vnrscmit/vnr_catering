@@ -101,11 +101,10 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div>
-                    <h5 class="mb-0">
+                    <h5 class="card-title mb-2">
                         <i class="typcn typcn-calendar-outline mr-2"></i>
-                        {{ $type }} Details
+                        {{ $type }} Details 
                     </h5>
-
                     <small class="">
                         Year : <strong>{{ $year }}</strong> |
                         Location : <strong>{{ $locationName }}</strong> |
@@ -116,6 +115,8 @@
                     <i class="fa fa-arrow-left"></i> Back
                 </a>
             </div>
+
+                
 
             <div class="card-body">
                 <div class="table-responsive">

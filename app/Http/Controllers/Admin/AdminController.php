@@ -130,13 +130,17 @@ class AdminController extends Controller
             if ($UserData->role == 'Admin' || $UserData->role == 'Super Admin') {
                 $allusers = User::where('status', 1)->get();
                 $overrideLock = true;
-            } elseif ($UserData->role == 'Canteen President' || $UserData->role == 'Canteen Incharge') {
+            } 
+            
+            elseif ($UserData->president_flag == 1 || $UserData->role == 'Canteen Incharge') {
                 $userIds = User::where('location_id', $locationId)
                     ->pluck('id');
                 // $query->whereIn('attend_user_id', $userIds);
                 $allusers = User::where('status', 1)->where('location_id', $locationId)->get();
                 $overrideLock = true;
-            } else {
+            }
+            
+            else {
                 $query->where('attend_user_id', $UserData->id);
                 $allusers  = [];
                 $overrideLock = false;
@@ -159,7 +163,7 @@ class AdminController extends Controller
             if ($UserData->role == 'Admin' || $UserData->role == 'Super Admin') {
                 $allusers = User::where('status', 1)->get();
                 $overrideLock = true;
-            } elseif ($UserData->role == 'Canteen President') {
+            } elseif ($UserData->role == 'Canteen Incharge' || $UserData->president_flag == 1) {
                 $userIds = User::where('location_id', $locationId)
                     ->pluck('id');
                 $query->whereIn('attend_user_id', $userIds);
