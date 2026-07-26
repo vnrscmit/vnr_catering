@@ -176,6 +176,9 @@ class AdminController extends Controller
             }
         }
 
+
+        // Dashboard Present Absent and Other Counts
+
         return view('admin.dashboard', compact(
             'formattedSalesData',
             'todayMenu',

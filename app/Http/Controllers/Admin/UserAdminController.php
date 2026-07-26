@@ -184,19 +184,22 @@ class UserAdminController extends Controller
     public function store(CreateUserRequest $request)
     {
 
-        $checkAlreadyPresident = User::where('location_id', $request->location_id)
-            ->where('president_flag', 1)
-            ->where('status', 1)
-            ->first();
+        if ($request->filled('president_flag') && $request->president_flag == 1) {
+            $checkAlreadyPresident = User::where('location_id', $request->location_id)
+                ->where('president_flag', 1)
+                ->where('status', 1)
+                ->first();
 
-        if ($checkAlreadyPresident) {
-            return redirect()
-                ->back()
-                ->with(
-                    'error',
-                    'Canteen President already assigned for this location. Current President ' . $checkAlreadyPresident->first_name
-                );
+            if ($checkAlreadyPresident) {
+                return redirect()
+                    ->back()
+                    ->with(
+                        'error',
+                        'Canteen President already assigned for this location. Current President ' . $checkAlreadyPresident->first_name
+                    );
+            }
         }
+
 
         $checkAlreadyExistEmployeeCode = User::where('user_code', $request->user_code)
             ->first();
