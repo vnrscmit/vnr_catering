@@ -76,6 +76,7 @@ class UserController extends Controller
                 'user' => [
                     'id' => $user->id,
                     'name' => explode(' ', trim($user->first_name))[0],
+                    'employee_id' => $user->user_code,
                     'email' => $user->email,
                     'mobile' => $user->mobile,
                     'designation' => $user->designation,

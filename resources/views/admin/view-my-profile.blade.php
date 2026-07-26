@@ -41,7 +41,7 @@
 
         <div class="card card-info">
             <div class="card-header">
-               <h5 class="card-title mb-0">  <i class="fa fa-user"></i> My Profile</h5>
+                <h5 class="card-title mb-0"> <i class="fa fa-user"></i> My Profile</h5>
             </div>
             <div class="card-body">
                 <div class="d-flex justify-content-center align-items-center">
@@ -61,6 +61,11 @@
                             <td>{{ $user->first_name }}</td>
                         </tr>
 
+                            <tr>
+                            <th>Employee Code</th>
+                            <td>{{ $user->user_code  ?? ' ' }}</td>
+                        </tr>
+
                         <tr>
                             <th>Mobile</th>
                             <td>{{ $user->mobile }}</td>
@@ -69,6 +74,8 @@
                             <th>Email</th>
                             <td>{{ $user->email ?? ' ' }}</td>
                         </tr>
+
+                    
 
                         <tr>
                             <th>Designation</th>
