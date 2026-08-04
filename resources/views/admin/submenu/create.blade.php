@@ -15,7 +15,14 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
+    function updateValue(checkbox) {
+        let hidden = checkbox.parentElement.querySelector('input[type="hidden"]');
+        hidden.value = checkbox.checked ? 1 : 0;
+    }
+
     $(document).ready(function() {
+
+        let rowCounter = 0;
 
         // Add row functionality
         $('#addRow').click(function() {
@@ -71,6 +78,13 @@
                        placeholder="Enter Menu Item Name"
                        required>
             </td>
+               <td>
+                                    <input type="checkbox"
+                                        class="row-checkbox ml-5"
+                                        name="special_flag[]"
+                                       value="1"
+                                        style="width: 20px; height: 20px; cursor: pointer;">
+                                </td>
             <td>
                 <button type="button"
                         class="btn btn-primary btn-sm addRowBtn">
@@ -86,28 +100,37 @@
             $(this).closest('tr').after(row);
         });
 
-        // Edit Sub Menu - Using Bootstrap 5 modal API
-        $(document).on('click', '.editSubMenuBtn', function() {
-            let id = $(this).data('id');
-            let menu_id = $(this).data('menu_id');
-            let name = $(this).data('name');
-            let status = $(this).data('status');
+     // Edit Menu Item - Using Bootstrap 5 modal API
+$(document).on('click', '.editSubMenuBtn', function() {
+    let id = $(this).data('id');
+    let menu_id = $(this).data('menu_id');
+    let name = $(this).data('name');
+    let status = $(this).data('status');
+    let special_flag = $(this).data('special_flag'); // Add this line
 
-            // Set form values
-            $('#edit_submenu_id').val(id);
-            $('#edit_menu_id').val(menu_id);
-            $('#edit_submenu_name').val(name);
-            $('#edit_submenu_status').val(status);
+    // Set form values
+    $('#edit_submenu_id').val(id);
+    $('#edit_menu_id').val(menu_id);
+    $('#edit_submenu_name').val(name);
+    $('#edit_submenu_status').val(status);
 
-            // Set form action with the correct route
-            let actionUrl = "{{ route('admin.submenus.update', '') }}/" + id;
-            $('#editSubMenuForm').attr('action', actionUrl);
+    // Set special flag radio buttons
+    if (special_flag == 1) {
+        $('#edit_special_flag_yes').prop('checked', true);
+        $('#edit_special_flag_no').prop('checked', false);
+    } else {
+        $('#edit_special_flag_yes').prop('checked', false);
+        $('#edit_special_flag_no').prop('checked', true);
+    }
 
-            // Show the modal using Bootstrap 5 API
-            var editModal = new bootstrap.Modal(document.getElementById('editSubMenuModal'));
-            editModal.show();
-        });
+    // Set form action with the correct route
+    let actionUrl = "{{ route('admin.submenus.update', '') }}/" + id;
+    $('#editSubMenuForm').attr('action', actionUrl);
 
+    // Show the modal using Bootstrap 5 API
+    var editModal = new bootstrap.Modal(document.getElementById('editSubMenuModal'));
+    editModal.show();
+});
         // Optional: Handle form submission via AJAX
         $(document).on('submit', '#editSubMenuForm', function(e) {
             e.preventDefault();
@@ -126,7 +149,7 @@
                     Swal.fire({
                         icon: 'success',
                         title: 'Success',
-                        text: 'Sub menu updated successfully!',
+                        text: 'Menu Item Updated Successfully!',
                         confirmButtonText: 'OK'
                     }).then((result) => {
                         if (result.isConfirmed) {
@@ -167,14 +190,13 @@
         <!-- Item Details Section -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="card-title mb-0">Menu Item Details</h5>
+                <h5 class="card-title mb-0">Menu Item Details - {{ $menu->name }}</h5>
             </div>
             <div class="card-body">
                 <table class="table table-bordered table-striped">
                     <thead style="background-color:#F7F7F7;">
                         <tr>
                             <th>#</th>
-                            <th>Menu Section</th>
                             <th>Menu Items</th>
                             <th>Status</th>
                             <th>Action</th>
@@ -184,8 +206,12 @@
                         @forelse($menu->subMenus as $row)
                         <tr>
                             <td>{{ $loop->iteration }}</td>
-                            <td>{{ $menu->name }}</td>
-                            <td>{{ $row->name }}</td>
+                            <td>
+                                {{ $row->name }}
+                                @if($row->special_flag == 1)
+                                <i class="fa fa-star text-warning" title="Special"></i>
+                                @endif
+                            </td>
                             <td>
                                 @if($row->status == 1)
                                 <span class="badge bg-primary">Active</span>
@@ -200,7 +226,8 @@
                                     data-id="{{ $row->id }}"
                                     data-menu_id="{{ $menu->id }}"
                                     data-name="{{ $row->name }}"
-                                    data-status="{{ $row->status }}">
+                                    data-status="{{ $row->status }}"
+                                    data-special_flag="{{ $row->special_flag }}">
                                     <i class="fa fa-edit"></i>
                                 </button>
                             </td>
@@ -234,18 +261,27 @@
                         <thead style="background-color:#F7F7F7;">
                             <tr>
                                 <th>Menu Item Name</th>
+                                <th width="150">Special Item</th>
                                 <th width="150">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             <!-- First row - No delete button -->
                             <tr>
+
                                 <td>
                                     <input type="text"
                                         name="submenu_name[]"
                                         class="form-control"
                                         placeholder="Enter Menu Item Name"
                                         required>
+                                </td>
+                                <td>
+                                    <input type="checkbox"
+                                        class="row-checkbox ml-5"
+                                        onchange="updateValue(this)"
+                                        style="width: 20px; height: 20px; cursor: pointer;">
+                                    <input type="hidden" name="special_flag[]" value="0">
                                 </td>
                                 <td>
                                     <button type="button"
@@ -288,13 +324,13 @@
 
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="editSubMenuModalLabel">Edit Sub Menu</h5>
+                    <h5 class="modal-title" id="editSubMenuModalLabel">Edit Menu Item</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="edit_submenu_name" class="form-label">Sub Menu Name</label>
+                        <label for="edit_submenu_name" class="form-label">Menu Item</label>
                         <input type="text"
                             class="form-control"
                             id="edit_submenu_name"
@@ -308,6 +344,36 @@
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>
                         </select>
+                    </div>
+
+                    <div class="row">
+                        <!-- Special Item -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Special Item</label>
+                            <div class="d-flex align-items-center gap-4">
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                        type="radio"
+                                        name="special_flag"
+                                        id="edit_special_flag_yes"
+                                        value="1">
+                                    <label class="form-check-label" for="edit_special_flag_yes">
+                                         Yes
+                                    </label>
+                                </div>
+                                <div class="form-check me-4">
+                                    <input class="form-check-input"
+                                        type="radio"
+                                        name="special_flag"
+                                        id="edit_special_flag_no"
+                                        value="0"
+                                        checked>
+                                    <label class="form-check-label" for="edit_special_flag_no">
+                                        No
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

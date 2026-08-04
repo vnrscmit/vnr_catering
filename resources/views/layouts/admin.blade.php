@@ -28,6 +28,13 @@
       <div class="navbar-menu-wrapper d-flex align-items-center justify-content-end">
 
         <ul class="navbar-nav navbar-nav-right">
+            
+            <li class="nav-item d-none d-flex mr-2">
+            <a class="nav-link" href="{{ route('admin.view.myprofile') }}">
+              <i class="fa fa-map-marker-alt mr-0"></i> {{ $loggedInUser->location->name }}
+            </a>
+          </li>
+          
           <li class="nav-item d-none d-flex  mr-2">
             <a class="nav-link" href="{{ route('admin.view.myprofile') }}">
               <i class="fa fa-user mr-0"></i> {{ $loggedInUser->first_name }} </a>

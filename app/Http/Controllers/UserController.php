@@ -57,6 +57,12 @@ class UserController extends Controller
             // Load relationships
             $user->load(['roles', 'department', 'location']);
 
+            $primaryLocation = collect([
+                [
+                    'location_id'   => $user->location_id,
+                    'location_name' => optional($user->location)->name,
+                ]
+            ]);
 
             $multiLocationData = MultipleLocation::with('location')
                 ->where('user_id', $user->id)
@@ -67,6 +73,11 @@ class UserController extends Controller
                         'location_name' => optional($item->location)->name,
                     ];
                 })
+                ->values();
+
+            $allLocations = $primaryLocation
+                ->merge($multiLocationData)
+                ->unique('location_id')
                 ->values();
 
             return response()->json([
@@ -92,7 +103,7 @@ class UserController extends Controller
                     'personal_guest_flag' => $user->personal_guest_flag,
                     'token' => $token,
                 ],
-                'multiLocationData' => $multiLocationData,
+                'multiLocationData' => $allLocations,
 
             ], 200);
         } catch (\Exception $e) {
@@ -138,6 +149,7 @@ class UserController extends Controller
             'mobile',
             'profile_picture as photo',
             'department_id',
+            'user_code as employee_id',
             'location_id'
         )
             ->with([

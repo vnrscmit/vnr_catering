@@ -89,7 +89,7 @@
             </li>
             @endif
 
-            @if ($loggedInUser->role == "Canteen Incharge" || $loggedInUser->president_flag == 1)
+            @if ($loggedInUser->role == "Canteen Administrator")
             <li class="nav-item {{ request()->route()->named('admin.users.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('admin.users.index') }}">
                 <i class="fa fa-users menu-icon"></i>
@@ -112,7 +112,6 @@
             </li>
 
 
-
             <li class="nav-item {{ request()->route()->named('rate-masters.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('rate-masters.index') }}">
                 <i class="fa fa-money-bill-wave menu-icon"></i>
@@ -130,6 +129,31 @@
               <a class="nav-link" href="{{ route('company-parameters.index') }}">
                 <i class="fa fa-cogs menu-icon"></i>
                 <span class="menu-title">Canteen Parameter</span>
+              </a>
+            </li>
+
+            <!-- <li class="nav-item {{ request()->route()->named('bill-generate.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('bill-generate.index') }}">
+                <i class="fa fa-file-invoice-dollar menu-icon"></i>
+                <span class="menu-title">Bill Generate</span>
+              </a>
+            </li> -->
+            @endif
+
+            @if ($loggedInUser->role == "Canteen Incharge")
+            <li class="nav-item {{ request()->route()->named('today-menu.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('today-menu.index') }}">
+                <i class="fa fa-utensils menu-icon"></i>
+                <span class="menu-title">Daily Menu Master</span>
+              </a>
+            </li>
+            @endif
+
+            @if ($loggedInUser->role == "Member" || $loggedInUser->role == "Non Member")
+            <li class="nav-item {{ request()->routeIs('calendar.index') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('calendar.index') }}">
+                <i class="fa fa-calendar-alt menu-icon"></i>
+                <span class="menu-title">Calendar</span>
               </a>
             </li>
             @endif

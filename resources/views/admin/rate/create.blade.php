@@ -54,11 +54,18 @@
                         <div class="col-md-6 mb-3">
                             <label>Effective From Month <span class="text-danger">*</span></label>
 
-                            <input type="month"
+                            <!-- <input type="month"
                                 name="effective_month"
                                 class="form-control"
                                 value="{{ old('effective_month') }}"
                                 min="{{ now()->format('Y-m') }}"
+                                required> -->
+
+                                
+                           <input type="month"
+                                name="effective_month"
+                                class="form-control"
+                                value="{{ old('effective_month') }}"
                                 required>
                         </div>
                     </div>

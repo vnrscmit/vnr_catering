@@ -39,7 +39,6 @@
             if (locationId == '') {
                 return;
             }
-            console.log(locationId);
 
             $.ajax({
                 url: "{{ route('company-parameters.getByLocation','') }}/" + locationId,
@@ -55,7 +54,7 @@
                         $('#guest_rate').val(response.data.guest_rate);
                         $('#attendance_out_time').val(response.data.attendance_out_time);
                         $('#max_day_show').val(response.data.max_day_show);
-
+                        $('#min_day').val(response.data.min_day);
                         $('#canteen_start_time').val(response.data.canteen_start_time);
                         $('#canteen_end_time').val(response.data.canteen_end_time);
 
@@ -78,7 +77,7 @@
                         $('#non_member_rate').val('');
                         $('#guest_rate').val('');
                         $('#attendance_out_time').val('');
-                        $('#max_day_show').val(5);
+                        $('#min_day').val(1);
 
                         $('#canteen_start_time').val('');
                         $('#canteen_end_time').val('');
@@ -143,7 +142,7 @@
     <div class="content-wrapper">
         <div class="card">
             <div class="card-header">
-                <h5>Create Canteen Parameter</h5>
+                <h5 class="card-title mb-0">Create Canteen Parameter</h5>
             </div>
 
             <div class="card-body">
@@ -166,7 +165,7 @@
                                 @foreach($locations as $location)
 
                                 <option value="{{ $location->id }}"
-                                    {{ old('location_id') == $location->id ? 'selected' : '' }}>
+                                    {{ old('location_id') == $location->id ? 'selected' : '' }} selected>
                                     {{ $location->name }}
                                 </option>
 
@@ -228,6 +227,22 @@
                                 min="1"
                                 required>
                         </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Min Day Present in a month <span class="text-danger">*</span>
+                            </label>
+
+                            <input
+                                type="number"
+                                id="min_day"
+                                name="min_day"
+                                class="form-control"
+                                value="{{ old('min_day',1) }}"
+                                min="0"
+                                required>
+                        </div>
+
 
                         <!-- Security Deposit Section -->
                         <div class="col-md-12 mb-3">

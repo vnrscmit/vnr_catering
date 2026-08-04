@@ -49,11 +49,6 @@ class RoleMasterController extends Controller
                     $delete = route('admin.roles.destroy', $row->id);
 
                     return '
-
-                <a href="' . $edit . '" class="btn btn-warning btn-sm">
-                    <i class="fa fa-edit"></i>
-                </a>
-
                 <form action="' . $delete . '" method="POST" style="display:inline-block">
                     ' . csrf_field() . '
                     ' . method_field('DELETE') . '

@@ -125,7 +125,7 @@ class HolidayController extends Controller
                 ->groupBy('locations.id', 'locations.name', 'holiday_lists.year');
 
 
-            if ($user->role == 'Canteen Incharge') {
+            if ($user->role == 'Canteen Administrator') {
                 $holidays->where('location_id',  $user->location_id)->get();
             } elseif ($user->role == 'Super Admin') {
             }
@@ -270,7 +270,7 @@ class HolidayController extends Controller
 
         if ($user->role == 'Super Admin') {
             $locations = Location::orderBy('name')->get();
-        } elseif ($user->role == 'Canteen Incharge' || $user->president_flag == 1) {
+        } elseif ($user->role == 'Canteen Administrator') {
             $locations = Location::where('id', $user->location_id)
                 ->orderBy('name')
                 ->get();
@@ -286,10 +286,10 @@ class HolidayController extends Controller
     /**
      * Store a newly created resource in storage.
      */
+         
     public function store(Request $request)
     {
 
-       
         $request->validate([
             'year' => 'required',
             'location_id' => 'required|exists:locations,id',
@@ -342,13 +342,25 @@ class HolidayController extends Controller
                     $allUsers = User::where('location_id',  $request->location_id)->where('status', 1)->get();
 
                     foreach ($allUsers as $user) {
-                        AttendanceAbsent::create([
-                            'calendar_id' => $calendar->id,
-                            'user_id'     => $user->id,
-                            'absent_flag' => 1,
-                            'location_id' => $request->location_id,
-                            'status'      => 1,
-                        ]);
+                        // AttendanceAbsent::create([
+                        //     'calendar_id' => $calendar->id,
+                        //     'user_id'     => $user->id,
+                        //     'absent_flag' => 1,
+                        //     'location_id' => $request->location_id,
+                        //     'status'      => 1,
+                        // ]);
+
+                        AttendanceAbsent::updateOrCreate(
+                            [
+                                'calendar_id' => $calendar->id,
+                                'user_id' => $user->id,
+                                'location_id' => $request->location_id,
+                            ],
+                            [
+                                'absent_flag' => 1,
+                                'status' => 1,
+                            ]
+                        );
 
                         // Har baar log insert hoga
                         AttendanceLog::create([
@@ -409,13 +421,26 @@ class HolidayController extends Controller
                         $allUsers = User::where('location_id',  $request->location_id)->where('status', 1)->get();
 
                         foreach ($allUsers as $user) {
-                            AttendanceAbsent::create([
-                                'calendar_id' => $calendar->id,
-                                'user_id'     => $user->id,
-                                'absent_flag' => 1,
-                                'location_id' => $request->location_id,
-                                'status'      => 1,
-                            ]);
+                            // AttendanceAbsent::create([
+                            //     'calendar_id' => $calendar->id,
+                            //     'user_id'     => $user->id,
+                            //     'absent_flag' => 1,
+                            //     'location_id' => $request->location_id,
+                            //     'status'      => 1,
+                            // ]);
+
+
+                            AttendanceAbsent::updateOrCreate(
+                                [
+                                    'calendar_id' => $calendar->id,
+                                    'user_id' => $user->id,
+                                    'location_id' => $request->location_id,
+                                ],
+                                [
+                                    'absent_flag' => 1,
+                                    'status' => 1,
+                                ]
+                            );
 
                             // Har baar log insert hoga
                             AttendanceLog::create([
@@ -474,24 +499,36 @@ class HolidayController extends Controller
                     $allUsers = User::where('location_id',  $request->location_id)->where('status', 1)->get();
 
                     foreach ($allUsers as $user) {
-                        AttendanceAbsent::create([
-                            'calendar_id' => $calendar->id,
-                            'user_id'     => $user->id,
-                            'absent_flag' => 1,
-                            'location_id' => $request->location_id,
-                            'status'      => 1,
-                        ]);
+                        // AttendanceAbsent::create([
+                        //     'calendar_id' => $calendar->id,
+                        //     'user_id'     => $user->id,
+                        //     'absent_flag' => 1,
+                        //     'location_id' => $request->location_id,
+                        //     'status'      => 1,
+                        // ]);
 
-                        // Har baar log insert hoga
-                        AttendanceLog::create([
-                            'calendar_id' => $calendar->id,
-                            'user_id'     => $user->id,
-                            'absent_flag' => 1,
-                            'created_by'  => auth()->id(),
-                            'remarks'     => 'Attendance updated for holiday list',
-                            'status'      => 1,
-                            'web_app'     => 'web',
-                        ]);
+                        // // Har baar log insert hoga
+                        // AttendanceLog::create([
+                        //     'calendar_id' => $calendar->id,
+                        //     'user_id'     => $user->id,
+                        //     'absent_flag' => 1,
+                        //     'created_by'  => auth()->id(),
+                        //     'remarks'     => 'Attendance updated for holiday list',
+                        //     'status'      => 1,
+                        //     'web_app'     => 'web',
+                        // ]);
+
+                        AttendanceAbsent::updateOrCreate(
+                            [
+                                'calendar_id' => $calendar->id,
+                                'user_id' => $user->id,
+                                'location_id' => $request->location_id,
+                            ],
+                            [
+                                'absent_flag' => 1,
+                                'status' => 1,
+                            ]
+                        );
                     }
                 }
             }
@@ -581,7 +618,8 @@ class HolidayController extends Controller
             // Re-open the day
             $calendarData->update([
                 'open_flag' => 1,
-                'holiday_flag' => 1,
+                'holiday_flag' => 0,
+                'sunday_flag' => 0,
             ]);
 
             // Delete holiday

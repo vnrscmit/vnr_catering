@@ -40,20 +40,21 @@ class AuthController extends Controller
      public function login(Request $request)
      {
          $request->validate([
-             'mobile' => 'required',
+             'username' => 'required',
              'password' => 'required|string',
          ]);
      
-         $user = user::where('mobile', $request->mobile)->first();
+         $user = user::where('username', $request->username)->first();
 
          if ($user && Hash::check($request->password, $user->password)) {
             $dashboardRoute = $this->getDashboardRoute($user);
+      
 
              if ($user->status == 1) {
                  auth()->login($user);
                  return redirect()->route($dashboardRoute);
              } else {
-                 session(['mobile' => $user->mobile, 'user_name' => $user->first_name]);
+                 session(['username' => $user->username, 'user_name' => $user->first_name]);
      
                  if ($user->notice === "change_password_to_activate_account") {
 
@@ -67,7 +68,7 @@ class AuthController extends Controller
                  } 
              }
          } else {
-             return back()->withErrors(['email' => 'Invalid mobile or password.']);
+             return back()->withErrors(['username' => 'Invalid username or password.']);
          }
      }
      
@@ -77,7 +78,7 @@ class AuthController extends Controller
     // Request Activation Link
      public function requestActivationLink(Request $request)
      {
-        if (!session()->has('mobile') || !session()->has('user_name')) {
+        if (!session()->has('username') || !session()->has('user_name')) {
             $errorMessage = 'Something went wrong, please try to login again.';
             return redirect()->route('auth.login')->withErrors(['error' => $errorMessage]);
         }
@@ -208,7 +209,7 @@ class AuthController extends Controller
 
     private function getDashboardRoute(User $user): string
     {
-        return in_array($user->role, ['Admin', 'Super Admin', 'Canteen Incharge', 'Member', 'Non Member', 'Canteen President']) 
+        return in_array($user->role, ['Admin', 'Super Admin', 'Canteen Incharge', 'Member', 'Non Member', 'Canteen Administrator']) 
             ? 'admin.dashboard' 
             : 'home';
     }

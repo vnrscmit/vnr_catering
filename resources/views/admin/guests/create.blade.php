@@ -25,7 +25,7 @@
         <div class="card">
 
             <div class="card-header">
-                <h5>Create New Guest</h5>
+                <h5 class="card-title mb-0">Create New Guest</h5>
             </div>
             <div class="card-body">
                 @if(session('error'))
@@ -43,20 +43,19 @@
                     <input type="hidden" name="calendar_id" value="{{ $dayStatus->id }}">
                     <div class="row">
 
-
-                         <!-- Location -->
+                        <!-- Location -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">
                                 Location <span class="text-danger">*</span>
                             </label>
 
-                            <select class="form-control @error('location') is-invalid @enderror"
-                                name="location_id"
-                                required>
+                            <select class="form-control @error('location_id') is-invalid @enderror"
+                                name="location_id" required>
                                 <option value="">Select Location</option>
                                 @foreach($locations as $location)
-                                <option value="{{ $location->id }}" {{ old('location') == $location->id ? 'selected' : '' }}>
-                                    {{ $location->name }}
+                                <option value="{{ $location->id }}" selected
+                                    {{ old('location_id', $user->location_id ?? '') == $location->id ? 'selected' : '' }}>
+                                    {{ $location->name }} 
                                 </option>
                                 @endforeach
                             </select>
@@ -66,50 +65,20 @@
                             @enderror
                         </div>
 
-                        <!-- Department -->
+                        <!-- Date -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">
-                                Department
+                                Date <span class="text-danger">*</span>
                             </label>
 
-                            <select class="form-control @error('department') is-invalid @enderror"
-                                name="department_id"
-                                >
+                            <input type="date"
+                                class="form-control @error('date') is-invalid @enderror"
+                                name="date"
+                                value="{{ old('date', date('Y-m-d')) }}"
+                                min="{{ date('Y-m-d') }}"
+                                required>
 
-                                <option value="">Select Department</option>
-                                @foreach($departments as $department)
-                                <option value="{{ $department->id }}" {{ old('department') == $department->id ? 'selected' : '' }}>
-                                    {{ $department->name }}
-                                </option>
-                                @endforeach
-                            </select>
-
-                            @error('department_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                   
-
-                        <!-- Employee -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">
-                                Employee
-                            </label>
-
-                            <select name="attend_user_id"
-                                class="form-control @error('attend_user_id') is-invalid @enderror">
-                                <option value="">Select Employee</option>
-                                @foreach($users as $user)
-                                <option value="{{ $user->id }}"
-                                    {{ old('attend_user_id') == $user->id ? 'selected' : '' }}>
-                                    {{ $user->first_name }}
-                                </option>
-                                @endforeach
-
-                            </select>
-
-                            @error('attend_user_id')
+                            @error('date')
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -148,6 +117,54 @@
                             </div>
                         </div>
 
+                        <!-- Department -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Department
+                            </label>
+
+                            <select class="form-control @error('department') is-invalid @enderror"
+                                name="department_id">
+                                <option value="">Select Department</option>
+                                @foreach($departments as $department)
+                                <option value="{{ $department->id }}" {{ old('department') == $department->id ? 'selected' : '' }}>
+                                    {{ $department->name }}
+                                </option>
+                                @endforeach
+                            </select>
+
+                            @error('department_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+
+
+                        <!-- Employee -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Employee
+                            </label>
+
+                            <select name="attend_user_id"
+                                class="form-control @error('attend_user_id') is-invalid @enderror">
+                                <option value="">Select Employee</option>
+                                @foreach($users as $user)
+                                <option value="{{ $user->id }}"
+                                    {{ old('attend_user_id') == $user->id ? 'selected' : '' }}>
+                                    {{ $user->first_name }}
+                                </option>
+                                @endforeach
+
+                            </select>
+
+                            @error('attend_user_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+
+
                         <!-- Guest Count -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">
@@ -169,14 +186,14 @@
                         <!-- Guest Name -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">
-                                Guest Name <span class="text-danger">*</span>
+                                Guest Name
                             </label>
 
                             <input type="text"
                                 class="form-control @error('guest_name') is-invalid @enderror"
                                 name="guest_name"
                                 value="{{ old('guest_name') }}"
-                                placeholder="e.g. Vendor Team, Client, Family" required>
+                                placeholder="e.g. Vendor Team, Client, Family">
 
                             @error('guest_name')
                             <div class="invalid-feedback">{{ $message }}</div>

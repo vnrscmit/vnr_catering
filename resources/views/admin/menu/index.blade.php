@@ -195,7 +195,7 @@
                 <button class="btn btn-primary btn-sm"
                     data-bs-toggle="modal"
                     data-bs-target="#addMenuModal">
-                    <i class="fa fa-plus"></i> Add Menu Master
+                    <i class="fa fa-plus"></i> Add Menu
                 </button>
             </div>
 
@@ -293,7 +293,7 @@
             @csrf
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Add Menu Master</h5>
+                    <h5 class="modal-title">Add Menu</h5>
 
                     <button type="button"
                         class="btn-close"

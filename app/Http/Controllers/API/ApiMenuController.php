@@ -119,11 +119,19 @@ class ApiMenuController extends Controller
             ->where('id', $calendarId)
             ->first();
 
+        if (!$dayStatus) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Day Status not found.',
+            ], 404);
+        }
+
         $dailyMenu = DailyMenu::with('items')
             ->where('calendar_id', $calendarId)
             ->where('location_id', $locationId)
             ->whereDate('menu_date', $dayStatus->date)
             ->first();
+
 
         $selectedSubmenuIds = $dailyMenu
             ? $dailyMenu->items->pluck('submenu_id')->toArray()
@@ -134,6 +142,7 @@ class ApiMenuController extends Controller
                 $query->where('status', 1);
             }
         ])
+            ->where('location_id', $locationId)
             ->where('status', 1)
             ->get();
 
@@ -148,6 +157,7 @@ class ApiMenuController extends Controller
                 $subMenus[] = [
                     'id'     => $subMenu->id,
                     'name'   => $subMenu->name,
+                    'special_flag'   => $subMenu->special_flag,
                     'status' => in_array($subMenu->id, $selectedSubmenuIds) ? 1 : 0,
                 ];
             }
@@ -155,7 +165,6 @@ class ApiMenuController extends Controller
             $data[] = [
                 'id'        => $menu->id,
                 'menu_name' => $menu->name,
-                'spcial_flag' => $menu->special_flag,
                 'sub_menu'  => $subMenus,
             ];
         }

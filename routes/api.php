@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\API\ApiAttendanceController;
 use App\Http\Controllers\API\ApiDashboardController;
+use App\Http\Controllers\API\ApiForgetPasswordController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -37,3 +38,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::post('/generate-year', [ApiAttendanceController::class, 'generateYear']);
 Route::post('login', [UserController::class, 'apilogin'])->name('user.login');
+
+// Forgot Password APIs
+Route::post('forgot-password/send-otp', [ApiForgetPasswordController::class, 'sendOtp'])
+    ->name('api.password.sendOtp');
+
+Route::post('forgot-password/verify-otp', [ApiForgetPasswordController::class, 'verifyOtp'])
+    ->name('api.password.verifyOtp');
+
+Route::post('forgot-password/update-password', [ApiForgetPasswordController::class, 'updatePassword'])
+    ->name('api.password.updatePassword');

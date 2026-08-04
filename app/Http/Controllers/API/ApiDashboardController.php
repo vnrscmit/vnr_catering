@@ -29,7 +29,7 @@ class ApiDashboardController extends Controller
         if (in_array($user->role, ['Member', 'Non Member'])) {
             return $this->memberDashboard($user, $locationId);
         }
-        if (in_array($user->role, ['Canteen Incharge'])) {
+        if (in_array($user->role, ['Canteen Incharge', 'Canteen Administrator'])) {
             return $this->inchargeDashboard($user,  $locationId);
         }
 
@@ -118,13 +118,14 @@ class ApiDashboardController extends Controller
             ->limit($CompanyParameter->max_day_show)
             ->get();
 
+        $startDate = DayStatus::where('id', $userData->start_calendar_id)->value('date');
 
         // Current Month Summary Data
         $summaryCurrentMonth = DayStatus::whereBetween('day_statuses.date', [
             $currentStart->format('Y-m-d'),
             $currentEnd->format('Y-m-d')
         ])
-            ->where('day_statuses.id', '>=', $userData->start_calendar_id)
+            ->where('day_statuses.date', '>=', $startDate)
             ->leftJoin('attendance_absents', function ($join)  use ($userData, $locationId) {
                 $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
                     ->where('attendance_absents.location_id', $locationId)
@@ -140,15 +141,18 @@ class ApiDashboardController extends Controller
         ")
             ->first();
 
+
         $monthDayCount = DayStatus::whereBetween('day_statuses.date', [
             $currentStart->format('Y-m-d'),
             $currentEnd->format('Y-m-d')
         ])
-            ->where('day_statuses.id', '>=', $userData->start_calendar_id)
-            ->where('day_statuses.sunday_flag', 0)
+
+            ->where('day_statuses.date', '>=', $startDate)
+            ->whereDate('day_statuses.date', '<=', Carbon::today())
             ->where('day_statuses.holiday_flag', 0)
             ->where('day_statuses.location_id', $locationId)
             ->where('day_statuses.open_flag', 1)->count();
+
 
         $summaryCurrentMonth->totalDays = $monthDayCount;
         $presentDays = ($monthDayCount - $summaryCurrentMonth->absent_days);
@@ -291,13 +295,15 @@ class ApiDashboardController extends Controller
             $guestAllowed = 1;
             $personalguestCount = Guest::where('attend_user_id', $userData->id)
                 ->where('location_id', $locationId)
+                ->where('calendar_id', $dayStatus->id)
                 ->where('guest_type', 'Personal Guest')
-                ->count();
+                ->sum('guest_count');
 
             $officeguestCount = Guest::where('attend_user_id', $userData->id)
                 ->where('location_id', $locationId)
+                ->where('calendar_id', $dayStatus->id)
                 ->where('guest_type', 'Office Guest')
-                ->count();
+                ->sum('guest_count');
         } else {
             $guestAllowed = 0;
             $personalguestCount = 0;
@@ -306,11 +312,43 @@ class ApiDashboardController extends Controller
 
         // Daily Menu List
 
-        $dailyMenuList = DailyMenu::with('items.submenu')
-            ->where('calendar_id', $dayStatus->id)->where('status', 1)->where('menu_date', $today)->where('location_id', $locationId)->first();
+        // $dailyMenuList = DailyMenu::with('items.submenu')
+        //     ->where('calendar_id', $dayStatus->id)->where('status', 1)->where('menu_date', $today)->where('location_id', $locationId)->first();
+
+        // $todayMenu = $dailyMenuList
+        //     ? $dailyMenuList->items->pluck('submenu.name')->values()->toArray()
+        //     : [];
+
+        $dailyMenuList = DailyMenu::with('items.menu', 'items.submenu')
+            ->where('calendar_id', $dayStatus->id)
+            ->where('location_id', $locationId)
+            ->where('menu_date', $today)
+            ->first();
+
+        $order = [
+            'Starters'        => 1,
+            'Refresher'       => 2,
+            'Vegetable'       => 3,
+            'Dal'             => 4,
+            'Rice'            => 5,
+            'Roti'            => 6,
+            'Dessert'         => 7,
+            'Accompaniments'  => 8,
+        ];
 
         $todayMenu = $dailyMenuList
-            ? $dailyMenuList->items->pluck('submenu.name')->values()->toArray()
+            ? $dailyMenuList->items
+            ->sortBy(function ($item) use ($order) {
+                return $order[$item->menu->name] ?? 999;
+            })
+            ->map(function ($item) {
+                return [
+                    'name' => $item->submenu->name ?? '',
+                    'special_flag' => $item->submenu->special_flag ?? 0
+                ];
+            })
+            ->values()
+            ->toArray()
             : [];
 
         $data = [
@@ -336,7 +374,19 @@ class ApiDashboardController extends Controller
             'summaryCurrentMonth' => $summaryCurrentMonth,
             'todayMenus'    => $todayMenu,
             'summaryMealCount' => $summaryMealCount,
+            'attendance_out_time' => Carbon::parse($CompanyParameter->attendance_out_time)->format('h:i A'),
+
+            'lunch_out_time' => $CompanyParameter->lunch_out_time
+                ? Carbon::parse($CompanyParameter->lunch_out_time)->format('h:i A')
+                : null,
+
+            'canteen_start_time' => Carbon::parse($CompanyParameter->canteen_start_time)->format('h:i A'),
+
+            'canteen_end_time' => $CompanyParameter->canteen_end_time
+                ? Carbon::parse($CompanyParameter->canteen_end_time)->format('h:i A')
+                : null,
         ];
+
 
         return response()->json([
             'status' => true,
@@ -369,14 +419,14 @@ class ApiDashboardController extends Controller
 
         $singleLinkedUserIds = User::where('location_id', $userData->location_id)
             ->whereNotNull('start_calendar_id')
-            ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge'])
+            ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge', 'Canteen Administrator'])
             ->where('status', 1)
             ->pluck('id');
 
         $multiLinkedUserIds = MultipleLocation::join('users', 'multiple_locations.user_id', '=', 'users.id')
             ->where('multiple_locations.location_id', $userData->location_id)
             ->where('users.status', 1)
-            ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge'])
+            ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge', 'Canteen Administrator'])
             ->pluck('multiple_locations.user_id');
 
         $allLinkedUserIds = $singleLinkedUserIds
@@ -404,6 +454,22 @@ class ApiDashboardController extends Controller
             ->where('guest_type', 'Personal Guest')
             ->sum('guest_count');
 
+        $lateChangesUserId = AttendanceAbsent::where('late_flag', 1)->where('calendar_id', $dayStatus->id)->pluck('user_id')->toArray();
+
+        $presentToAbsent = User::where('status', 1)->where('role', 'Member')->whereIn('id', $lateChangesUserId)
+            ->count();
+
+        $absentToPresent = User::where('status', 1)->where('role', 'Non Member')->whereIn('id', $lateChangesUserId)
+            ->count();
+
+        $lateGuest = Guest::where('late_flag', 1)->where('calendar_id', $dayStatus->id)->count();
+
+        $lateEntry = [
+            'presentToAbsent' => $presentToAbsent,
+            'absentToPresent' => $absentToPresent,
+            'lateGuest' => $lateGuest,
+        ];
+
         $data = [
             'total_users'          => $totalUsers,
             'present_count'        => $presentCount,
@@ -411,6 +477,18 @@ class ApiDashboardController extends Controller
             'official_guest_count' => $officialGuestCount,
             'personal_guest_count' => $personalGuestCount,
             'total_meals'          => $presentCount + $officialGuestCount + $personalGuestCount,
+            'lateEntry'           => $lateEntry,
+            'attendance_out_time' => Carbon::parse($companyParameter->attendance_out_time)->format('h:i A'),
+
+            'lunch_out_time' => $companyParameter->lunch_out_time
+                ? Carbon::parse($companyParameter->lunch_out_time)->format('h:i A')
+                : null,
+
+            'canteen_start_time' => Carbon::parse($companyParameter->canteen_start_time)->format('h:i A'),
+
+            'canteen_end_time' => $companyParameter->canteen_end_time
+                ? Carbon::parse($companyParameter->canteen_end_time)->format('h:i A')
+                : null,
         ];
 
         return response()->json([

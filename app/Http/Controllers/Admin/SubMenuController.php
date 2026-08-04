@@ -11,10 +11,10 @@ use Illuminate\Http\RedirectResponse;
 use App\Http\Controllers\Traits\AdminViewSharedDataTrait;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 
 class SubMenuController extends Controller
 {
-
 
     use AdminViewSharedDataTrait;
 
@@ -32,6 +32,8 @@ class SubMenuController extends Controller
     {
         // Get all submenu names from the request
         $submenuNames = $request->submenu_name ?? [];
+
+        $specialFlags = $request->special_flag ?? [];
 
 
         // Check if submenu names exist
@@ -58,16 +60,19 @@ class SubMenuController extends Controller
 
         // Create multiple submenus
         $createdCount = 0;
-        foreach ($submenuNames as $name) {
-
-            $checkExist = SubMenu::where('name', $name)->first();
+        foreach ($submenuNames as $index => $name) {
+            $checkExist = SubMenu::where('menu_id', $menuId)->where('name', $name)->first();
             if ($checkExist) {
                 continue;
             } else {
+
+                $specialFlag = isset($specialFlags[$index]) ? (int)$specialFlags[$index] : 0;
+                $formattedName = Str::title(trim($name));
                 SubMenu::create([
                     'menu_id' => $menuId,
-                    'name' => trim($name),
+                    'name' =>  $formattedName,
                     'status' => 1,
+                    'special_flag' => $specialFlag
                 ]);
                 $createdCount++;
             }
@@ -77,33 +82,46 @@ class SubMenuController extends Controller
             ->route('admin.menus.index')
             ->with('success', "{$createdCount} submenu created successfully!");
     }
-    public function update(Request $request, $id)
-    {
-        $validated = $request->validate([
-            'menu_id' => 'required|exists:menus,id',
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('sub_menus', 'name')
-                    ->where(function ($query) use ($request) {
-                        return $query->where('menu_id', $request->menu_id);
-                    })
-                    ->ignore($id),
-            ],
-            'status' => 'required|in:0,1',
-        ]);
 
-        $submenu = SubMenu::findOrFail($id);
+   public function update(Request $request, $id)
+{
+    // Format name
+    $request->merge([
+        'name' => Str::title(preg_replace('/\s+/', ' ', trim($request->name)))
+    ]);
 
-        $submenu->update($validated);
+    $validated = $request->validate([
+        'menu_id' => 'required|exists:menus,id',
+        'name' => [
+            'required',
+            'string',
+            'max:255',
+            Rule::unique('sub_menus', 'name')
+                ->where(function ($query) use ($request) {
+                    return $query->where('menu_id', $request->menu_id);
+                })
+                ->ignore($id),
+        ],
+        'status' => 'required|in:0,1',
+        'special_flag' => 'nullable|in:0,1', 
+    ]);
 
-        return response()->json([
-            'status' => true,
-            'message' => 'Submenu updated successfully.',
-            'data' => $submenu
-        ]);
-    }
+    $submenu = SubMenu::findOrFail($id);
+
+    // Prepare data for update
+    $updateData = $validated;
+    
+    // Handle special_flag - if not present in request, set to 0
+    $updateData['special_flag'] = $request->has('special_flag') ? $request->special_flag : 0;
+
+    $submenu->update($updateData);
+
+    return response()->json([
+        'status' => true,
+        'message' => 'Submenu updated successfully.',
+        'data' => $submenu
+    ]);
+}
 
     public function destroy($id): RedirectResponse
     {
