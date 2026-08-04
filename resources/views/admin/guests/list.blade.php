@@ -25,7 +25,7 @@
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span class="fw-bold">Guests Management</span>
+                <span class="card-title fw-bold mt-2">Guests Management</span>
 
                 <a href="{{ url()->previous() }}" class="btn btn-secondary btn-sm">
                     <i class="fa fa-arrow-left me-1"></i> Back
@@ -33,7 +33,6 @@
             </div>
             <div class="card-body">
                 <div class="row">
-
                     <div class="col-md-4 mb-4">
                         <div class="card upcoming-card h-100 guest-box personal">
                             <div class="card-body ">
@@ -74,13 +73,13 @@
                         <thead>
                             <tr>
                                 <th>#</th>
+                                <th>Date</th>
                                 <th>Name</th>
                                 <th>Type</th>
                                 <th>Count</th>
                                 <th>Location</th>
                                 <th>Department</th>
                                 <th>Attended By</th>
-                                <th>Date</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -89,15 +88,16 @@
                             @forelse($guests as $guest)
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
+                                <td>
+                                    {{ optional($guest->calendar)->date ? \Carbon\Carbon::parse($guest->calendar->date)->format('d-m-Y') : '-' }}
+                                </td>
                                 <td>{{ $guest->guest_name }}</td>
                                 <td>{{ $guest->guest_type }}</td>
                                 <td>{{ $guest->guest_count }}</td>
                                 <td>{{ $guest->location->name ?? ' ' }}</td>
                                 <td>{{ $guest->department->name ?? ' ' }}</td>
                                 <td>{{ $guest->attendUser->first_name ?? ' ' }}</td>
-                                <td>
-                                    {{ optional($guest->calendar)->date ? \Carbon\Carbon::parse($guest->calendar->date)->format('d-m-Y') : '-' }}
-                                </td>
+
                                 <td>{{ $guest->status ? 'Active' : 'Inactive' }}</td>
                                 <td style="width: 120px;">
                                     <a href="{{ route('admin.guests.edit', $guest->id) }}"

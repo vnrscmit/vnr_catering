@@ -11,7 +11,7 @@ class SubMenu extends Model
 
     protected $table = 'sub_menus';
 
-    protected $fillable = ['menu_id', 'name', 'status'];
+    protected $fillable = ['menu_id', 'name', 'status', 'special_flag', 'created_at', 'updated_at'];
 
     public function menu()
     {

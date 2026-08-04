@@ -50,7 +50,7 @@
                                 Location <span class="text-danger">*</span>
                             </label>
 
-                            <select class="form-control" name="location_id" required>
+                            <select class="form-control @error('location_id') is-invalid @enderror" name="location_id" required>
                                 <option value="">Select Location</option>
 
                                 @foreach($locations as $location)
@@ -66,13 +66,66 @@
                             @enderror
                         </div>
 
+                        <!-- Date -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Date <span class="text-danger">*</span>
+                            </label>
+
+                            <input type="date"
+                                class="form-control @error('date') is-invalid @enderror"
+                                name="date"
+                                value="{{ old('date', $guest->date ?? date('Y-m-d')) }}"
+                                min="{{ date('Y-m-d') }}"
+                                required>
+
+                            @error('date')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- Guest Type -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Guest Type<span class="text-danger">*</span>
+                            </label>
+
+                            <div class="d-flex mt-2">
+
+                                <div class="form-check me-4">
+                                    <input class="form-check-input"
+                                        type="radio"
+                                        name="guest_type"
+                                        value="Office Guest"
+                                        {{ old('guest_type', $guest->guest_type) == 'Office Guest' ? 'checked' : '' }}>
+
+                                    <label class="form-check-label">
+                                        Official
+                                    </label>
+                                </div>
+
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                        type="radio"
+                                        name="guest_type"
+                                        value="Personal Guest"
+                                        {{ old('guest_type', $guest->guest_type) == 'Personal Guest' ? 'checked' : '' }}>
+
+                                    <label class="form-check-label">
+                                        Personal
+                                    </label>
+                                </div>
+
+                            </div>
+                        </div>
+
                         <!-- Department -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">
-                                Department 
+                                Department
                             </label>
 
-                            <select class="form-control" name="department_id">
+                            <select class="form-control @error('department') is-invalid @enderror" name="department_id">
                                 <option value="">Select Department</option>
 
                                 @foreach($departments as $department)
@@ -88,15 +141,14 @@
                             @enderror
                         </div>
 
-                    
-
                         <!-- Employee -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">
                                 Employee
                             </label>
 
-                            <select class="form-control" name="attend_user_id">
+                            <select name="attend_user_id"
+                                class="form-control @error('attend_user_id') is-invalid @enderror">
                                 <option value="">Select Employee</option>
 
                                 @foreach($users as $user)
@@ -112,35 +164,6 @@
                             @enderror
                         </div>
 
-                        <!-- Guest Type -->
-                        <div class="d-flex mt-2">
-
-                            <div class="form-check me-4">
-                                <input class="form-check-input"
-                                    type="radio"
-                                    name="guest_type"
-                                    value="Office Guest"
-                                    {{ old('guest_type', $guest->guest_type) == 'Office Guest' ? 'checked' : '' }}>
-
-                                <label class="form-check-label">
-                                    Official
-                                </label>
-                            </div>
-
-                            <div class="form-check">
-                                <input class="form-check-input"
-                                    type="radio"
-                                    name="guest_type"
-                                    value="Personal Guest"
-                                    {{ old('guest_type', $guest->guest_type) == 'Personal Guest' ? 'checked' : '' }}>
-
-                                <label class="form-check-label">
-                                    Personal
-                                </label>
-                            </div>
-
-                        </div>
-
                         <!-- Guest Count -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">
@@ -148,12 +171,12 @@
                             </label>
 
                             <input type="number"
-                                class="form-control"
+                                class="form-control @error('guest_count') is-invalid @enderror"
                                 name="guest_count"
                                 value="{{ old('guest_count', $guest->guest_count) }}"
                                 min="1"
                                 max="10"
-                                required>
+                                placeholder="Enter Guest Count" required>
 
                             @error('guest_count')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -163,14 +186,14 @@
                         <!-- Guest Name -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">
-                                Guest Name <span class="text-danger">*</span>
+                                Guest Name
                             </label>
 
                             <input type="text"
-                                class="form-control"
+                                class="form-control @error('guest_name') is-invalid @enderror"
                                 name="guest_name"
                                 value="{{ old('guest_name', $guest->guest_name) }}"
-                                required>
+                                placeholder="e.g. Vendor Team, Client, Family">
 
                             @error('guest_name')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -178,9 +201,15 @@
                         </div>
 
                         <div class="col-md-12 mb-3">
-
                             <label>Remarks</label>
-                            <textarea name="guest_remarks" class="form-control">{{ old('guest_remarks', $guest->guest_remarks) }}</textarea>
+                            <textarea
+                                name="guest_remarks" 
+                                placeholder="Enter Remarks"
+                                class="form-control @error('guest_remarks') is-invalid @enderror">{{ old('guest_remarks', $guest->guest_remarks) }}</textarea>
+                            
+                            @error('guest_remarks')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
 
@@ -195,12 +224,10 @@
                         </div>
                     </div>
 
-
+                </form>
             </div>
-            </form>
         </div>
     </div>
-</div>
 </div>
 
 <script>

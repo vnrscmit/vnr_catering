@@ -113,7 +113,7 @@
 </script>
 @endpush
 
-@section('title', 'Department Master')
+@section('title', 'Canteen Parameter Master')
 @section('content')
 
 <div class="main-panel">

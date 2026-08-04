@@ -276,8 +276,8 @@
 
                         <div class="row">
                             <div class="form-group col-md-12">
-                                <label for="mobile">Mobile Number</label>
-                                <input id="mobile" class="form-control" placeholder="Enter your mobile number" required type="mobile" name="mobile" value="{{ old('mobile') }}">
+                                <label for="username">Username</label>
+                                <input id="username" class="form-control" placeholder="Enter your username" required type="text" name="username" value="{{ old('username') }}">
                             </div>
 
                             <div class="form-group col-md-12 position-relative">

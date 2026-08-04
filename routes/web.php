@@ -29,6 +29,7 @@ use App\Http\Controllers\Admin\GeneralSettingsController;
 use App\Http\Controllers\Admin\TermsAndConditionController;
 use App\Http\Controllers\Admin\TableBookingController as AdminTableBookingController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\BillController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\RoleMasterController;
@@ -148,7 +149,7 @@ Route::prefix('customer')->middleware(CheckRoleCustomer::class)->group(function 
 
 //Admin Dashboard routes
 Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function () {
-    Route::get('/', [AdminController::class, 'index'])->name('admin.dashboard');
+
 
     Route::get('profile', [AdminController::class, 'viewMyProfile'])->name('admin.view.myprofile');
     Route::get('profile/edit', [AdminController::class, 'editMyProfile'])->name('admin.myprofile.edit');
@@ -261,13 +262,24 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
             ->name('admin.users.show');
         Route::post('/users/suspend', [UserAdminController::class, 'suspend'])
             ->name('admin.users.suspend');
-        Route::get('users/{user}/edit', [UserAdminController::class, 'edit'])
-            ->name('admin.users.edit');
-        Route::post('users/store', [UserAdminController::class, 'store'])->name('admin.users.store');
+
+        Route::get('users/{id}/edit', [UserAdminController::class, 'edit'])->name('admin.users.edit');
         Route::put('users/{id}', [UserAdminController::class, 'update'])->name('admin.users.update');
+
+
+        Route::post('users/store', [UserAdminController::class, 'store'])->name('admin.users.store');
+        Route::get('users/{id}/edit', [UserAdminController::class, 'edit'])->name('admin.users.edit');
+        Route::get('users/{id}/email', [UserAdminController::class, 'email'])->name('admin.users.email');
+        Route::post('users/emailBulk', [UserAdminController::class, 'emailBulk'])->name('admin.users.emailBulk');
+
+
+        Route::post('/users/update-date-bulk', [UserAdminController::class, 'updateDateBulk'])
+            ->name('admin.users.updateDateBulkNew');
+
         Route::delete('users/{id}', [UserAdminController::class, 'destroy'])->name('admin.users.destroy');
         Route::post('/users/update-date', [UserAdminController::class, 'updateDate'])
             ->name('admin.users.updateDate');
+
 
         Route::get('/get-security-amount/{location}', [UserAdminController::class, 'getSecurityAmount'])
             ->name('security.amount');
@@ -365,8 +377,21 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
     Route::get('/guests/{guest}/edit', [AttendanceController::class, 'guestEdit'])->name('admin.guests.edit');
     Route::put('/guests/{guest}', [AttendanceController::class, 'guestUpdate'])->name('admin.guests.update');
     Route::delete('/guests/{guest}', [AttendanceController::class, 'destroy'])->name('admin.guests.destroy');
-    Route::post('/attendance/override', [AttendanceController::class, 'overrideAttendance'])
+    // Route::post('/attendance/override', [AttendanceController::class, 'overrideAttendance'])
+    //     ->name('attendance.override');
+
+    Route::post('/attendance/override', [AttendanceController::class, 'overrideAttendanceNew'])
         ->name('attendance.override');
+
+    Route::post('/attendance/toggle', [AttendanceController::class, 'toggle'])
+        ->name('attendance.toggle');
+    Route::get('/calendar', [AttendanceController::class, 'calendar'])->name('calendar.index');
+
+    Route::get('/calendar/events', [AttendanceController::class, 'calendarEvents'])->name('calendar.events');
+    Route::resource('bill-generate', BillController::class);
+    Route::get('/{id?}', [AdminController::class, 'index'])->name('admin.dashboard');
+
+    Route::post('/attendance/update', [AttendanceController::class, 'update'])->name('attendance.update');
 });
 
 Route::post(

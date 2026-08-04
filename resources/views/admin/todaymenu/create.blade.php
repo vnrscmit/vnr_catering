@@ -20,7 +20,7 @@
 <script>
     $(function() {
         $('.select2').select2({
-            placeholder: 'Select SubMenu',
+            placeholder: 'Select Menu Items',
             allowClear: true
         });
     });
@@ -78,7 +78,7 @@
                                 <option value="">-- Select Location --</option>
 
                                 @foreach($locations as $location)
-                                <option value="{{ $location->id }}"
+                                <option value="{{ $location->id }}" selected
                                     {{ old('location_id') == $location->id ? 'selected' : '' }}>
                                     {{ $location->name }}
                                 </option>
@@ -93,7 +93,7 @@
 
                         <!-- Guest Allowed -->
                         <div class="col-md-4">
-                             <label><strong>Special<span class="text-danger"> *</span></strong></label>
+                            <label><strong>Feast Day<span class="text-danger"> *</span></strong></label>
                             <div class="d-flex align-items-center gap-4">
                                 <div class="form-check me-4">
                                     <input class="form-check-input"
@@ -129,8 +129,8 @@
                     <table class="table table-bordered">
                         <thead class="table-light">
                             <tr>
-                                <th width="30%">Menu</th>
-                                <th width="70%">Sub Menu</th>
+                                <th width="30%">Menu Section</th>
+                                <th width="70%">Menu Items</th>
                             </tr>
                         </thead>
 
@@ -143,17 +143,33 @@
                                 </td>
 
                                 <td>
-                                    <select
-                                        name="submenu_id[{{ $menu->id }}][]"
-                                        class="form-control select2"
-                                        multiple>
+                                    <div class="row">
                                         @foreach($menu->submenus as $submenu)
-                                        <option value="{{ $submenu->id }}">
-                                            {{ $submenu->name }}
-                                        </option>
-                                        @endforeach
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input
+                                                    type="checkbox"
+                                                    name="submenu_id[{{ $menu->id }}][]"
+                                                    value="{{ $submenu->id }}"
+                                                    id="submenu_{{ $menu->id }}_{{ $submenu->id }}"
+                                                    class="form-check-input submenu-checkbox"
+                                                    data-menu-id="{{ $menu->id }}"
+                                                    data-submenu-id="{{ $submenu->id }}"
+                                                    {{ (old('submenu_id.'.$menu->id) && in_array($submenu->id, old('submenu_id.'.$menu->id))) ? 'checked' : '' }}>
+                                                <label
+                                                    class="form-check-label"
+                                                    for="submenu_{{ $menu->id }}_{{ $submenu->id }}">
+                                                    {{ $submenu->name }}
 
-                                    </select>
+                                                    {{-- Show special indicator if submenu is special --}}
+                                                    @if($submenu->special_flag == 1)
+                                                    <i class="fa fa-star text-warning" title="Special"></i>
+                                                    @endif
+                                                </label>
+                                            </div>
+                                        </div>
+                                        @endforeach
+                                    </div>
                                 </td>
                             </tr>
                             @endforeach
@@ -172,9 +188,6 @@
                         </div>
                     </div>
                 </form>
-
-
-
 
             </div>
         </div>

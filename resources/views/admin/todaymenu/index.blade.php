@@ -124,7 +124,7 @@
                                 <th>#</th>
                                 <th>Date</th>
                                   <th>Location</th>
-                                <th>Items</th>
+                                <th>Menu Items</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>

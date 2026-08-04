@@ -378,6 +378,14 @@
         color: var(--primary-green);
     }
 
+    .holiday-btn.selected {
+        background: var(--primary-green-bg);
+        border-color: var(--primary-green);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(46, 97, 21, 0.15);
+        color: var(--primary-green);
+    }
+
     .holiday-btn strong {
         display: block;
         font-size: 15px;
@@ -530,10 +538,18 @@
         });
 
         // Quick holiday buttons
+        // Quick holiday buttons
+        // Quick holiday buttons - Toggle version (multiple can be selected)
         $('.holiday-btn').click(function() {
-            $('#holidayDateInput').val($(this).data('date'));
-            $('#holidayRemarkInput').val($(this).data('remark'));
-            $('#addHolidayDate').trigger('click');
+            // Toggle the selected class on the clicked button
+            $(this).toggleClass('selected');
+
+            // If you want to keep the functionality but allow multiple selections
+            if ($(this).hasClass('selected')) {
+                $('#holidayDateInput').val($(this).data('date'));
+                $('#holidayRemarkInput').val($(this).data('remark'));
+                $('#addHolidayDate').trigger('click');
+            }
         });
 
         // FORM SUBMIT VALIDATION
@@ -604,7 +620,7 @@
     });
 
     // ============ HOLIDAY DATES FUNCTIONS ============
-    
+
     function addHolidayDate(dateValue, remarkValue) {
         // Check if date already exists
         var exists = false;
@@ -648,10 +664,10 @@
 
         // Add the new item
         $('#selectedHolidayDatesList').append(dateHtml);
-        
+
         // Sort all items by date
         sortHolidayDates();
-        
+
         updateHolidayDateCount();
         removeEmptyMessage('holiday');
     }
@@ -659,14 +675,14 @@
     function sortHolidayDates() {
         var container = $('#selectedHolidayDatesList');
         var items = container.children('.date-item').get();
-        
+
         // Sort items by date
         items.sort(function(a, b) {
             var dateA = new Date($(a).data('date'));
             var dateB = new Date($(b).data('date'));
             return dateA - dateB;
         });
-        
+
         // Re-append sorted items
         $.each(items, function(index, item) {
             container.append(item);
@@ -674,10 +690,20 @@
     }
 
     function removeHolidayDate(element) {
+        var $dateItem = $(element).closest('.date-item');
+        var dateValue = $dateItem.find('.date-text').text().trim(); // Get the date text
+
         $(element).closest('.date-item').fadeOut(200, function() {
             $(this).remove();
             updateHolidayDateCount();
             checkEmptyList('holiday');
+
+            // Remove selected class from holiday button with matching date
+            $('.holiday-btn').each(function() {
+                if ($(this).data('date') === dateValue) {
+                    $(this).removeClass('selected');
+                }
+            });
         });
     }
 
@@ -692,7 +718,7 @@
     }
 
     // ============ SPECIFIC DATES FUNCTIONS ============
-    
+
     function addSpecificDate(dateValue, remarkValue) {
         // Check if date already exists
         var exists = false;
@@ -736,10 +762,10 @@
 
         // Add the new item
         $('#selectedDatesList').append(dateHtml);
-        
+
         // Sort all items by date
         sortSpecificDates();
-        
+
         updateDateCount();
         removeEmptyMessage('specific');
     }
@@ -747,14 +773,14 @@
     function sortSpecificDates() {
         var container = $('#selectedDatesList');
         var items = container.children('.date-item').get();
-        
+
         // Sort items by date
         items.sort(function(a, b) {
             var dateA = new Date($(a).data('date'));
             var dateB = new Date($(b).data('date'));
             return dateA - dateB;
         });
-        
+
         // Re-append sorted items
         $.each(items, function(index, item) {
             container.append(item);
@@ -780,7 +806,7 @@
     }
 
     // ============ UTILITY FUNCTIONS ============
-    
+
     function formatDateDMY(dateString) {
         var date = new Date(dateString);
         var day = String(date.getDate()).padStart(2, '0');

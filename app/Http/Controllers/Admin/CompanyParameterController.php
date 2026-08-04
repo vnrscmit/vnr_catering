@@ -33,7 +33,7 @@ class CompanyParameterController extends Controller
     {
         $user = Auth::user();
 
-        if (in_array($user->role, ['Member', 'Non Member', 'Canteen President'])) {
+        if (in_array($user->role, ['Member', 'Non Member'])) {
             abort(403, 'Canteen Parameter is not available for this role.');
         }
 
@@ -41,7 +41,7 @@ class CompanyParameterController extends Controller
 
             $query = CompanyParameter::with('location');
 
-            if ($user->role == 'Canteen Incharge') {
+            if ($user->role == 'Canteen Incharge' || $user->role == 'Canteen Administrator') {
                 $query->where('location_id', $user->location_id)->orderByDesc('id');
             }
 
@@ -118,15 +118,16 @@ class CompanyParameterController extends Controller
     {
         $user = Auth::user();
 
-        if (in_array($user->role, ['Member', 'Non Member'])) {
+        if (in_array($user->role, ['Member', 'Non Member', 'Canteen Incharge'])) {
             abort(403, 'Canteen Parameter is not available for this role.');
         }
 
-        if ($user->role == 'Canteen Incharge') {
+        if ($user->role == 'Canteen Administrator') {
             $locations = Location::where('status', 1)
                 ->where('id', $user->location_id)
                 ->orderBy('name')
                 ->get();
+                
         } else {
             $locations = Location::where('status', 1)
                 ->orderBy('name')
@@ -153,10 +154,10 @@ class CompanyParameterController extends Controller
         $request->validate([
             'location_id'          => 'required|exists:locations,id',
             'attendance_out_time'  => 'required',
-            'lunch_out_time'       => 'required',
             'canteen_start_time'   => 'required',
             'canteen_end_time'     => 'required|after:canteen_start_time',
             'max_day_show'         => 'required|integer|min:1',
+            'min_day'              => 'required|integer|min:0',
             'security_deposit_applicable' => 'required|in:yes,no',
             'security_deposit_amount' => 'required_if:security_deposit_applicable,yes|nullable|numeric|min:0',
         ]);
@@ -189,6 +190,7 @@ class CompanyParameterController extends Controller
                 'canteen_start_time'   => $request->canteen_start_time,
                 'canteen_end_time'     => $request->canteen_end_time,
                 'max_day_show'         => $request->max_day_show,
+                'min_day'              => $request->min_day,
                 'security_deposit_applicable' => $request->security_deposit_applicable,
                 'security_deposit_amount' => $request->security_deposit_applicable == 'yes'
                     ? $request->security_deposit_amount
@@ -260,7 +262,7 @@ class CompanyParameterController extends Controller
                 );
 
             // Role Wise Filter
-            if (in_array($user->role, ['Canteen Incharge', 'Canteen President'])) {
+            if (in_array($user->role, ['Canteen Administrator'])) {
                 $query->where('rate_masters.location_id', $user->location_id);
             } elseif (!in_array($user->role, ['Admin', 'Super Admin'])) {
                 return DataTables::of(collect())->make(true);
@@ -351,7 +353,7 @@ class CompanyParameterController extends Controller
 
         if ($UserData->role == 'Admin' || $UserData->role == 'Super Admin') {
             $locations = Location::where('status', 1)->get();
-        } elseif ($UserData->role == 'Canteen President' || $UserData->role == 'Canteen Incharge') {
+        } elseif ($UserData->role == 'Canteen Administrator') {
             $locations = Location::where('status', 1)->where('id', $UserData->location_id)->get();
         } else {
             return redirect()->back()->with('error', 'Rate Master not allowed .');

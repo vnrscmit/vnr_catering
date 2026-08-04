@@ -11,6 +11,7 @@ class CompanyParameter extends Model
         'attendance_out_time',
         'lunch_out_time',
         'max_day_show',
+        'min_day',
         'status',
         'member_rate',
         'non_member_rate',
@@ -20,8 +21,8 @@ class CompanyParameter extends Model
         'inactive_user_id',
         'canteen_start_time',
         'canteen_end_time',
-        'security_deposit_applicable', 
-        'security_deposit_amount',      
+        'security_deposit_applicable',
+        'security_deposit_amount',
     ];
 
     protected $casts = [

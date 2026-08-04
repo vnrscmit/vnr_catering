@@ -17,6 +17,7 @@ use App\Models\Location;
 use App\Http\Controllers\Traits\AdminViewSharedDataTrait;
 use App\Models\DepartmentLocation;
 use App\Models\MultipleLocation;
+use Illuminate\Support\Facades\DB;
 
 class AttendanceController extends Controller
 {
@@ -93,7 +94,7 @@ class AttendanceController extends Controller
             $userData = User::where('status', 1)->where('id', $userDataCheck->id)->where('personal_guest_flag', 1)->get();
             $department = Department::where('id', $userDataCheck->department_id)->where('status', 1)->get();
             $location = Location::where('id', $userDataCheck->location_id)->where('status', 1)->get();
-        } else if ($userDataCheck->role == 'Canteen Incharge') {
+        } else if ($userDataCheck->role == 'Canteen Incharge' || $userDataCheck->role == 'Canteen Administrator') {
             $userData = User::where('status', 1)->where('location_id', $userDataCheck->location_id)->where('personal_guest_flag', 1)->get();
             $allLinkedDepartment = DepartmentLocation::where('location_id', $userDataCheck->location_id)->pluck('department_id');
             $department = Department::whereIn('id',  $allLinkedDepartment)->where('status', 1)->get();
@@ -127,17 +128,18 @@ class AttendanceController extends Controller
             'guest_type' => 'required|in:Office Guest,Personal Guest',
             'department_id' => 'nullable|exists:departments,id',
             'location_id' => 'required|exists:locations,id',
-            'guest_name' => 'required|string|max:255',
+            'guest_name' => 'nullable|string|max:255',
             'guest_count' => 'required|integer|min:1',
             'guest_remarks' => 'nullable|string|max:1000',
             'attend_user_id' => 'nullable|exists:users,id',
             'calendar_id' => 'required|exists:day_statuses,id',
+            'date' => 'required|date',
         ]);
+
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
         }
-
-        $calendar = DayStatus::where('id', $request->calendar_id)->where('location_id', $request->location_id)->where('open_flag', 1)->first();
+        $calendar = DayStatus::where('date', $request->date)->where('location_id', $request->location_id)->where('open_flag', 1)->first();
         if (!$calendar) {
             return back()->with('error', 'Day status not found for the selected date.')->withInput();
         }
@@ -251,19 +253,19 @@ class AttendanceController extends Controller
 
         $guest->load('calendar');
 
-        if ($userDataCheck->role == 'Member' || $userDataCheck->role == 'Non Member' || $userDataCheck->role == 'Canteen President') {
+        if ($userDataCheck->role == 'Member' || $userDataCheck->role == 'Non Member') {
             $location = Location::where('id', $userDataCheck->location_id)->where('status', 1)->get();
             $departmentFetchId = Department::getByDepartment($userDataCheck->location_id)->pluck('department_id')->toArray();
             $department = Department::where('status', 1)->whereIn('id', $departmentFetchId)->get();
             $user = User::where('status', 1)->where('id', $userDataCheck->id)->get();
-        } else if ($userDataCheck->role == 'Canteen Incharge') {
+        } else if ($userDataCheck->role == 'Canteen Incharge' || $userDataCheck->role == 'Canteen Administrator') {
             $location = Location::where('id', $userDataCheck->location_id)->where('status', 1)->get();
             $departmentFetchId = Department::getByDepartment($userDataCheck->location_id)->pluck('department_id')->toArray();
             $department = Department::where('status', 1)->whereIn('id', $departmentFetchId)->get();
             $userData1 = User::where('status', 1)->where('location_id', $userDataCheck->location_id)->pluck('id')->toArray();
             $userData2 = MultipleLocation::where('location_id', $userDataCheck->location_id)->pluck('user_id')->toArray();
             $userIds = array_values(array_unique(array_merge($userData1, $userData2)));
-            $user = User::where('status', 1)->where('id', $userDataCheck->id)->get();
+            $user = User::where('status', 1)->whereIn('id', $userIds)->get();
         } else {
             $location = Location::where('status', 1)->get();
             $department = Department::where('status', 1)->get();
@@ -285,7 +287,8 @@ class AttendanceController extends Controller
             'department_id'  => 'nullable|exists:departments,id',
             'location_id'    => 'required|exists:locations,id',
             'calendar_id'    => 'required|exists:day_statuses,id',
-            'guest_name'     => 'required|string|max:255',
+            'date'           => 'required|date',
+            'guest_name'     => 'nullable|string|max:255',
             'guest_count'    => 'required|integer|min:1',
             'guest_remarks'  => 'nullable|string|max:1000',
             'attend_user_id' => 'nullable|exists:users,id',
@@ -296,7 +299,6 @@ class AttendanceController extends Controller
         }
 
         $userData = User::find($request->attend_user_id);
-
 
         $existingGuest = Guest::where('calendar_id', $request->calendar_id)
             ->where('attend_user_id', $request->attend_user_id)
@@ -334,10 +336,11 @@ class AttendanceController extends Controller
             }
         }
 
-        $companyParameter = CompanyParameter::where('location_id', $request->location_id)->where('status', 1)->first();
+        $companyParameter = CompanyParameter::where('location_id', $request->location_id)
+            ->where('status', 1)
+            ->first();
 
         $currentTime = Carbon::now();
-
         $lateFlag = 0;
 
         if ($companyParameter && $currentTime->gt($companyParameter->attendance_out_time)) {
@@ -353,7 +356,7 @@ class AttendanceController extends Controller
             'guest_count'    => $request->guest_count,
             'guest_remarks'  => $request->guest_remarks,
             'attend_user_id' => $request->attend_user_id,
-            'late_flag' => $lateFlag,
+            'late_flag'      => $lateFlag,
         ]);
 
         return redirect()
@@ -367,7 +370,7 @@ class AttendanceController extends Controller
         return redirect()->back()->with('success', 'Guest deleted successfully.');
     }
 
-  public function markAttendance($id)
+    public function markAttendance($id)
     {
         $UserData = Auth::user();
 
@@ -380,7 +383,6 @@ class AttendanceController extends Controller
         }
 
         $dayStatus = DayStatus::where('id', $id)
-            ->where('location_id', $UserData->location_id)
             ->where('open_flag', 1)
             ->where('lock_flag', 0)
             ->where('sunday_flag', 0)
@@ -392,10 +394,12 @@ class AttendanceController extends Controller
         }
 
         // Check calendar id and date match
-        $calendar = DayStatus::where('id', $id)->where('location_id', $UserData->location_id)
+        $calendar = DayStatus::where('id', $id)
+            ->where('open_flag', 1)
+            ->where('lock_flag', 0)
+            ->where('sunday_flag', 0)
+            ->where('holiday_flag', 0)
             ->first();
-            
-          
 
         if (!$calendar) {
             return response()->json([
@@ -406,7 +410,7 @@ class AttendanceController extends Controller
 
         $today = Carbon::today()->toDateString();
 
-        $CompanyParameter = CompanyParameter::where('location_id', $UserData->location_id)->where('status', 1)->first();
+        $CompanyParameter = CompanyParameter::where('location_id', $calendar->location_id)->where('status', 1)->first();
 
         if ($calendar->date == $today) {
             $currentTime = Carbon::now()->format('H:i:s');
@@ -420,7 +424,6 @@ class AttendanceController extends Controller
 
         $attendance = AttendanceAbsent::where('calendar_id', $calendar->id)
             ->where('user_id', $UserData->id)
-            ->where('location_id', $UserData->location_id)
             ->first();
 
         if ($attendance) {
@@ -436,7 +439,7 @@ class AttendanceController extends Controller
                 'calendar_id' => $calendar->id,
                 'user_id'     => $UserData->id,
                 'absent_flag' => $newAbsentFlag,
-                 'location_id' => $UserData->location_id,
+                'location_id' => $calendar->location_id,
                 'status'      => 1,
             ]);
         }
@@ -456,7 +459,7 @@ class AttendanceController extends Controller
     }
 
 
-  public function overrideAttendance(Request $request)
+    public function overrideAttendance(Request $request)
     {
         $request->validate([
             'user_id' => 'required|exists:users,id',
@@ -497,7 +500,7 @@ class AttendanceController extends Controller
 
         $attendance = AttendanceAbsent::where('calendar_id', $dayStatus->id)
             ->where('user_id', $request->user_id)
-             ->where('location_id', $checkUser->location_id)
+            ->where('location_id', $checkUser->location_id)
             ->first();
 
         $currentTime = Carbon::now();
@@ -545,5 +548,359 @@ class AttendanceController extends Controller
         ]);
 
         return back()->with('success', "Attendance overridden successfully.");
+    }
+
+    public function overrideAttendanceNew(Request $request)
+    {
+        $userData = Auth::user();
+
+        if (!$userData) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found.'
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'absent_flag' => 'required|in:0,1',
+            'remarks' => 'nullable|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first()
+            ], 422);
+        }
+
+        try {
+
+            $checkUser = User::find($request->user_id);
+
+            if ($checkUser->status == 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This user is inactive.'
+                ]);
+            }
+
+            if (is_null($checkUser->start_calendar_id)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Start date is not set for this user.'
+                ]);
+            }
+
+            $today = Carbon::today()->toDateString();
+
+            $dayStatus = DayStatus::where('date', $today)
+                ->where('location_id', $userData->location_id)
+                ->where('open_flag', 1)
+                ->first();
+
+            if (!$dayStatus) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Day status not found.'
+                ]);
+            }
+
+            $companyParameter = CompanyParameter::where('location_id', $userData->location_id)
+                ->where('status', 1)
+                ->first();
+
+            $lateFlag = 0;
+
+            if (
+                $companyParameter &&
+                Carbon::now()->gt(Carbon::parse($companyParameter->attendance_out_time))
+            ) {
+                $lateFlag = 1;
+            }
+
+            AttendanceAbsent::updateOrCreate(
+                [
+                    'calendar_id' => $dayStatus->id,
+                    'user_id' => $request->user_id,
+                    'location_id' => $userData->location_id,
+                ],
+                [
+                    'absent_flag'      => $request->absent_flag,
+                    'late_flag'        => $lateFlag,
+                    'status'           => 1,
+                    'override_flag'    => 1,
+                    'override_remarks' => $request->remarks,
+                    'override_user_id' => $userData->id,
+                ]
+            );
+
+            AttendanceLog::create([
+                'calendar_id' => $dayStatus->id,
+                'user_id' => $request->user_id,
+                'absent_flag' => $request->absent_flag,
+                'created_by' => $userData->id,
+                'remarks' => $request->remarks ?: 'Attendance overridden',
+                'status' => 1,
+                'web_app' => 'web',
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Attendance overridden successfully.',
+                'absent_flag' => (int)$request->absent_flag
+            ]);
+        } catch (\Exception $e) {
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    public function toggle(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'absent_flag' => 'required|in:0,1',
+        ]);
+
+        $authUser = Auth::user();
+
+        $CompanyParameter = CompanyParameter::where('location_id', $authUser->location_id)->where('status', 1)->first();
+
+        $currentTime = Carbon::now()->format('H:i:s');
+        $maxTime = $CompanyParameter->attendance_out_time->format('H:i:s');
+        if ($currentTime > $maxTime) {
+            $maxTime = Carbon::createFromFormat('H:i:s', $maxTime)
+                ->format('h:i A');
+
+            return response()->json([
+                'success' => false,
+                'message' => "Attendance cannot be marked after {$maxTime}. The maximum allowed attendance marking time has been exceeded."
+            ]);
+        }
+
+        $userData = User::findOrFail($request->user_id);
+
+        $today = Carbon::today()->toDateString();
+
+        $dayStatus = DayStatus::where('date', $today)
+            ->where('location_id', $authUser->location_id)
+            ->first();
+
+        if (!$dayStatus) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Day status not found.'
+            ], 404);
+        }
+
+        $attendance = AttendanceAbsent::updateOrCreate(
+            [
+                'calendar_id' => $dayStatus->id,
+                'user_id'     => $userData->id,
+                'location_id' => $userData->location_id,
+            ],
+            [
+                'absent_flag' => $request->absent_flag == 1 ? 0 : 1,
+                'status' => 1,
+            ]
+        );
+
+        return response()->json([
+            'success' => true,
+            'absent_flag' => $attendance->absent_flag,
+            'message' => $attendance->absent_flag ? 'Marked Absent' : 'Marked Present',
+        ]);
+    }
+
+    public function calendar()
+    {
+        $UserData = Auth::user();
+
+        if (($UserData->role == 'Member' || $UserData->role == 'Non Member')) {
+            $primaryLocation = collect([
+                [
+                    'location_id'   => $UserData->location_id,
+                    'location_name' => optional($UserData->location)->name,
+                ]
+            ]);
+
+            $multiLocationData = MultipleLocation::with('location')
+                ->where('user_id', $UserData->id)
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'location_id'   => $item->location_id,
+                        'location_name' => optional($item->location)->name,
+                    ];
+                })
+                ->values();
+
+            $allLocations = $primaryLocation
+                ->merge($multiLocationData)
+                ->unique('location_id')
+                ->values();
+
+            $locations = $allLocations;
+        } else {
+            return redirect()->back()->with('error', 'Does not have a permission');
+        }
+
+
+        return view('admin.attendance.calendar', compact('locations'));
+    }
+
+
+    public function calendarEvents(Request $request)
+    {
+        $request->validate([
+            'location_id' => 'required|exists:locations,id',
+        ]);
+
+        $userData = Auth::user();
+
+        $today = Carbon::today()->toDateString();
+        $locationId = $request->location_id;
+
+        $query = function ($start, $end, $type) use ($userData, $today, $locationId) {
+
+            $days = DayStatus::whereBetween('day_statuses.date', [
+                $start->toDateString(),
+                $end->toDateString()
+            ])
+                ->leftJoin('attendance_absents', function ($join) use ($userData, $locationId) {
+                    $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
+                        ->where('attendance_absents.user_id', $userData->id)
+                        ->where('attendance_absents.location_id', $locationId);
+                })
+                ->select(
+                    'day_statuses.*',
+                    DB::raw('IFNULL(attendance_absents.absent_flag,0) as absent_flag')
+                )
+                ->where('day_statuses.location_id', $locationId)
+                ->orderBy('day_statuses.date')
+                ->get();
+
+            return [
+                $type . 'days' => $days,
+                $type . 'Summary' => [
+                    'present' => $days->where('absent_flag', 0)
+                        ->where('open_flag', 1)
+                        ->where('date', '<=', Carbon::today()->toDateString())
+                        ->count(),
+
+                    'absent' => $days
+                        ->filter(function ($day) use ($userData) {
+                            return $day->absent_flag == 1
+                                && $day->open_flag == 1
+                                && $day->id >= $userData->start_calendar_id
+                                && Carbon::parse($day->date)->lte(Carbon::today());
+                        })
+                        ->count(),
+
+
+                    'locked' => $days->where('open_flag', 1)
+                        ->where('date', '<', $today)
+                        ->count(),
+                ]
+            ];
+        };
+
+        return response()->json([
+            'status' => true,
+            'data' => [
+                'previous_month' => $query(
+                    Carbon::now()->subMonth()->startOfMonth(),
+                    Carbon::now()->subMonth()->endOfMonth(),
+                    'previous'
+                ),
+
+                'current_month' => $query(
+                    Carbon::now()->startOfMonth(),
+                    Carbon::now()->endOfMonth(),
+                    'current'
+                ),
+
+                'next_month' => $query(
+                    Carbon::now()->addMonth()->startOfMonth(),
+                    Carbon::now()->addMonth()->endOfMonth(),
+                    'next'
+                ),
+            ]
+        ]);
+    }
+
+    public function update(Request $request)
+    {
+        $authUser = Auth::user();
+        try {
+            $request->validate([
+                'date' => 'required|date',
+                'location_id' => 'required',
+                'absent_flag' => 'required|in:0,1'
+            ]);
+
+            $CompanyParameter = CompanyParameter::where('location_id', $request->location_id)->where('status', 1)->first();
+
+            $userData = User::findOrFail($authUser->id);
+
+            $today = Carbon::today()->toDateString();
+
+            $dayStatus = DayStatus::where('date', $request->date)
+                ->where('location_id', $request->location_id)
+                ->first();
+      
+
+            if (!$dayStatus) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Day status not found.'
+                ], 404);
+            }
+
+            $dayStatusCheck = DayStatus::where('date', $today)
+            ->where('date', $request->date)
+                ->where('location_id', $request->location_id)
+                ->first();
+
+            $currentTime = Carbon::now()->format('H:i:s');
+            $maxTime = $CompanyParameter->attendance_out_time->format('H:i:s');
+            if ($dayStatusCheck && ($currentTime > $maxTime)) {
+                $maxTime = Carbon::createFromFormat('H:i:s', $maxTime)
+                    ->format('h:i A');
+
+                return response()->json([
+                    'success' => false,
+                    'message' => "Attendance cannot be marked after {$maxTime}. The maximum allowed attendance marking time has been exceeded."
+                ]);
+            }
+
+         
+           AttendanceAbsent::updateOrCreate(
+                [
+                    'calendar_id' => $dayStatus->id,
+                    'user_id'     => $userData->id,
+                    'location_id' => $request->location_id,
+                ],
+                [
+                    'absent_flag' => $request->absent_flag,
+                    'status' => 1,
+                ]
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Attendance updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 }
