@@ -25522,14 +25522,14 @@ body.avgrund-active {
   min-height: calc(100vh - 64px);
   /* background-image: url('/assets/images/sidebar_img.png');
    */
-  background-color: #2E6115;
+  background-color: white;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   font-family: "Inter", sans-serif;
   font-weight: 300;
   padding: 0;
-  width: 255px;
+  width: 257px;
   z-index: 11;
   transition: width 0.25s ease, background 0.25s ease;
   -webkit-transition: width 0.25s ease, background 0.25s ease;
@@ -25543,7 +25543,7 @@ body.avgrund-active {
 
 .sidebar .sidebar-profile {
   padding: 1.75rem 1.125rem;
-    margin-bottom: -16px;
+  margin-bottom: -16px;
 }
 
 .sidebar .sidebar-profile .sidebar-profile-image {
@@ -25573,13 +25573,13 @@ body.avgrund-active {
   font-size: 1rem;
   font-weight: bold;
   margin-bottom: 0;
-  color: #ffffff;
+  color: #3E4542;
 }
 
 .sidebar .sidebar-profile .sidebar-profile-name .sidebar-designation {
-  font-size: 0.75rem;
+  font-size: 0.90rem;
   margin-bottom: 0;
-  color: white;
+  color: #333333;
 }
 
 .sidebar .sidebar-menu-title {
@@ -25660,7 +25660,7 @@ body.avgrund-active {
 }
 
 .sidebar .nav .nav-item .nav-link i {
-  color: white;
+  color: #575956;
 }
 
 .sidebar .nav .nav-item .nav-link i.menu-icon {
@@ -25707,12 +25707,11 @@ body.avgrund-active {
 }
 
 .sidebar .nav .nav-item .nav-link .menu-title {
-  color: white;
-  display: inline-block;
-  font-size: 0.875rem;
-  line-height: 1;
-  vertical-align: middle;
-  font-weight: bold;
+  font-family: "Roboto", sans-serif;
+  font-size: 17px;
+  font-weight: 500;
+  color: #333333;
+  line-height: 1.4;
 }
 
 .sidebar .nav .nav-item .nav-link .badge {
@@ -25747,15 +25746,25 @@ body.avgrund-active {
 }
 
 .sidebar .nav:not(.sub-menu)>.nav-item:hover>.nav-link {
-  background: #295217;
-  color: #ffff;
+  background: #F3FAF0;
+  border-left: 4px solid #1A8C39;
+  color: #163D1A;
+  /* Darker Green */
+  border-radius: 6px;
+  margin: 3px 12px;
+  padding: 12px 16px;
+}
+
+.sidebar .nav:not(.sub-menu)>.nav-item:hover>.nav-link .menu-title,
+.sidebar .nav:not(.sub-menu)>.nav-item:hover>.nav-link i {
+  color: #163D1A;
+  /* Darker Green */
 }
 
 .sidebar .nav.sub-menu {
   margin-bottom: 0;
   margin-top: 0;
   list-style: none;
-  padding: 0.25rem 0 0 3.5rem;
 }
 
 .sidebar .nav.sub-menu .nav-item {
@@ -25786,23 +25795,31 @@ body.avgrund-active {
 }
 
 .sidebar .nav.sub-menu .nav-item .nav-link {
-  color: black;
-  padding: 0.5rem 1rem;
-  position: relative;
-  font-size: 0.75rem;
-  line-height: 1;
-  height: auto;
-  border-top: 0;
-  color: white;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+
+    padding: 0.75rem 1.75rem;
+
+    transition: color 0.45s;
+
+    font-family: "Roboto", sans-serif;
+    font-size: 17px;
+    font-weight: 500;
+    color: #333333;
+    line-height: 1.4;
+
+    gap: 12px;
 }
 
-.sidebar .nav.sub-menu .nav-item .nav-link:hover {
-  color: #fff;
-}
+
 
 .sidebar .nav.sub-menu .nav-item .nav-link.active {
-  color: #fff;
-  background: transparent;
+  font-family: "Roboto", sans-serif;
+  font-size: 17px;
+  font-weight: 500;
+  color: #333333;
+  line-height: 1.4;
 }
 
 .sidebar .nav.sub-menu .nav-item:hover {
@@ -25842,7 +25859,7 @@ body.avgrund-active {
 
 .sidebar-light .sidebar .sidebar-profile {
   padding: 1.75rem 1.125rem;
-      margin-bottom: -16px;
+  margin-bottom: -16px;
 }
 
 .sidebar-light .sidebar .sidebar-profile .sidebar-profile-image {
@@ -25878,7 +25895,7 @@ body.avgrund-active {
 .sidebar-light .sidebar .sidebar-profile .sidebar-profile-name .sidebar-designation {
   font-size: 0.75rem;
   margin-bottom: 0;
-  color: #001737;
+  color: #333333;
 }
 
 .sidebar-light .sidebar .nav .nav-item .nav-link {
@@ -25897,9 +25914,21 @@ body.avgrund-active {
   color: white;
 }
 
+
 .active-nav {
-  background: #295217;
+  /* background: #F3FAF0;
+    border-left: 4px solid #1A8C39;
+    color: #163D1A; */
+
+  background: #F3FAF0;
+  border-left: 4px solid #1A8C39;
+  color: #163D1A;
+  border-radius: 8px;
+  margin: 0px 12px;
+  /* padding: 0px 16px; */
+  /* transition: all .25s ease; */
 }
+
 
 .sidebar-light .sidebar .nav:not(.sub-menu)>.nav-item:hover>.nav-link {
   background: #333;
@@ -25914,10 +25943,17 @@ body.avgrund-active {
   color: #adadad;
 }
 
-.sidebar-light .sidebar .nav.sub-menu .nav-item .nav-link.active {
-  color: #048E46;
-  ;
-  background: transparent;
+.sidebar .nav.sub-menu .nav-item .nav-link.active {
+  font-family: "Roboto", sans-serif;
+  font-size: 17px;
+  font-weight: 500;
+  color: #333333;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* Adds space between icon and text */
+  /* OR use padding-left if you want more control */
 }
 
 .sidebar-light .sidebar .nav.sub-menu .nav-item .nav-link:hover {

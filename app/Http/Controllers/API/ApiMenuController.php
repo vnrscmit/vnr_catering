@@ -9,44 +9,12 @@ use App\Models\DayStatus;
 use App\Models\Menu;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class ApiMenuController extends Controller
 {
-    // public function menuList()
-
-    // {
-    //     $menus = Menu::with(['subMenus' => function ($query) {
-    //         $query->where('status', 1);
-    //     }])->where('status', 1)->get();
-
-    //     $data = [];
-
-    //     foreach ($menus as $menu) {
-
-    //         $subMenus = [];
-
-    //         foreach ($menu->subMenus as $subMenu) {
-    //             $subMenus[] = [
-    //                 'id'   => $subMenu->id,
-    //                 'name' => $subMenu->name,
-    //             ];
-    //         }
-
-    //         $data[] = [
-    //             'id'        => $menu->id,
-    //             'menu_name' => $menu->name,
-    //             'sub_menu'  => $subMenus,
-    //         ];
-    //     }
-
-    //     return response()->json([
-    //         'status'  => true,
-    //         'message' => 'Menu List',
-    //         'data'    => $data,
-    //     ]);
-    // }
 
 
     public function menuListDateWise(Request $request)
@@ -99,6 +67,8 @@ class ApiMenuController extends Controller
 
     public function menuList(Request $request)
     {
+
+        $user = Auth::user();
         $validator = Validator::make($request->all(), [
             'location_id' => 'required|exists:locations,id',
             'calendar_id' => 'required|exists:day_statuses,id',
@@ -126,11 +96,16 @@ class ApiMenuController extends Controller
             ], 404);
         }
 
-        $dailyMenu = DailyMenu::with('items')
+        $query = DailyMenu::with('items')
             ->where('calendar_id', $calendarId)
             ->where('location_id', $locationId)
-            ->whereDate('menu_date', $dayStatus->date)
-            ->first();
+            ->whereDate('menu_date', $dayStatus->date);
+
+        if (in_array($user->role, ['Member', 'Non Member'])) {
+            $query->where('status', 1);
+        }
+
+        $dailyMenu = $query->first();
 
 
         $selectedSubmenuIds = $dailyMenu
@@ -144,6 +119,19 @@ class ApiMenuController extends Controller
         ])
             ->where('location_id', $locationId)
             ->where('status', 1)
+            ->orderByRaw("
+        CASE name
+            WHEN 'Starters' THEN 1
+            WHEN 'Refresher' THEN 2
+            WHEN 'Vegetable' THEN 3
+            WHEN 'Dal' THEN 4
+            WHEN 'Roti' THEN 5
+            WHEN 'Rice' THEN 6
+            WHEN 'Accompaniments' THEN 7
+            WHEN 'Dessert' THEN 8
+            ELSE 999
+        END
+    ")
             ->get();
 
         $data = [];
@@ -189,7 +177,7 @@ class ApiMenuController extends Controller
         $validator = Validator::make($request->all(), [
             'location_id' => 'required|exists:locations,id',
             'calendar_id' => 'required|exists:day_statuses,id',
-            'status'      => 'required|in:0,1',
+            'status'      => 'required|in:2,1',
             'menus'       => 'required|array|min:1',
             'menus.*.menu_id'     => 'required|exists:menus,id',
             'menus.*.sub_menu_id' => 'required|exists:sub_menus,id',

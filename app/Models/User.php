@@ -32,6 +32,7 @@ protected $fillable = [
     'security_amount',
     'payment_method',
     'payment_date',
+     'generate_code',
     'start_calendar_id',
     'suspend_date',
     'suspend_calendar_id',

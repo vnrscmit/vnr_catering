@@ -57,26 +57,41 @@
 
 
             // Check if selected role is "Canteen Administration Role"
-            if (roleName.trim() == 'Canteen Administrator') {
+             if (roleName.trim() == 'Canteen Administrator') {
                 // Hide the fields
                 $('#mobile_field').hide();
                 $('#email_field').hide();
                 $('#user_code_field').hide();
+                $('#generate_pin').hide();
 
                 // Remove required attributes
                 $('#mobile').removeAttr('required');
                 $('#email').removeAttr('required');
                 $('#user_code').removeAttr('required');
-            } else {
-                // Show the fields
+                $('#generate_code').removeAttr('required');
+            } else if (roleName.trim() == 'Canteen Incharge') {
                 $('#mobile_field').show();
                 $('#email_field').show();
                 $('#user_code_field').show();
+                $('#generate_pin').show();
 
                 // Add back required attributes
                 $('#mobile').attr('required', true);
                 $('#email').attr('required', true);
                 $('#user_code').attr('required', true);
+                $('#generate_code').attr('required', true);
+            } else {
+                // Show the fields
+                $('#mobile_field').show();
+                $('#email_field').show();
+                $('#user_code_field').show();
+                $('#generate_pin').hide();
+
+                // Add back required attributes
+                $('#mobile').attr('required', true);
+                $('#email').attr('required', true);
+                $('#user_code').attr('required', true);
+                $('#generate_code').removeAttr('required');
             }
         }
 
@@ -141,6 +156,12 @@
 
         $('input[name="personal_guest_flag"]').on('change', toggleGuestFields);
         toggleGuestFields();
+    });
+    
+           $('#generate_code_btn').on('click', function() {
+        let code = Math.floor(1000 + Math.random() * 9000);
+
+        $('#generate_code').val(code);
     });
 </script>
 @endpush
@@ -416,6 +437,29 @@
                                         value="{{ old('deposit_date') }}">
                                 </div>
                             </div>
+                        </div>
+                        
+                                  <!-- Generate Code -->
+                        <div class="col-md-6 mb-3" id="generate_pin">
+                            <label for="generate_code" class="form-label">Generate Code <span class="text-danger">*</span></label>
+
+                            <div class="input-group">
+                                <input type="text"
+                                    class="form-control @error('generate_code') is-invalid @enderror"
+                                    name="generate_code"
+                                    value="{{ old('generate_code') }}"
+                                    placeholder="Generate Code"
+                                    maxlength="4" id="generate_code"
+                                    readonly required>
+
+                                <button type="button" class="btn btn-primary" id="generate_code_btn">
+                                    Generate Code
+                                </button>
+                            </div>
+
+                            @error('generate_code')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
 
                         <!-- Guest Allowed -->

@@ -46,7 +46,11 @@
                     orderable: false,
                     searchable: false
                 },
-             
+                {
+                    data: 'organization_name',
+                    name: 'organization_name'
+                },
+
                 {
                     data: 'name',
                     name: 'name'
@@ -55,7 +59,7 @@
                     data: 'short_code',
                     name: 'short_code'
                 },
-           
+
                 {
                     data: 'status',
                     name: 'status'
@@ -124,6 +128,7 @@
                         <thead>
                             <tr>
                                 <th>#</th>
+                                <th>Organization</th>
                                 <th>Location</th>
                                 <th>Short Code</th>
                                 <th>Status</th>

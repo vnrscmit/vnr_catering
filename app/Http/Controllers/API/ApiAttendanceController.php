@@ -156,150 +156,289 @@ class ApiAttendanceController extends Controller
     //     ]);
     // }
     
- public function calendar(Request $request)
-    {
-        $request->validate([
-            'location_id' => 'required|exists:locations,id',
-        ]);
+public function calendar(Request $request)
+{
+    $request->validate([
+        'location_id' => 'required|exists:locations,id',
+    ]);
 
-        $userData = Auth::user();
-        $today = Carbon::today()->toDateString();
-        $locationId = $request->location_id;
+    $userData = Auth::user();
 
-        // Week summary function
-        $getWeekSummary = function ($start, $end, $type) use ($userData, $today, $locationId) {
-            $days = DayStatus::whereBetween('day_statuses.date', [
-                $start->toDateString(),
-                $end->toDateString()
-            ])
-                ->leftJoin('attendance_absents', function ($join) use ($userData, $locationId) {
-                    $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
-                        ->where('attendance_absents.user_id', $userData->id)
-                        ->where('attendance_absents.location_id', $locationId);
-                })
-                     ->leftJoin('holiday_lists', function ($join) use ($locationId) {
-                    $join->on('day_statuses.id', '=', 'holiday_lists.calendar_id')
-                        ->on('day_statuses.location_id', '=', 'holiday_lists.location_id')
-                        ->where('holiday_lists.status', 1);
-                })
-                ->select(
-                    'day_statuses.*',
-                    DB::raw('IFNULL(attendance_absents.absent_flag,0) as absent_flag'),
-                    'holiday_lists.remarks as holiday_remarks'
+    $today = Carbon::today()->toDateString();
+    $locationId = $request->location_id;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Weekly Summary Helper
+    |--------------------------------------------------------------------------
+    */
+    $makeWeekSummary = function ($currentWeek, $weekStartDate) use ($userData) {
+
+        $weekDays = collect($currentWeek)
+            ->where('open_flag', 1)
+            ->values();
+
+        // If week has no open days, don't try to access last()->date
+        if ($weekDays->isEmpty()) {
+            return null;
+        }
+
+        $lastDay = $weekDays->last();
+
+        return [
+            'start_date' => Carbon::parse($weekStartDate)->format('F j'),
+
+            'end_date' => Carbon::parse($lastDay->date)->format('F j'),
+
+            'days' => $weekDays->count(),
+
+            'present' => $weekDays->filter(function ($d) {
+
+                return $d->absent_flag == 0
+                    && $d->open_flag == 1
+                    && Carbon::parse($d->date)->lte(Carbon::today());
+
+            })->count(),
+
+            'absent' => $weekDays->filter(function ($d) use ($userData) {
+
+                return $d->absent_flag == 1
+                    && $d->open_flag == 1
+                    && $userData->start_calendar_id !== null
+                    && $d->id >= $userData->start_calendar_id
+                    && Carbon::parse($d->date)->lte(Carbon::today());
+
+            })->count(),
+        ];
+    };
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Month / Week Summary Function
+    |--------------------------------------------------------------------------
+    */
+    $getWeekSummary = function ($start, $end, $type)
+        use ($userData, $today, $locationId, $makeWeekSummary) {
+
+        $days = DayStatus::whereBetween('day_statuses.date', [
+            $start->toDateString(),
+            $end->toDateString()
+        ])
+            ->leftJoin('attendance_absents', function ($join) use ($userData, $locationId) {
+
+                $join->on(
+                    'day_statuses.id',
+                    '=',
+                    'attendance_absents.calendar_id'
                 )
-                ->where('day_statuses.location_id', $locationId)
-                ->orderBy('day_statuses.date')
-                ->get();
+                ->where('attendance_absents.user_id', $userData->id)
+                ->where('attendance_absents.location_id', $locationId);
+            })
 
-            // Group days by week
-            $weeks = [];
-            $currentWeek = [];
-            $weekStartDate = null;
+            ->leftJoin('holiday_lists', function ($join) use ($locationId) {
 
-            foreach ($days as $day) {
-                $dayDate = Carbon::parse($day->date);
+                $join->on(
+                    'day_statuses.id',
+                    '=',
+                    'holiday_lists.calendar_id'
+                )
+                ->on(
+                    'day_statuses.location_id',
+                    '=',
+                    'holiday_lists.location_id'
+                )
+                ->where('holiday_lists.status', 1);
+            })
 
-                // Check if it's Monday or start of new week
-                if ($dayDate->dayOfWeek == Carbon::MONDAY || $weekStartDate === null) {
-                    if (!empty($currentWeek)) {
-                        // Calculate week summary
-                       $weekDays = collect($currentWeek)->where('open_flag', 1)->values();
-                    $weekSummary = [
-    'start_date' => Carbon::parse($weekStartDate)->format('F j'),
-    'end_date'   => Carbon::parse($weekDays->last()->date)->format('F j'),
+            ->select(
+                'day_statuses.*',
+                DB::raw('IFNULL(attendance_absents.absent_flag, 0) as absent_flag'),
+                'holiday_lists.remarks as holiday_remarks'
+            )
 
-    'days' => $weekDays->count(),
+            ->where('day_statuses.location_id', $locationId)
 
-    'present' => $weekDays->filter(function ($d) {
-        return $d->absent_flag == 0
-            && $d->open_flag == 1
-            && Carbon::parse($d->date)->lte(Carbon::today());
-    })->count(),
+            ->orderBy('day_statuses.date')
 
-    'absent' => $weekDays->filter(function ($d) use ($userData) {
-        return $d->absent_flag == 1
-            && $d->open_flag == 1
-            && $d->id >= $userData->start_calendar_id
-            && Carbon::parse($d->date)->lte(Carbon::today());
-    })->count(),
-];
+            ->get();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Group Days By Week
+        |--------------------------------------------------------------------------
+        */
+        $weeks = [];
+
+        $currentWeek = [];
+        $weekStartDate = null;
+
+
+        foreach ($days as $day) {
+
+            $dayDate = Carbon::parse($day->date);
+   $startDate = Carbon::parse(
+                    DayStatus::where('id', $userData->start_calendar_id)->value('date')
+                );
+
+                if ($dayDate->lt($startDate)) {
+                    $day->lock_flag = 1;
+                }
+
+            // Monday = new week
+            if (
+                $dayDate->dayOfWeek == Carbon::MONDAY
+                || $weekStartDate === null
+            ) {
+
+                // Previous week
+                if (!empty($currentWeek)) {
+
+                    $weekSummary = $makeWeekSummary(
+                        $currentWeek,
+                        $weekStartDate
+                    );
+
+                    // Only add if week has open days
+                    if ($weekSummary !== null) {
                         $weeks[] = $weekSummary;
                     }
-                    $currentWeek = [];
-                    $weekStartDate = $dayDate;
                 }
-                $currentWeek[] = $day;
+
+
+                // Start new week
+                $currentWeek = [];
+
+                $weekStartDate = $dayDate;
             }
 
-            // Add last week
-            if (!empty($currentWeek)) {
-                $weekDays = collect($currentWeek)->where('open_flag', 1)->values();
-                $weekSummary = [
-                    'start_date' => Carbon::parse($weekStartDate)->format('F j'),
-                    'end_date'   => Carbon::parse($weekDays->last()->date)->format('F j'),
 
-                    'days' => $weekDays->count(),
+            $currentWeek[] = $day;
+        }
 
-                    'present' => $weekDays->filter(function ($d) {
-                        return $d->absent_flag == 0
-                            && $d->open_flag == 1
-                            && Carbon::parse($d->date)->lte(Carbon::today());
-                    })->count(),
 
-                    'absent' => $weekDays->filter(function ($d) use ($userData) {
-                        return $d->absent_flag == 1
-                            && $d->open_flag == 1
-                            && $d->id >= $userData->start_calendar_id
-                            && Carbon::parse($d->date)->lte(Carbon::today());
-                    })->count(),
-                ];
+        /*
+        |--------------------------------------------------------------------------
+        | Add Last Week
+        |--------------------------------------------------------------------------
+        */
+        if (!empty($currentWeek)) {
+
+            $weekSummary = $makeWeekSummary(
+                $currentWeek,
+                $weekStartDate
+            );
+
+            // Only add if week has open days
+            if ($weekSummary !== null) {
                 $weeks[] = $weekSummary;
             }
+        }
 
-            return [
-                $type . 'days' => $days,
-                $type . 'Summary' => [
-                    'present' => $days->where('absent_flag', 0)
-                        ->where('open_flag', 1)
-                        ->where('date', '<=', Carbon::today()->toDateString())
-                        ->count(),
-                    'absent' => $days
-                        ->filter(function ($day) use ($userData) {
-                            return $day->absent_flag == 1
-                                && $day->open_flag == 1
-                                && $day->id >= $userData->start_calendar_id
-                                && Carbon::parse($day->date)->lte(Carbon::today());
-                        })
-                        ->count(),
-                    'locked' => $days->where('open_flag', 1)
-                        ->where('date', '<', $today)
-                        ->count(),
-                    $type . 'weeks' => $weeks // Add weekly summary
-                ]
-            ];
-        };
 
-        return response()->json([
-            'status' => true,
-            'data' => [
-                'previous_month' => $getWeekSummary(
-                    Carbon::now()->subMonth()->startOfMonth(),
-                    Carbon::now()->subMonth()->endOfMonth(),
-                    'previous'
-                ),
-                'current_month' => $getWeekSummary(
-                    Carbon::now()->startOfMonth(),
-                    Carbon::now()->endOfMonth(),
-                    'current'
-                ),
-                'next_month' => $getWeekSummary(
-                    Carbon::now()->addMonth()->startOfMonth(),
-                    Carbon::now()->addMonth()->endOfMonth(),
-                    'next'
-                ),
-            ]
-        ]);
-    }
+        /*
+        |--------------------------------------------------------------------------
+        | Overall Month Summary
+        |--------------------------------------------------------------------------
+        */
+        $presentCount = $days
+            ->where('absent_flag', 0)
+            ->where('open_flag', 1)
+            ->filter(function ($day) {
+
+                return Carbon::parse($day->date)
+                    ->lte(Carbon::today());
+
+            })
+            ->count();
+
+
+        $absentCount = $days
+            ->filter(function ($day) use ($userData) {
+
+                return $day->absent_flag == 1
+                    && $day->open_flag == 1
+                    && $userData->start_calendar_id !== null
+                    && $day->id >= $userData->start_calendar_id
+                    && Carbon::parse($day->date)
+                        ->lte(Carbon::today());
+
+            })
+            ->count();
+
+
+        $lockedCount = $days
+            ->where('lock_flag', 1)
+            ->count();
+
+
+
+        return [
+
+            $type . 'days' => $days,
+
+            $type . 'Summary' => [
+
+                'present' => $presentCount,
+
+                'absent' => $absentCount,
+
+                'locked' => $lockedCount,
+
+                $type . 'weeks' => $weeks,
+            ],
+        ];
+    };
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Response
+    |--------------------------------------------------------------------------
+    */
+    return response()->json([
+
+        'status' => true,
+
+        'data' => [
+
+            'previous_month' => $getWeekSummary(
+                Carbon::now()
+                    ->subMonth()
+                    ->startOfMonth(),
+
+                Carbon::now()
+                    ->subMonth()
+                    ->endOfMonth(),
+
+                'previous'
+            ),
+
+            'current_month' => $getWeekSummary(
+                Carbon::now()
+                    ->startOfMonth(),
+
+                Carbon::now()
+                    ->endOfMonth(),
+
+                'current'
+            ),
+
+            'next_month' => $getWeekSummary(
+                Carbon::now()
+                    ->addMonth()
+                    ->startOfMonth(),
+
+                Carbon::now()
+                    ->addMonth()
+                    ->endOfMonth(),
+
+                'next'
+            ),
+        ],
+    ]);
+}
     public function guestCreate(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -309,7 +448,7 @@ class ApiAttendanceController extends Controller
             'guest_name'      => 'nullable|string|max:255',
             'guest_count'     => 'required|integer|min:1',
             'guest_remarks'   => 'nullable|string|max:1000',
-            'attend_user_id'  => 'nullable|exists:users,id',
+            'attend_user_id'  => 'nullable',
             'date'           => 'required|date',
         ]);
 
@@ -331,6 +470,7 @@ class ApiAttendanceController extends Controller
             ], 201);
         }
 
+if($request->attend_user_id != 0){
         $userData = User::findOrFail($request->attend_user_id);
 
         if ($userData) {
@@ -355,6 +495,7 @@ class ApiAttendanceController extends Controller
                 ], 422);
             }
         }
+}
 
         $companyParameter = CompanyParameter::where('location_id', $request->location_id)->where('status', 1)->first();
         $currentTime = Carbon::now();
@@ -427,6 +568,7 @@ class ApiAttendanceController extends Controller
 
         $personalGuestCount = $guestList->where('guest_type', 'Personal Guest')->sum('guest_count');
         $officeGuestCount   = $guestList->where('guest_type', 'Office Guest')->sum('guest_count');
+ 
 
         return response()->json([
             'status' => true,
@@ -524,6 +666,48 @@ class ApiAttendanceController extends Controller
             'status'      => 1,
         ]);
 
+            if ($userData->multilocation_flag == 1) {
+            // Get all locations for this user
+            $multiLocationData = MultipleLocation::where('user_id', $userData->id)->get();
+
+            if ($userData->location_id == $calendar->location_id) {
+
+                if ($request->absent_flag == 0) {
+                    // Loop through each location and create/update attendance
+                    foreach ($multiLocationData as $location) {
+                        AttendanceAbsent::updateOrCreate(
+                            [
+                                'calendar_id' => $calendar->id,
+                                'user_id'     => $userData->id,
+                                'location_id' => $location->location_id,
+                            ],
+                            [
+                                'absent_flag' => 1,
+                                'status'      => 1,
+                            ]
+                        );
+                    }
+                }
+            } else {
+                // Get all locations for this user
+                $location = Location::where('id', $userData->location_id)->first();
+
+                if ($request->absent_flag == 0) {
+                    AttendanceAbsent::updateOrCreate(
+                        [
+                            'calendar_id' => $calendar->id,
+                            'user_id'     => $userData->id,
+                            'location_id' => $location->id,
+                        ],
+                        [
+                            'absent_flag' => 1,
+                            'status'      => 1,
+                        ]
+                    );
+                }
+            }
+        }
+
         return response()->json([
             'status' => true,
             'message' => 'Attendance marked successfully.'
@@ -564,8 +748,25 @@ class ApiAttendanceController extends Controller
                 'message' => 'Day status not found for today.',
             ], 404);
         }
+        
+           $singleLinkedUserIds = User::where('location_id', $locationId)
+            ->whereNotNull('start_calendar_id')
+            ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge', 'Canteen Administrator'])
+            ->where('status', 1)
+            ->pluck('id');
 
-        $users = User::where('users.location_id', $locationId)
+        $multiLinkedUserIds = MultipleLocation::join('users', 'multiple_locations.user_id', '=', 'users.id')
+            ->where('multiple_locations.location_id', $locationId)
+            ->where('users.status', 1)
+            ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge', 'Canteen Administrator'])
+            ->pluck('multiple_locations.user_id');
+
+        $allLinkedUserIds = $singleLinkedUserIds
+            ->merge($multiLinkedUserIds)
+            ->unique()
+            ->values();
+
+        $users =  User::whereIn('users.id', $allLinkedUserIds)
             ->join('departments', 'users.department_id', '=', 'departments.id')
             ->whereNotNull('users.start_calendar_id')
             ->where('users.start_calendar_id', '<=', $dayStatus->id)
@@ -574,7 +775,7 @@ class ApiAttendanceController extends Controller
                     ->where('attendance_absents.location_id', $locationId)
                     ->where('attendance_absents.calendar_id', $dayStatus->id);
             })
-            ->whereDate('day_statuses.date', '<=', Carbon::today())
+            // ->whereDate('day_statuses.date', '<=', Carbon::today())
             ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge', 'Canteen Administrator'])
             ->select(
                 'users.id',
@@ -832,14 +1033,14 @@ class ApiAttendanceController extends Controller
                 ];
             });
 
-        $personalGuestCount = $guestList->where('guest_type', 'Personal Guest')->count();
-        $officeGuestCount   = $guestList->where('guest_type', 'Office Guest')->count();
+        $personalGuestCount = $guestList->where('guest_type', 'Personal Guest')->sum('guest_count');
+        $officeGuestCount   = $guestList->where('guest_type', 'Office Guest')->sum('guest_count');
 
         return response()->json([
             'status' => true,
             'message' => 'Guest list fetched successfully.',
             'summary' => [
-                'total_guest' => $guestList->count(),
+                'total_guest' => $guestList->sum('guest_count'),
                 'personal_guest_count' => $personalGuestCount,
                 'office_guest_count' => $officeGuestCount,
             ],

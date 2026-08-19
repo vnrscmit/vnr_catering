@@ -35,6 +35,8 @@ use App\Http\Controllers\LocationController;
 use App\Http\Controllers\RoleMasterController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Models\CompanyParameter;
+use App\Http\Controllers\Admin\OrganizationController;
+use App\Http\Controllers\FeedbackController;
 
 Route::get('/', [MainSiteController::class, 'home'])->name('home');
 
@@ -149,7 +151,6 @@ Route::prefix('customer')->middleware(CheckRoleCustomer::class)->group(function 
 
 //Admin Dashboard routes
 Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function () {
-
 
     Route::get('profile', [AdminController::class, 'viewMyProfile'])->name('admin.view.myprofile');
     Route::get('profile/edit', [AdminController::class, 'editMyProfile'])->name('admin.myprofile.edit');
@@ -389,11 +390,37 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
 
     Route::get('/calendar/events', [AttendanceController::class, 'calendarEvents'])->name('calendar.events');
     Route::resource('bill-generate', BillController::class);
+
+
+    // Individual Bill Routes (Without Prefix)
+    Route::get('/individual', [BillController::class, 'individualSettlement'])->name('bill-generate.individual');
+    Route::get('/individual/create', [BillController::class, 'individualCreate'])->name('bill-generate.individual.create');
+    Route::post('/individual/store', [BillController::class, 'individualStore'])->name('bill-generate.individual.store');
+    Route::get('/individual/{id}', [BillController::class, 'individualShow'])->name('bill-generate.individual.show');
+    Route::get('/individual/edit/{id}', [BillController::class, 'individualEdit'])->name('bill-generate.individual.edit');
+    Route::get('/individual/delete/{id}', [BillController::class, 'individualDelete'])->name('bill-generate.individual.delete');
+    Route::put('/individual/{id}', [BillController::class, 'individualUpdate'])->name('bill-generate.individual.update');
+    Route::delete('/individual/{id}', [BillController::class, 'individualDestroy'])->name('bill-generate.individual.destroy');
+
+    // Monthly Bill Routes (Without Prefix)
+    Route::get('/monthly', [BillController::class, 'monthly'])->name('bill-generate.monthly');
+    Route::get('/monthly/create', [BillController::class, 'monthlyCreate'])->name('bill-generate.monthly.create');
+    Route::post('/monthly/store', [BillController::class, 'monthlyStore'])->name('bill-generate.monthly.store');
+    Route::get('/monthly/user-list/{id}', [BillController::class, 'monthlyUserList'])->name('bill-generate.monthly.user_list');
+
     Route::get('/{id?}', [AdminController::class, 'index'])->name('admin.dashboard');
 
     Route::post('/attendance/update', [AttendanceController::class, 'update'])->name('attendance.update');
 });
 
+Route::resource('organizations', OrganizationController::class);
+Route::resource('feedback', FeedbackController::class);
+
+Route::get('/get-districts', [OrganizationController::class, 'getDistricts'])->name('get.districts');
+Route::get('/get-tehsils', [OrganizationController::class, 'getTehsils'])->name('get.tehsils');
+
+Route::delete('organizations/{id}/remove-logo', [OrganizationController::class, 'removeLogo'])
+    ->name('organizations.removeLogo');
 Route::post(
     '/forgot-password/send-otp',
     [ForgotPasswordController::class, 'sendOtp']
@@ -408,3 +435,10 @@ Route::post(
     [ForgotPasswordController::class, 'updatePassword']
 )
     ->name('password.updatePassword');
+
+
+Route::get('/get-users-by-department/{departmentId}', [BillController::class, 'getUsersByDepartment'])
+    ->name('get.users.by.department');
+
+Route::get('/get-user-details/{userId}/{chargeDate}', [BillController::class, 'getUserDetails'])
+    ->name('get.user.details');

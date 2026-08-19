@@ -207,9 +207,7 @@
 
                                                 {{-- Show special indicator if submenu is special --}}
                                                 @if($submenu->special_flag == 1)
-                                                <span class="badge bg-warning text-dark feast-badge">
-                                                    <i class="fa fa-star"></i> Feast
-                                                </span>
+                                             <i class="fa fa-star text-warning" title="Special"></i>
                                                 @endif
                                             </label>
                                         </div>
@@ -221,16 +219,45 @@
                         </tbody>
                     </table>
 
-                    <div class="d-flex justify-content-end mt-2">
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fa fa-save"></i> Update
-                            </button>
-                            <a href="{{ route('today-menu.index') }}" class="btn btn-secondary">
-                                <i class="fa fa-arrow-left"></i> Back
-                            </a>
-                        </div>
-                    </div>
+                                    <div class="d-flex justify-content-end mt-2">
+    <div class="mb-3">
+
+        <button type="draft"
+                class="btn me-2"
+                id="draftBtn"
+                name="action"
+                value="2"
+                style="width: 135px;
+                       height: 42px;
+                       border: none;
+                       border-radius: 6px;
+                       font-weight: 600;
+                       background: linear-gradient(135deg, #d96f00, #cc6900);
+                       color: #fff;">
+            <i class="fa fa-file"></i> Save Draft
+        </button>
+
+        <button type="submit"
+                class="btn btn-primary me-2"   name="action"
+                value="1"
+                style="width: 130px;
+                       height: 42px;
+                       border-radius: 6px;
+                       font-weight: 600;">
+            <i class="fa fa-file"></i> Publish
+        </button>
+
+        <a href="{{ route('today-menu.index') }}"
+           class="btn btn-secondary"
+           style="width: 130px;
+                  height: 42px;
+                  border-radius: 6px;
+                  font-weight: 600;">
+            <i class="fa fa-arrow-left"></i> Back
+        </a>
+
+    </div>
+</div>
                 </form>
 
             </div>

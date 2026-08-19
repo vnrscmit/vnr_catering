@@ -97,10 +97,10 @@ class AdminController extends Controller
             'Refresher'       => 2,
             'Vegetable'       => 3,
             'Dal'             => 4,
-            'Rice'            => 5,
-            'Roti'            => 6,
-            'Dessert'         => 7,
-            'Accompaniments'  => 8,
+            'Roti'            => 5,
+            'Rice'            => 6,
+            'Accompaniments'  => 7,
+             'Dessert'         => 8,
         ];
 
         $todayMenu = $dailyMenuList
@@ -117,9 +117,19 @@ class AdminController extends Controller
             ->values()
             ->toArray()
             : [];
+            
+            $checkDate = DayStatus::where('id', $UserData->start_calendar_id)->value('date');
  
+$startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locationId)->value('date');
 
-        $upComingDays = DayStatus::where('day_statuses.date', '>', $today)
+$upComingDays = DayStatus::where('day_statuses.date', '>', $today);
+
+
+if ($startDate) {
+    $upComingDays->where('day_statuses.date', '>=', $startDate);
+}
+
+        $upComingDays = $upComingDays
             ->leftJoin('attendance_absents', function ($join) use ($locationId) {
                 $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
                     ->where('attendance_absents.user_id', auth()->id())
@@ -295,14 +305,14 @@ class AdminController extends Controller
         }
 
 
+            $startDate = DayStatus::where('id', $UserData->start_calendar_id)->value('date');
         $summaryCurrentMonth = Null;
         $allLocations = [];
-        if (($UserData->role == 'Member' || $UserData->role == 'Non Member')) {
+            if ((($UserData->role == 'Member' || $UserData->role == 'Non Member') &&  $startDate)) {
 
             $currentStart = Carbon::now()->startOfMonth();
             $currentEnd   = Carbon::now()->endOfMonth();
 
-            $startDate = DayStatus::where('id', $UserData->start_calendar_id)->value('date');
             // Current Month Summary Data
             $summaryCurrentMonth = DayStatus::whereBetween('day_statuses.date', [
                 $currentStart->format('Y-m-d'),
@@ -375,8 +385,15 @@ class AdminController extends Controller
                 ->unique('location_id')
                 ->values();
         }
+        
+               $mainCardLock = false;
+        if ($UserData->role == 'Member' || $UserData->role == 'Non Member') {
+            if ($today < $startDate) {
+                $mainCardLock = true;
+            }
+        }
+    
      
-
         return view('admin.dashboard', compact(
             'formattedSalesData',
             'todayMenu',
@@ -399,7 +416,8 @@ class AdminController extends Controller
             'totalMeal',
             'usersAttendance',
             'summaryCurrentMonth',
-            'allLocations'
+            'allLocations',
+            'mainCardLock',
         ));
     }
 
@@ -484,10 +502,11 @@ class AdminController extends Controller
 
         // Update the password
         $user->password = Hash::make($request->new_password);
+        $user->plain_password = $request->new_password;
         $user->save();
 
         // Send password changed notification email
-        Mail::to($user->email)->send(new PasswordChangedNotification($user));
+        // Mail::to($user->email)->send(new PasswordChangedNotification($user));
 
         return redirect()->route('admin.dashboard')->with('success', 'Your password has been successfully updated.');
     }

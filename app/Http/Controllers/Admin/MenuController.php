@@ -7,7 +7,6 @@ use App\Http\Requests\MenuRequest;
 use App\Models\DayStatus;
 use App\Models\Menu;
 use Illuminate\Http\RedirectResponse;
-use App\Http\Controllers\Traits\AdminViewSharedDataTrait;
 use App\Models\DailyMenu;
 use App\Models\Location;
 use Carbon\Carbon;
@@ -19,14 +18,6 @@ use Illuminate\Validation\Rule;
 
 class MenuController extends Controller
 {
-
-    use AdminViewSharedDataTrait;
-
-    public function __construct()
-    {
-        $this->shareAdminViewData();
-    }
-
 
     public function index(Request $request)
     {
@@ -53,20 +44,20 @@ class MenuController extends Controller
                 'Refresher',
                 'Vegetable',
                 'Dal',
-                'Rice',
                 'Roti',
-                'Dessert',
+                'Rice',
                 'Accompaniments'
+                'Dessert'
             ) = 0 THEN 999
             ELSE FIELD(name,
                 'Starters',
                 'Refresher',
                 'Vegetable',
                 'Dal',
-                'Rice',
                 'Roti',
-                'Dessert',
+                'Rice',
                 'Accompaniments'
+                'Dessert'
             )
         END
     ")
@@ -247,8 +238,14 @@ class MenuController extends Controller
                     <i class="fa fa-trash"></i>
                 </button>';
             })
+            
+              ->addColumn('status', function ($row) {
+                    return $row->status == 1
+                        ? '<span class="badge bg-primary">Publish</span>'
+                        : '<span class="badge bg-warning">Draft</span>';
+                })
 
-            ->rawColumns(['menu_items', 'action']) // <-- Added 'menu_items' here
+            ->rawColumns(['menu_items', 'action', 'status']) // <-- Added 'menu_items' here
             ->make(true);
     }
 
@@ -282,10 +279,10 @@ class MenuController extends Controller
                 'Refresher',
                 'Vegetable',
                 'Dal',
-                'Rice',
                 'Roti',
-                'Dessert',
-                'Accompaniments'
+                'Rice',
+                'Accompaniments',
+                'Dessert'
             ) = 0 THEN 999
             ELSE FIELD(name,
                 'Starters',
@@ -294,8 +291,8 @@ class MenuController extends Controller
                 'Dal',
                 'Rice',
                 'Roti',
-                'Dessert',
-                'Accompaniments'
+                 'Accompaniments',
+                'Dessert'
             )
         END
     ")
@@ -312,6 +309,7 @@ class MenuController extends Controller
             'submenu_id.*.*' => 'exists:sub_menus,id',
             'location_id' => 'required|exists:locations,id',
             'special_flag' => 'required|in:0,1',
+            'action' => 'required|in:1,2',
         ]);
 
         if ($validator->fails()) {
@@ -342,6 +340,7 @@ class MenuController extends Controller
             'special_flag' => $request->special_flag,
             'menu_date' => $request->menu_date,
             'remarks' => $request->remarks,
+             'status' => $request->action,
             'created_by' => auth()->id(),
         ]);
 
@@ -387,20 +386,20 @@ class MenuController extends Controller
                 'Refresher',
                 'Vegetable',
                 'Dal',
-                'Rice',
                 'Roti',
-                'Dessert',
-                'Accompaniments'
+                'Rice',
+                'Accompaniments',
+                'Dessert'
             ) = 0 THEN 999
             ELSE FIELD(name,
                 'Starters',
                 'Refresher',
                 'Vegetable',
                 'Dal',
-                'Rice',
                 'Roti',
-                'Dessert',
-                'Accompaniments'
+                'Rice',
+                'Accompaniments',
+                'Dessert'
             )
         END
     ")
@@ -437,6 +436,8 @@ class MenuController extends Controller
             'submenu_id.*' => 'array',
             'submenu_id.*.*' => 'exists:sub_menus,id',
             'special_flag' => 'required|in:0,1',
+             'action' => 'required|in:1,2',
+
 
         ], [
             'menu_date.unique' => 'Menu already exists for the selected location and date.',
@@ -464,6 +465,7 @@ class MenuController extends Controller
             'menu_date' => $request->menu_date,
             'remarks' => $request->remarks,
             'special_flag' => $request->special_flag,
+              'status' => $request->action,
         ]);
 
         // Delete old items

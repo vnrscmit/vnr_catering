@@ -6,51 +6,65 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up(): void
-    {
-        Schema::create('bills', function (Blueprint $table) {
+   public function up(): void
+{
+    Schema::create('bills', function (Blueprint $table) {
 
-            $table->id();
+        $table->id();
 
-            $table->string('type')->nullable();
+        $table->string('type')->nullable();
 
-            $table->unsignedBigInteger('user_id')->nullable();
+        $table->unsignedBigInteger('user_id')->nullable();
 
-            $table->date('generate_date');
+        $table->date('charge_date');
 
-            $table->string('generate_month');
+        $table->date('generate_date');
 
-            $table->unsignedBigInteger('calendar_id');
+        $table->string('generate_month');
 
-            $table->string('bill_no')->unique();
+        $table->unsignedBigInteger('calendar_id');
 
-            $table->date('bill_date');
+        $table->string('bill_no')->unique();
 
-            $table->integer('total_diets')->default(0);
+        $table->date('bill_date');
 
-            $table->integer('individual_set_diet')->default(0);
+        $table->integer('total_diets')->default(0);
 
-            $table->integer('president_diet')->default(0);
+        $table->integer('individual_set_diet')->default(0);
 
-            $table->integer('guest_diet')->default(0);
+        $table->integer('president_diet')->default(0);
 
-            $table->integer('net_chargeable_diet')->default(0);
+        $table->integer('guest_diet')->default(0);
 
-            $table->decimal('total_expenses',12,2)->default(0);
+        // Non Member Diet
+        $table->integer('non_member_diets')->default(0);
 
-            $table->decimal('guest_expenses',12,2)->default(0);
+        $table->integer('net_chargeable_diet')->default(0);
 
-            $table->decimal('individual_expenses',12,2)->default(0);
+        $table->integer('total_expenses')->default(0);
 
-            $table->decimal('net_monthly_expenses',12,2)->default(0);
+        $table->integer('guest_expenses')->default(0);
 
-            $table->decimal('per_diet_calculation',12,2)->default(0);
+        // Non Member Charges
+        $table->integer('non_member_expenses')->default(0);
 
-            $table->tinyInteger('status')->default(1);
+        $table->integer('individual_expenses')->default(0);
 
-            $table->timestamps();
-        });
-    }
+        $table->integer('net_monthly_expenses')->default(0);
+
+        $table->integer('per_diet_calculation')->default(0);
+
+        $table->decimal('per_diet_calculation_auto', 12, 2)->default(0);
+
+        $table->decimal('balance', 12, 2)->default(0);
+
+        $table->text('remarks')->nullable();
+
+        $table->tinyInteger('status')->default(1);
+
+        $table->timestamps();
+    });
+}
 
     public function down(): void
     {

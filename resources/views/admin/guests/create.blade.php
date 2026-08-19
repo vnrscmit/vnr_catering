@@ -15,6 +15,7 @@
 <script src="/admin_resources/js/todolist.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 @endpush
 
 @section('title', 'Add Guest')
@@ -175,7 +176,7 @@
                                 class="form-control @error('guest_count') is-invalid @enderror"
                                 name="guest_count"
                                 value="{{ old('guest_count',1) }}"
-                                min="1" max="10"
+                                min="1" 
                                 placeholder="Enter Guest Count" required>
 
                             @error('guest_count')
