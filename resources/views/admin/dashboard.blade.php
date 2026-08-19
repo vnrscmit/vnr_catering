@@ -23,8 +23,8 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-
 <script>
+
   $(document).ready(function() {
 
     $('#member_filter, #attendance_filter').on('change', function() {
@@ -576,6 +576,7 @@
       $UserData->role !== 'Super Admin' &&
       $UserData->role !== 'Canteen Administrator'
       )
+         @if(!$mainCardLock)
       <div class="col-12 col-lg-6 mb-4">
         <div class="card lunch-card">
           <div class="card-body">
@@ -608,19 +609,42 @@
             <div class="menu-box mt-3">
               <h6>Today's Menu</h6>
 
-              <div class="row">
-                @foreach($todayMenu as $menu)
-                <div class="col-md-6 mb-2">
-                  <div class="menu-item">
+                <div class="row">
+                @php
+                $half = ceil(count($todayMenu) / 2);
+                $firstColumn = array_slice($todayMenu, 0, $half);
+                $secondColumn = array_slice($todayMenu, $half);
+                @endphp
+
+                {{-- First Column --}}
+                <div class="col-md-6">
+                  @foreach($firstColumn as $menu)
+                  <div class="menu-item mb-2">
                     <i class="fa fa-utensils me-2"></i>
                     {{ $menu['name'] }}
+
                     @if($menu['special_flag'] == 1)
-                   <i class="fa fa-star text-warning" title="Special"></i>
+                    <i class="fa fa-star text-warning" title="Special"></i>
                     @endif
                   </div>
+                  @endforeach
                 </div>
-                @endforeach
+
+                {{-- Second Column --}}
+                <div class="col-md-6">
+                  @foreach($secondColumn as $menu)
+                  <div class="menu-item mb-2">
+                    <i class="fa fa-utensils me-2"></i>
+                    {{ $menu['name'] }}
+
+                    @if($menu['special_flag'] == 1)
+                    <i class="fa fa-star text-warning" title="Special"></i>
+                    @endif
+                  </div>
+                  @endforeach
+                </div>
               </div>
+              
             </div>
 
             @else
@@ -741,6 +765,7 @@
           </div>
         </div>
       </div>
+           @endif
       <!-- ......................................Upcoming days...................................... -->
       <div class="col-12 col-lg-6 mb-4">
         <div class="card upcoming-card">
@@ -1253,11 +1278,8 @@
 <!-- main-panel ends -->
 
 <script>
-  let remainingSeconds = {
-    {
-      (int)($remainingSeconds ?? 0)
-    }
-  };
+  // Pass data from Laravel to JavaScript properly
+  let remainingSeconds = {{ isset($remainingSeconds) ? (int)$remainingSeconds : 0 }};
 
   function updateCountdown() {
     const countdown = document.getElementById('countdown');
@@ -1282,7 +1304,10 @@
     remainingSeconds--;
   }
 
-  updateCountdown();
-  const timer = setInterval(updateCountdown, 1000);
+  // Initialize and start the timer
+  if (typeof remainingSeconds !== 'undefined' && remainingSeconds > 0) {
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 1000);
+  }
 </script>
 @endsection

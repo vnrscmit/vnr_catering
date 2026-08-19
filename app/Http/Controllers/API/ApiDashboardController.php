@@ -45,7 +45,7 @@ class ApiDashboardController extends Controller
 
     private function memberDashboard($userData, $locationId)
     {
-
+        
         if ($userData->start_calendar_id == null) {
             return response()->json([
                 'status' => false,
@@ -69,8 +69,7 @@ class ApiDashboardController extends Controller
                 'message' => 'Company parameter is not configured for your location.',
             ], 400);
         }
-
-
+        
         $today = Carbon::today()->format('Y-m-d');
         $currentStart = Carbon::now()->startOfMonth();
         $currentEnd   = Carbon::now()->endOfMonth();
@@ -98,8 +97,14 @@ class ApiDashboardController extends Controller
             ->orderBy('day_statuses.date', 'asc')
             ->limit($CompanyParameter->max_day_show)
             ->get();
+           
 
+       $checkDate = DayStatus::where('id', $userData->start_calendar_id)->value('date');
+ 
+$startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locationId)->value('date');
+  
         $upComingDays = DayStatus::where('day_statuses.date', '>', $today)
+          ->where('day_statuses.date', '>=', $startDate)
             ->leftJoin('attendance_absents', function ($join) use ($locationId) {
                 $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
                     ->where('attendance_absents.user_id', auth()->id())
@@ -117,8 +122,12 @@ class ApiDashboardController extends Controller
             ->orderBy('day_statuses.date', 'asc')
             ->limit($CompanyParameter->max_day_show)
             ->get();
+            
+              $checkDate = DayStatus::where('id', $userData->start_calendar_id)->value('date');
+ 
+$startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locationId)->value('date');
 
-        $startDate = DayStatus::where('id', $userData->start_calendar_id)->value('date');
+    
 
         // Current Month Summary Data
         $summaryCurrentMonth = DayStatus::whereBetween('day_statuses.date', [
@@ -330,10 +339,11 @@ class ApiDashboardController extends Controller
             'Refresher'       => 2,
             'Vegetable'       => 3,
             'Dal'             => 4,
-            'Rice'            => 5,
-            'Roti'            => 6,
-            'Dessert'         => 7,
-            'Accompaniments'  => 8,
+             'Roti'            => 5,
+            'Rice'            => 6,
+            'Accompaniments'  => 7,
+            'Dessert'         => 8,
+          
         ];
 
         $todayMenu = $dailyMenuList
@@ -350,6 +360,10 @@ class ApiDashboardController extends Controller
             ->values()
             ->toArray()
             : [];
+            
+                   $startDate = Carbon::parse(
+            DayStatus::where('id', $userData->start_calendar_id)->value('date')
+        )->format('d-m-Y');
 
         $data = [
             'today' => [
@@ -385,6 +399,8 @@ class ApiDashboardController extends Controller
             'canteen_end_time' => $CompanyParameter->canteen_end_time
                 ? Carbon::parse($CompanyParameter->canteen_end_time)->format('h:i A')
                 : null,
+                
+             'startDate' => $startDate ?? '',
         ];
 
 
@@ -422,6 +438,7 @@ class ApiDashboardController extends Controller
             ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge', 'Canteen Administrator'])
             ->where('status', 1)
             ->pluck('id');
+        
 
         $multiLinkedUserIds = MultipleLocation::join('users', 'multiple_locations.user_id', '=', 'users.id')
             ->where('multiple_locations.location_id', $userData->location_id)
@@ -469,6 +486,12 @@ class ApiDashboardController extends Controller
             'absentToPresent' => $absentToPresent,
             'lateGuest' => $lateGuest,
         ];
+        
+         if ($userData->personal_guest_flag == 1) {
+            $guestAllowed = 1;
+         }else{
+              $guestAllowed = 0;
+         }
 
         $data = [
             'total_users'          => $totalUsers,
@@ -489,6 +512,9 @@ class ApiDashboardController extends Controller
             'canteen_end_time' => $companyParameter->canteen_end_time
                 ? Carbon::parse($companyParameter->canteen_end_time)->format('h:i A')
                 : null,
+                
+                 'startDate' => '',
+                 'guestAllowed' => $guestAllowed,
         ];
 
         return response()->json([

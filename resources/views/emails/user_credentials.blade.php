@@ -18,7 +18,7 @@
                             <!-- Header with Icon -->
                             <table width="100%">
                                 <tr>
-                                    <td align="center" style="padding:35px 20px 15px;">
+                                  <td align="center" style="padding:0 20px 15px;">
                                         <img
                                             src="https://ahaar.vnrseeds.in/assets/images/ahaar_logo_login_3.png"
                                             alt="AHAAR Logo"
@@ -38,24 +38,34 @@
 
                             <!-- Credentials Box (Visual Highlight) -->
                             <table width="100%" cellpadding="15" style="background-color: #F9FBE7; border-left: 6px solid #2E7D32; border-radius: 8px; margin: 25px 0;">
-                                <tr>
-                                    <td>
-                                        <table>
-                                            <tr>
-                                                <td style="font-weight: bold; color: #333; width: 100px;">🔗 Portal:</td>
-                                                <td style="color: #1A73E8;"><a href="https://ahaar.vnrseeds.in/">https://ahaar.vnrseeds.in/</a></td>
-                                            </tr>
-                                            <tr>
-                                                <td style="font-weight: bold; color: #333; width: 100px;">👤 User ID:</td>
-                                                <td style="color: #333;">{{ $user->mobile }}</td>
-                                            </tr>
-                                            <tr>
-                                                <td style="font-weight: bold; color: #333; width: 100px;">🔑 Password:</td>
-                                                <td style="color: #D32F2F; font-weight: 600; letter-spacing: 1px; background-color: #FFF3E0; padding: 4px 12px; border-radius: 20px; display: inline-block;">{{ $password }}</td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                </tr>
+                               <tr>
+    <td>
+        <table>
+            <tr>
+                <td style="font-weight: bold; color: #333; width: 100px;">&#128279; Portal:</td>
+                <td style="color: #1A73E8;"><a href="https://ahaar.vnrseeds.in/">https://ahaar.vnrseeds.in/</a></td>
+            </tr>
+            
+            <tr>
+                <td style="font-weight: bold; color: #333; width: 100px;">&#128241; App:</td>
+                <td style="color: #1A73E8;">
+                    <a href="https://ahaar.vnrseeds.in/AhaarLive.apk" target="_blank">
+                        Download
+                    </a>
+                </td>
+            </tr>
+            
+            <tr>
+                <td style="font-weight: bold; color: #333; width: 100px;">&#128100; User ID:</td>
+                <td style="color: #333;">{{ $user->mobile }}</td>
+            </tr>
+            <tr>
+                <td style="font-weight: bold; color: #333; width: 100px;">&#128273; Password:</td>
+                <td style="color: #D32F2F; font-weight: 600; letter-spacing: 1px; background-color: #FFF3E0; padding: 4px 12px; border-radius: 20px; display: inline-block;">{{ $password }}</td>
+            </tr>
+        </table>
+    </td>
+</tr>
                             </table>
 
                             <!-- Footer -->

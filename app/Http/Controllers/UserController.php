@@ -18,17 +18,17 @@ class UserController extends Controller
         return view('auth.login');
     }
 
-    public function apilogin(Request $request)
+   public function apilogin(Request $request)
     {
         // Validate request
         $request->validate([
-            'mobile' => 'required|string',
+            'username' => 'required|string',
             'password' => 'required|string',
         ]);
 
         try {
             // Find user by mobile number
-            $user = User::where('mobile', $request->mobile)->first();
+            $user = User::where('username', $request->username)->first();
 
             // Check if user exists and password is correct
             if (!$user || !Hash::check($request->password, $user->password)) {
@@ -79,6 +79,14 @@ class UserController extends Controller
                 ->merge($multiLocationData)
                 ->unique('location_id')
                 ->values();
+                
+                   if ($user->start_calendar_id == null) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Your start Date is not set please contact to your canteen incharge',
+                    'data' => null
+                ], 500);
+            }
 
             return response()->json([
                 'status' => true,
@@ -87,10 +95,10 @@ class UserController extends Controller
                 'user' => [
                     'id' => $user->id,
                     'name' => explode(' ', trim($user->first_name))[0],
-                    'employee_id' => $user->user_code,
-                    'email' => $user->email,
-                    'mobile' => $user->mobile,
-                    'designation' => $user->designation,
+                    'employee_id' => $user->user_code ?? '',
+                    'email' => $user->email ?? '',
+                    'mobile' => $user->mobile ?? '',
+                    'designation' => $user->designation ?? '',
                     'role' => $user->role,
                     'role_id' => $user->role_id,
                     'department' => optional($user->department)->name,
@@ -101,6 +109,7 @@ class UserController extends Controller
                     'profile_picture' => $user->profile_picture,
                     'multilocation_flag' => $user->multilocation_flag,
                     'personal_guest_flag' => $user->personal_guest_flag,
+                       'generate_code' => $user->generate_code,
                     'token' => $token,
                 ],
                 'multiLocationData' => $allLocations,
@@ -242,11 +251,52 @@ class UserController extends Controller
 
         // Update password
         $user->password = Hash::make($request->new_password);
+        $user->plain_password = $request->new_password;
         $user->save();
 
         return response()->json([
             'status' => true,
             'message' => 'Password changed successfully.',
         ]);
+    }
+    
+     public function generatePin(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'generate_code' => 'required|digits:4',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $user = Auth::user();
+
+        // Only Canteen Incharge can update the code
+        if ($user->role !== 'Canteen Incharge') {
+            return response()->json([
+                'status' => false,
+                'message' => 'You are not authorized to update generate code.',
+            ], 403);
+        }
+
+        $targetUser = User::find($request->user_id);
+
+        $targetUser->generate_code = $request->generate_code;
+        $targetUser->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Generate code updated successfully.',
+            'data' => [
+                'user_id' => $targetUser->id,
+                'generate_code' => $targetUser->generate_code,
+            ],
+        ], 200);
     }
 }

@@ -7,6 +7,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\API\ApiAttendanceController;
 use App\Http\Controllers\API\ApiDashboardController;
 use App\Http\Controllers\API\ApiForgetPasswordController;
+use App\Http\Controllers\API\ApiReportController;
+use App\Http\Controllers\Api\ApiFeedbackController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -34,6 +36,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/manage-attendance', [ApiAttendanceController::class, 'manageAttendance']);
     Route::post('/manage-override-attendance', [ApiAttendanceController::class, 'overrideAttendance']);
     Route::post('/change-password', [UserController::class, 'changePassword']);
+
+    Route::get('/generate-pin', [UserController::class, 'generatePin']);
+
+    //Reports 
+    Route::get('/report-attendance', [ApiReportController::class, 'reportAttendance']);
+
+
+    Route::get('feedback-list', [ApiFeedbackController::class, 'index']);
+    Route::post('feedback-store', [ApiFeedbackController::class, 'store']);
+    Route::get('/stats', [ApiFeedbackController::class, 'stats']);
+    Route::get('/{id}', [ApiFeedbackController::class, 'show']);
+    Route::put('/{id}', [ApiFeedbackController::class, 'update']);
+    Route::delete('/{id}', [ApiFeedbackController::class, 'destroy']);
+    Route::patch('/{id}/status', [ApiFeedbackController::class, 'updateStatus']);
 });
 
 Route::post('/generate-year', [ApiAttendanceController::class, 'generateYear']);

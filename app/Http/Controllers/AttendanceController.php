@@ -197,7 +197,7 @@ class AttendanceController extends Controller
     }
 
 
-    public function guestList($id)
+   public function guestList($id)
     {
         $user = Auth::user();
 
@@ -221,14 +221,14 @@ class AttendanceController extends Controller
         ])->where('calendar_id', $dayStatus->id);
 
         if ($user->role == 'Admin' || $user->role == 'Super Admin') {
-        } elseif ($user->role == 'Canteen President' || $user->role == 'Canteen Incharge') {
+        } elseif ($user->role == 'Canteen President' || $user->role == 'Canteen Incharge' || $user->role == 'Canteen Administrator') {
             $query->where('location_id', $user->location_id);
         } else {
             $query->where('attend_user_id', $user->id);
         }
 
         $guestList = $query->latest()->get();
-
+        
         $summary = [
             'total_guest' => $guestList->sum('guest_count'),
             'personal_guest_count' => $guestList
@@ -426,6 +426,8 @@ class AttendanceController extends Controller
             ->where('user_id', $UserData->id)
             ->first();
 
+
+
         if ($attendance) {
             $newAbsentFlag = $attendance->absent_flag == 1 ? 0 : 1;
             $attendance->update([
@@ -433,7 +435,6 @@ class AttendanceController extends Controller
                 'status'      => 1,
             ]);
         } else {
-
             $newAbsentFlag = 1;
             AttendanceAbsent::create([
                 'calendar_id' => $calendar->id,
@@ -454,6 +455,50 @@ class AttendanceController extends Controller
             'status'      => 1,
             'web_app'     => 'web',
         ]);
+
+
+        if ($UserData->multilocation_flag == 1) {
+            // Get all locations for this user
+            $multiLocationData = MultipleLocation::where('user_id', $UserData->id)->get();
+
+            if ($UserData->location_id == $calendar->location_id) {
+
+                if ($newAbsentFlag == 0) {
+                    // Loop through each location and create/update attendance
+                    foreach ($multiLocationData as $location) {
+                        AttendanceAbsent::updateOrCreate(
+                            [
+                                'calendar_id' => $calendar->id,
+                                'user_id'     => $UserData->id,
+                                'location_id' => $location->location_id,
+                            ],
+                            [
+                                'absent_flag' => 1,
+                                'status'      => 1,
+                            ]
+                        );
+                    }
+                }
+            } else {
+                // Get all locations for this user
+                $location = Location::where('id', $UserData->location_id)->first();
+
+                if ($newAbsentFlag == 0) {
+                    AttendanceAbsent::updateOrCreate(
+                        [
+                            'calendar_id' => $calendar->id,
+                            'user_id'     => $UserData->id,
+                            'location_id' => $location->id,
+                        ],
+                        [
+                            'absent_flag' => 1,
+                            'status'      => 1,
+                        ]
+                    );
+                }
+            }
+        }
+
 
         return back()->with('success', "Attendance marked successfully.");
     }
@@ -749,6 +794,10 @@ class AttendanceController extends Controller
         } else {
             return redirect()->back()->with('error', 'Does not have a permission');
         }
+        
+        if($UserData->start_calendar_id == null){
+            return redirect()->back()->with('error', 'Your start Date is not set please contact to your canteen incharge');
+        }
 
 
         return view('admin.attendance.calendar', compact('locations'));
@@ -784,6 +833,18 @@ class AttendanceController extends Controller
                 ->where('day_statuses.location_id', $locationId)
                 ->orderBy('day_statuses.date')
                 ->get();
+                
+                    foreach ($days as $day) {
+                $dayDate = Carbon::parse($day->date);
+
+                $startDate = Carbon::parse(
+                    DayStatus::where('id', $userData->start_calendar_id)->value('date')
+                );
+
+                if ($dayDate->lt($startDate)) {
+                    $day->lock_flag = 1;
+                }
+            }
 
             return [
                 $type . 'days' => $days,
@@ -802,9 +863,8 @@ class AttendanceController extends Controller
                         })
                         ->count(),
 
-
-                    'locked' => $days->where('open_flag', 1)
-                        ->where('date', '<', $today)
+              'locked' => $days
+                        ->where('lock_flag', '=', 1)
                         ->count(),
                 ]
             ];
@@ -853,7 +913,7 @@ class AttendanceController extends Controller
             $dayStatus = DayStatus::where('date', $request->date)
                 ->where('location_id', $request->location_id)
                 ->first();
-      
+
 
             if (!$dayStatus) {
                 return response()->json([
@@ -863,7 +923,7 @@ class AttendanceController extends Controller
             }
 
             $dayStatusCheck = DayStatus::where('date', $today)
-            ->where('date', $request->date)
+                ->where('date', $request->date)
                 ->where('location_id', $request->location_id)
                 ->first();
 
@@ -879,8 +939,8 @@ class AttendanceController extends Controller
                 ]);
             }
 
-         
-           AttendanceAbsent::updateOrCreate(
+
+            AttendanceAbsent::updateOrCreate(
                 [
                     'calendar_id' => $dayStatus->id,
                     'user_id'     => $userData->id,

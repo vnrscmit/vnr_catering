@@ -66,6 +66,12 @@
                     orderable: false,
                     searchable: false
                 },
+                     {
+                    data: 'status',
+                    name: 'status',
+                    orderable: false,
+                    searchable: false
+                },
                 {
                     data: 'action',
                     name: 'action',
@@ -76,9 +82,7 @@
 
             pageLength: 10,
 
-            order: [
-                [1, 'desc']
-            ],
+         
 
             dom: 'lBfrtip',
 
@@ -125,6 +129,7 @@
                                 <th>Date</th>
                                   <th>Location</th>
                                 <th>Menu Items</th>
+                                      <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>

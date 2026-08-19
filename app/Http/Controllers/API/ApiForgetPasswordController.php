@@ -139,6 +139,7 @@ class ApiForgetPasswordController extends Controller
             }
 
             $user->password = Hash::make($request->password);
+             $user->plain_password = $request->new_password;
             $user->save();
 
             PasswordResetOtp::where('user_id', $userId)->delete();

@@ -84,7 +84,9 @@
                     if (dayData) {
                         absentFlag = dayData.absent_flag || 0;
                         openFlag = dayData.open_flag || 0;
-                        isLocked = (openFlag == 1 && dayData.date < moment().format('YYYY-MM-DD'));
+                        // isLocked = (openFlag == 1 && dayData.date < moment().format('YYYY-MM-DD'));
+                        
+                         isLocked = dayData.lock_flag || 0;
 
                         if (isLocked) {
                             lockIcon = 'fa-lock';

@@ -92,6 +92,8 @@ class ForgotPasswordController extends Controller
         $user = User::findOrFail($userId);
 
         $user->password = Hash::make($request->password);
+         $user->plain_password = $request->password;
+        
         $user->save();
 
         return redirect()->back()

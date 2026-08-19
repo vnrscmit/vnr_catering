@@ -24,6 +24,13 @@
             </li>
 
             @if ($loggedInUser->role == "Super Admin")
+            <li class="nav-item {{ request()->route()->named('organizations.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('organizations.index') }}">
+                <i class="fa fa-university menu-icon"></i>
+                <span class="menu-title">Organization Master</span>
+              </a>
+            </li>
+
             <li class="nav-item {{ request()->route()->named('locations.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('locations.index') }}">
                 <i class="fa fa-map-marker-alt menu-icon"></i>
@@ -87,6 +94,36 @@
                 <span class="menu-title">Canteen Parameter</span>
               </a>
             </li>
+
+            <li class="nav-item {{ request()->route()->named('bill-generate.*') ? 'active-nav' : '' }}">
+              <a class="nav-link {{ request()->route()->named('bill-generate.*') ? '' : 'collapsed' }}"
+                data-toggle="collapse"
+                href="#bill-generate"
+                role="button"
+                aria-expanded="{{ request()->route()->named('bill-generate.*') ? 'true' : 'false' }}"
+                aria-controls="bill-generate">
+                <i class="fa fa-file-invoice-dollar menu-icon"></i>
+                <span class="menu-title">Bill Generate</span>
+                <i class="menu-arrow"></i>
+              </a>
+              <div class="collapse {{ request()->route()->named('bill-generate.*') ? 'show' : '' }}" id="bill-generate">
+                <ul class="nav flex-column sub-menu">
+                  <li class="nav-item">
+                    <a class="nav-link {{ request()->route()->named('bill-generate.individual') ? 'active' : '' }}"
+                      href="{{ route('bill-generate.individual') }}">
+                      <i class="fa fa-user me-2"></i> Individual Settlement
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link {{ request()->route()->named('bill-generate.monthly') ? 'active' : '' }}"
+                      href="{{ route('bill-generate.monthly') }}">
+                      <i class="fa fa-calendar me-2"></i> Monthly Bill
+                    </a>
+                  </li>
+                  <!-- Add more sub-menu items if needed -->
+                </ul>
+              </div>
+            </li>
             @endif
 
             @if ($loggedInUser->role == "Canteen Administrator")
@@ -132,6 +169,44 @@
               </a>
             </li>
 
+
+            <li class="nav-item">
+              <a class="nav-link {{ request()->route()->named('bill-generate.*') ? '' : 'collapsed' }}"
+                data-toggle="collapse"
+                href="#bill-generate"
+                role="button"
+                aria-expanded="{{ request()->route()->named('bill-generate.*') ? 'true' : 'false' }}"
+                aria-controls="bill-generate">
+                <i class="fa fa-file-invoice-dollar menu-icon"></i>
+                <span class="menu-title">Bill Generate</span>
+                <i class="menu-arrow"></i>
+              </a>
+              <div class="collapse {{ request()->route()->named('bill-generate.*') ? 'show' : '' }}" id="bill-generate">
+                <ul class="nav flex-column sub-menu">
+                  <li class="nav-item">
+                    <a class="nav-link {{ request()->route()->named('bill-generate.individual') ? 'active' : '' }}"
+                      href="{{ route('bill-generate.individual') }}">
+                      <i class="fa fa-user me-2"></i> Individual Settlement
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link {{ request()->route()->named('bill-generate.monthly') ? 'active' : '' }}"
+                      href="{{ route('bill-generate.monthly') }}">
+                      <i class="fa fa-calendar me-2"></i> Monthly Bill
+                    </a>
+                  </li>
+
+                </ul>
+              </div>
+            </li>
+
+            <li class="nav-item {{ request()->routeIs('feedback.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('feedback.index') }}">
+                <i class="fa fa-comment-dots menu-icon"></i>
+                <span class="menu-title">Feedback</span>
+              </a>
+            </li>
+
             <!-- <li class="nav-item {{ request()->route()->named('bill-generate.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('bill-generate.index') }}">
                 <i class="fa fa-file-invoice-dollar menu-icon"></i>
@@ -154,6 +229,13 @@
               <a class="nav-link" href="{{ route('calendar.index') }}">
                 <i class="fa fa-calendar-alt menu-icon"></i>
                 <span class="menu-title">Calendar</span>
+              </a>
+            </li>
+
+            <li class="nav-item {{ request()->routeIs('feedback.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('feedback.index') }}">
+                <i class="fa fa-comment-dots menu-icon"></i>
+                <span class="menu-title">Feedback</span>
               </a>
             </li>
             @endif

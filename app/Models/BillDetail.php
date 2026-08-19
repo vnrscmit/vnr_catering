@@ -14,6 +14,7 @@ class BillDetail extends Model
         'user_diets',
         'rate_per_diet',
         'bill_amount',
+        'balance',
         'status'
 
     ];

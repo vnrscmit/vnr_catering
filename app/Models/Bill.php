@@ -10,6 +10,7 @@ class Bill extends Model
 
         'type',
         'user_id',
+        'charge_date',
         'generate_date',
         'generate_month',
         'calendar_id',
@@ -18,13 +19,19 @@ class Bill extends Model
         'total_diets',
         'individual_set_diet',
         'president_diet',
+        'non_member_diet',
         'guest_diet',
+        'guest_expenses',
         'net_chargeable_diet',
         'total_expenses',
         'guest_expenses',
+        'non_member_expenses',
         'individual_expenses',
         'net_monthly_expenses',
         'per_diet_calculation',
+        'per_diet_calculation_auto',
+        'balance',
+        'remarks',
         'status'
     ];
 

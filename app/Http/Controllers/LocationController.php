@@ -7,8 +7,11 @@ use App\Models\Location;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Traits\AdminViewSharedDataTrait;
 use App\Models\Department;
+use App\Models\Feedback;
+use App\Models\Organization;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Yajra\DataTables\Facades\DataTables;
 
 class LocationController extends Controller
@@ -29,10 +32,26 @@ class LocationController extends Controller
     {
         if ($request->ajax()) {
 
-            $locations = Location::query();
+            $feedbacks = Feedback::with(['user', 'location']);
 
-            return DataTables::of($locations)
+            return DataTables::of($feedbacks)
                 ->addIndexColumn()
+
+                ->addColumn('user_name', function ($row) {
+                    return $row->user ? $row->user->name : 'N/A';
+                })
+
+                ->addColumn('location_name', function ($row) {
+                    return $row->location ? $row->location->name : 'N/A';
+                })
+
+                ->editColumn('subject', function ($row) {
+                    return $row->subject ?? 'N/A';
+                })
+
+                ->editColumn('description', function ($row) {
+                    return $row->description ?? 'N/A';
+                })
 
                 ->editColumn('status', function ($row) {
                     if ($row->status == 1) {
@@ -42,45 +61,46 @@ class LocationController extends Controller
                     return '<span class="badge bg-danger">Inactive</span>';
                 })
 
+                ->editColumn('created_at', function ($row) {
+                    return $row->created_at
+                        ? $row->created_at->format('d-m-Y h:i A')
+                        : 'N/A';
+                })
+
                 ->addColumn('action', function ($row) {
 
-                    $view = route('locations.show', $row->id);
-                    $edit = route('locations.edit', $row->id);
-                    $delete = route('locations.destroy', $row->id);
+                    $edit = route('feedback.edit', $row->id);
+                    $delete = route('feedback.destroy', $row->id);
 
                     return '
-                    <a href="' . $view . '" class="btn btn-info btn-sm">
-                        <i class="fa fa-eye"></i>
-                    </a>
-
                     <a href="' . $edit . '" class="btn btn-warning btn-sm">
                         <i class="fa fa-edit"></i>
                     </a>
 
-                    <form action="' . $delete . '" method="POST" style="display:inline-block">
-                        ' . csrf_field() . '
-                        ' . method_field('DELETE') . '
-                        <button class="btn btn-danger btn-sm"
-                            onclick="return confirm(\'Are you sure?\')">
-                            <i class="fa fa-trash"></i>
-                        </button>
-                    </form>
+                    <button type="button"
+                            class="btn btn-danger btn-sm deleteFeedback"
+                            data-id="' . $row->id . '">
+                        <i class="fa fa-trash"></i>
+                    </button>
                 ';
                 })
 
                 ->rawColumns(['status', 'action'])
                 ->make(true);
         }
-        return view('admin.locations.index');
-    }
 
+        return view('feedback.index');
+    }
     /**
      * Show the form for creating a new resource.
      */
     public function create()
     {
+
+
         $locations = Location::where('status', 1)->get();
-        return view('admin.locations.create', compact('locations'));
+        $organizations = Organization::where('status', 1)->get();
+        return view('admin.locations.create', compact('locations', 'organizations'));
     }
 
     /**
@@ -89,11 +109,28 @@ class LocationController extends Controller
     public function store(Request $request)
     {
 
+        $authUser = Auth::user();
+
+        // Check if user has permission
+        if ($authUser->role !== 'Super Admin') {
+            return redirect()->back()->with('error', 'You do not have permission to delete bills.');
+        }
+
+
         $validated = $request->validate([
+            'organization_id' => 'required|exists:organizations,id',
             'name' => 'required|string|unique:locations,name|max:255',
             'short_code' => 'required|string|unique:locations,short_code|max:4|min:2',
             'status' => 'required',
         ]);
+
+        $organizationCountAllowed = Organization::where('id', $request->organization_id)->value('max_location_allowed');
+        $locationCount = Location::where('organization_id', $request->organization_id)->where('status', 1)->count();
+
+        if ($organizationCountAllowed <= $locationCount) {
+            return redirect()->route('locations.index')
+                ->with('error', 'You have reached the maximum location limit. You are allowed to create only ' . $organizationCountAllowed . ' location under this organization. Currently, ' . $locationCount . ' location are already active.');
+        }
 
         Location::create($validated);
 
@@ -109,38 +146,54 @@ class LocationController extends Controller
         return view('admin.locations.show', compact('location'));
     }
 
+
     /**
-     * Show the form for editing the specified resource.
+     * Show the form for editing the specified location.
      */
-    public function edit(Location $location)
+    public function edit($id)
     {
-        return view('admin.locations.edit', compact('location'));
+        $location = Location::findOrFail($id);
+        $organizations = Organization::where('status', 1)->get();
+
+        return view('admin.locations.edit', compact('location', 'organizations'));
     }
 
     /**
-     * Update the specified resource in storage.
+     * Update the specified location in storage.
      */
-    public function update(Request $request, Location $location)
+    public function update(Request $request, $id)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|unique:locations,name,' . $location->id . '|max:255',
-            'short_code' => 'required|string|unique:locations,short_code,' . $location->id . '|max:50',
-            'status' => 'sometimes|boolean',
+        $location = Location::findOrFail($id);
+
+        $request->validate([
+            'organization_id' => 'required|exists:organizations,id',
+            'name' => 'required|string|max:255',
+            'short_code' => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('locations', 'short_code')->ignore($location->id),
+            ],
+            'status' => 'required|in:0,1',
         ]);
 
-        $validated['status'] = $request->has('status') ? 1 : 0;
-
-        $location->update($validated);
+        $location->update([
+            'organization_id' => $request->organization_id,
+            'name' => $request->name,
+            'short_code' => $request->short_code,
+            'status' => $request->status,
+        ]);
 
         return redirect()->route('locations.index')
             ->with('success', 'Location updated successfully!');
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Remove the specified location from storage.
      */
-    public function destroy(Location $location)
+    public function destroy($id)
     {
+        $location = Location::findOrFail($id);
         $location->delete();
 
         return redirect()->route('locations.index')

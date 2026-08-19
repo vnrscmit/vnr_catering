@@ -23,6 +23,7 @@ return new class extends Migration
             $table->decimal('rate_per_diet', 10, 2)->default(0);
 
             $table->decimal('bill_amount', 12, 2)->default(0);
+            $table->decimal('balance', 12, 2)->default(0);
 
             $table->tinyInteger('status')->default(1);
 

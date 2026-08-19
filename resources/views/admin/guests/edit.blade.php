@@ -175,7 +175,6 @@
                                 name="guest_count"
                                 value="{{ old('guest_count', $guest->guest_count) }}"
                                 min="1"
-                                max="10"
                                 placeholder="Enter Guest Count" required>
 
                             @error('guest_count')
