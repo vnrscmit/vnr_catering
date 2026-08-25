@@ -14,7 +14,7 @@ class ApiFeedbackController extends Controller
      * Display a listing of feedbacks
      */
 
-    public function index(Request $request)
+   public function index(Request $request)
     {
         $user = Auth::user();
 
@@ -37,7 +37,7 @@ class ApiFeedbackController extends Controller
 
         $query = Feedback::with([
             'location:id,name',
-            'user:id,first_name'
+            'user:id,first_name,role'
         ])->where('location_id', $user->location_id);
 
         // Members can only see their own feedback
@@ -58,6 +58,7 @@ class ApiFeedbackController extends Controller
 
                     'user_name'     => $feedback->user?->first_name,
                     'location_name' => $feedback->location?->name,
+                      'role' => $feedback->user?->role,
 
                     'created_date'  => $feedback->created_at?->format('d-m-Y'),
                     'created_time'  => $feedback->created_at?->format('h:i A'),

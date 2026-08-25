@@ -124,6 +124,14 @@
                 </ul>
               </div>
             </li>
+
+            <li class="nav-item {{ request()->route()->named('payment.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('payment.index') }}">
+                <i class="fas fa-credit-card"></i>
+                <span class="menu-title">Bill Payment</span>
+              </a>
+            </li>
+
             @endif
 
             @if ($loggedInUser->role == "Canteen Administrator")
@@ -198,6 +206,13 @@
 
                 </ul>
               </div>
+            </li>
+
+            <li class="nav-item {{ request()->route()->named('payment.*') ? 'active-nav' : '' }}">
+              <a class="nav-link" href="{{ route('payment.index') }}">
+                <i class="fa fa-credit-card menu-icon"></i>
+                <span class="menu-title">Bill Payment</span>
+              </a>
             </li>
 
             <li class="nav-item {{ request()->routeIs('feedback.*') ? 'active-nav' : '' }}">

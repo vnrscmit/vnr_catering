@@ -42,7 +42,7 @@
 
     $(document).ready(function() {
 
-        const maxLength = 255;
+        const maxLength = 500;
         const description = $('#description');
         const counter = $('#descriptionCount');
 
@@ -119,15 +119,15 @@
                                 class="form-control @error('description') is-invalid @enderror"
                                 id="description"
                                 name="description"
-                                rows="5"
-                              maxlength="255"
+                                rows="7"
+                              maxlength="500"
                                 placeholder="Please describe your feedback in detail..."
                                 required>{{ old('description') }}</textarea>
 
                             <div class="d-flex justify-content-end mt-1">
                                 <small class="text-danger"
                                     style="font-size: 97% !important; font-weight: 400 !important;">
-                                    <span id="descriptionCount">255</span> Characters Remaining
+                                    <span id="descriptionCount"></span>/500 
                                 </small>
                             </div>
 
@@ -144,7 +144,7 @@
                                 <i class="fa fa-save"></i> Submit
                             </button>
 
-                            <button type="reset" class="btn" onclick="resetFormWithSweetAlert()" style="background-color: #117a8b; border-color: #10707f; color: white;">
+                            <button type="reset" class="btn" onclick="resetFormWithSweetAlert()" style="background-color: #F2BB1E; border-color: #F2BB1E; color: white;">
                                 <i class="fa fa-undo"></i> Reset
                             </button>
                             <a href="{{ route('feedback.index') }}" class="btn btn-secondary">

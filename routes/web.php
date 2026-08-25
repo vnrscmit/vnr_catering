@@ -37,6 +37,7 @@ use App\Http\Controllers\ForgotPasswordController;
 use App\Models\CompanyParameter;
 use App\Http\Controllers\Admin\OrganizationController;
 use App\Http\Controllers\FeedbackController;
+use App\Http\Controllers\PaymenController;
 
 Route::get('/', [MainSiteController::class, 'home'])->name('home');
 
@@ -54,14 +55,6 @@ Route::post('cart/clear', [MainSiteController::class, 'clearCart'])->name('custo
 Route::post('cart/update', [MainSiteController::class, 'updateCartQuantity'])->name('customer.cart.update');
 
 Route::get('getcart-totalitems/', [MainSiteController::class, 'getTotalItems'])->name('customer.getcart.totalitems');
-
-//stripe payment routes
-Route::get('payment/', [PaymentController::class, 'payment'])->name('payment');
-
-Route::get('payment-success', [PaymentController::class, 'paymentSuccess'])->name('payment.success');
-Route::get('payment-cancel', [PaymentController::class, 'paymentCancel'])->name('payment.cancel');
-Route::post('stripe/webhook', [PaymentController::class, 'handleStripeWebhook']);
-
 
 
 Route::get('about/', [MainSiteController::class, 'about'])->name('about');
@@ -141,9 +134,6 @@ Route::prefix('customer')->middleware(CheckRoleCustomer::class)->group(function 
     // step 4: order review
     Route::get('/checkout/review', [CheckoutController::class, 'review'])->name('customer.checkout.review');
 
-    // Step 4: Payment & review
-    Route::get('/checkout/payment', [CheckoutController::class, 'payment'])->name('customer.checkout.payment');
-    Route::post('/checkout/payment', [CheckoutController::class, 'paymentPost'])->name('customer.checkout.payment.post');
 
     // Step 5: Confirmation
     Route::get('/checkout/complete/{order}', [CheckoutController::class, 'complete'])->name('customer.checkout.complete');
@@ -406,8 +396,12 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
     Route::get('/monthly', [BillController::class, 'monthly'])->name('bill-generate.monthly');
     Route::get('/monthly/create', [BillController::class, 'monthlyCreate'])->name('bill-generate.monthly.create');
     Route::post('/monthly/store', [BillController::class, 'monthlyStore'])->name('bill-generate.monthly.store');
+        Route::get('/monthly/show/{id}', [BillController::class, 'monthlyShow'])->name('bill-generate.monthly.show');
     Route::get('/monthly/user-list/{id}', [BillController::class, 'monthlyUserList'])->name('bill-generate.monthly.user_list');
-
+    Route::get('/monthly/edit/{id}', [BillController::class, 'monthlyEdit'])->name('bill-generate.monthly.edit');
+    Route::put('/monthly/update/{id}', [BillController::class, 'monthlyUpdate'])->name('bill-generate.monthly.update');
+    Route::get('/monthly/delete/{id}', [BillController::class, 'monthlyDelete'])->name('bill-generate.monthly.delete');
+    Route::get('/monthly/final-submit/{id}', [BillController::class, 'monthlyFinalSubmit'])->name('bill-generate.monthly.finalSubmit');
     Route::get('/{id?}', [AdminController::class, 'index'])->name('admin.dashboard');
 
     Route::post('/attendance/update', [AttendanceController::class, 'update'])->name('attendance.update');
@@ -415,6 +409,18 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
 
 Route::resource('organizations', OrganizationController::class);
 Route::resource('feedback', FeedbackController::class);
+
+
+Route::prefix('payment')->name('payment.')->group(function () {
+    Route::get('/', [PaymentController::class, 'index'])->name('index');
+    Route::get('/create/{id}', [PaymentController::class, 'create'])->name('create');
+    Route::post('/store', [PaymentController::class, 'store'])->name('store');
+    Route::get('/{id}/edit', [PaymentController::class, 'edit'])->name('edit');
+    Route::put('update/{id}', [PaymentController::class, 'update'])->name('update');
+    Route::delete('destroy/{id}', [PaymentController::class, 'destroy'])->name('destroy');
+    Route::get('show/{id}', [PaymentController::class, 'show'])->name('show');
+    Route::get('/getPaymentData', [PaymentController::class, 'getPaymentData'])->name('getPaymentData');
+});
 
 Route::get('/get-districts', [OrganizationController::class, 'getDistricts'])->name('get.districts');
 Route::get('/get-tehsils', [OrganizationController::class, 'getTehsils'])->name('get.tehsils');

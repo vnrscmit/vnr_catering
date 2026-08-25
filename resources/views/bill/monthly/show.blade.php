@@ -679,31 +679,6 @@
         </table>
 
     </div>
-
-
-    <!-- ================= FOOTER ================= -->
-
-    <div class="footer-section">
-
-        <div class="verify-message">
-            <i class="fa-regular fa-circle-question"></i>
-            <span>Please verify all entries before final submission.</span>
-        </div>
-
-
-        <div class="action-buttons">
-            <a href="{{ route('bill-generate.monthly.finalSubmit', $bill->id) }}"><button type="submit" class="btn btn-primary">
-                    <i class="fa fa-save"></i> Final Submit
-                </button>
-            </a>
-            <a href="{{ route('bill-generate.monthly') }}" class="btn btn-secondary">
-                <i class="fa fa-arrow-left"></i> Back
-            </a>
-
-        </div>
-
-    </div>
-
 </div>
 
 @endsection

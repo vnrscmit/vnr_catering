@@ -14,7 +14,10 @@ class BillDetail extends Model
         'user_diets',
         'rate_per_diet',
         'bill_amount',
+        'pre_balance',
         'balance',
+        'payment_flag',
+        'payment_amount',
         'status'
 
     ];
@@ -27,5 +30,10 @@ class BillDetail extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class, 'bill_detail_id');
     }
 }

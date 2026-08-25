@@ -20,10 +20,14 @@ return new class extends Migration
 
             $table->integer('user_diets')->default(0);
 
-            $table->decimal('rate_per_diet', 10, 2)->default(0);
+            $table->integer('rate_per_diet')->default(0);
+            $table->integer('bill_amount')->default(0);
+            $table->integer('balance')->default(0);
+            $table->integer('pre_balance')->default(0);
 
-            $table->decimal('bill_amount', 12, 2)->default(0);
-            $table->decimal('balance', 12, 2)->default(0);
+
+            $table->tinyInteger('payment_flag')->default(0);
+            $table->integer('payment_amount')->default(0);
 
             $table->tinyInteger('status')->default(1);
 

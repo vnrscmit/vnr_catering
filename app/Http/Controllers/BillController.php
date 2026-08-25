@@ -99,6 +99,12 @@ class BillController extends Controller
         title="Delete">
          <i class="fa fa-trash"></i>
     </a>';
+                    } else if ($row->status == 1) {
+                        $buttons .= '<a href="' . route('bill-generate.individual.delete', $row->id) . '"
+        class="btn btn-sm btn-danger me-1"
+        title="Delete">
+         <i class="fa fa-trash"></i>
+    </a>';
                     }
 
                     return '<div class="d-flex" style="gap: 2px;">' . $buttons . '</div>';
@@ -442,9 +448,6 @@ class BillController extends Controller
         }
     }
 
-
-
-
     // In your controller
     public function getUsersByDepartment($departmentId)
     {
@@ -678,24 +681,30 @@ class BillController extends Controller
                 ->addColumn('action', function ($row) {
                     $buttons = '';
 
-                    $buttons .= '<a href="' . route('bill-generate.individual.show', $row->id) . '"
+                    $buttons .= '<a href="' . route('bill-generate.monthly.show', $row->id) . '"
         class="btn btn-sm btn-info me-1"
         title="View">
         <i class="fa fa-eye"></i>
     </a>';
 
                     if ($row->status == 2 || $row->status == 0) {
-                        $buttons .= '<a href="' . route('bill-generate.individual.edit', $row->id) . '"
+                        $buttons .= '<a href="' . route('bill-generate.monthly.edit', $row->id) . '"
         class="btn btn-sm btn-warning me-1"
         title="Edit">
         <i class="fa fa-edit"></i>
     </a>';
 
 
-                        $buttons .= '<a href="' . route('bill-generate.individual.delete', $row->id) . '"
+                        $buttons .= '<a href="' . route('bill-generate.monthly.delete', $row->id) . '"
         class="btn btn-sm btn-danger me-1"
         title="Delete">
          <i class="fa fa-trash"></i>
+    </a>';
+                    } else if ($row->status == 1) {
+                        $buttons .= '<a href="' . route('payment.create', $row->id) . '"
+        class="btn btn-sm btn-danger me-1"
+        title="Payment">
+      <i class="fa fa-money-bill-wave"></i>
     </a>';
                     }
 
@@ -739,6 +748,37 @@ class BillController extends Controller
             return redirect()->back()->with('error', 'No calendar found for previous month.');
         }
 
+        $previousStartformat = Carbon::parse($previousStart)->startOfMonth()->format('Y-m');
+
+        $checkIndividual = Bill::where('generate_month', $previousStartformat)->where('type', 'Individual')->where('status', 2)->count();
+
+        if ($checkIndividual > 0) {
+            return redirect()->back()->with('error', 'One or more individual settlement are pending so please delete or final submit than generate monthly bill.');
+        }
+
+        $monthlyBill = Bill::where('generate_month', $previousStartformat)
+            ->where('type', 'Monthly')
+            ->whereIn('status', [1, 2])
+            ->first();
+
+        if ($monthlyBill) {
+
+            $monthName = Carbon::parse($previousStart . '-01')->format('F Y');
+
+            if ($monthlyBill->status == 2) {
+                return redirect()->back()->with(
+                    'error',
+                    'Monthly Bill for ' . $monthName . ' is already generated and its pending. Please delete or edit the existing bill.'
+                );
+            }
+
+            if ($monthlyBill->status == 1) {
+                return redirect()->back()->with(
+                    'error',
+                    'Monthly bill for ' . $monthName . ' has already been generated.'
+                );
+            }
+        }
 
         // Total Calculation
         $totalMonthDays = $calendarIds->count();
@@ -754,10 +794,47 @@ class BillController extends Controller
 
         $presentCountAll = $totalMonthDaysMeal - $dietCountAbsent;
 
+        // Individual Settlement
+        $previousMonth = Carbon::now()->subMonth()->startOfMonth()->format('Y-m');
+        $individualSettlementDiet = Bill::where('generate_month', $previousMonth)->where('status', 1)->sum('total_diets') ?? 0;
+
+        $allSettlementIds = Bill::where('generate_month', $previousMonth)->where('status', 1)->pluck('user_id');
+
+
+        // Member Calculation
+        $allMemberIds = UserLocation::where('user_locations.location_id', $locationId)
+            ->join('users', 'users.id', '=', 'user_locations.user_id')
+            ->where('users.role', '=', 'Member')
+            ->where('president_flag', 0)
+            ->whereNotIn('users.id', $allSettlementIds)
+            ->distinct()
+            ->pluck('user_locations.user_id');
+
+        $memberDietCountAbsent = AttendanceAbsent::whereIn('calendar_id', $calendarIds)
+            ->where('location_id', $locationId)
+            ->whereIn('user_id', $allMemberIds)
+            ->where('absent_flag', 1)
+            ->count();
+
+        $allUserLocationMember = UserLocation::where('user_locations.location_id', $locationId)
+            ->join('users', 'users.id', '=', 'user_locations.user_id')
+            ->where('users.role', '=', 'Member')
+            ->where('users.president_flag', 0)
+            ->whereNotIn('users.id', $allSettlementIds)
+            ->distinct('user_id')
+            ->count('user_id');
+
+        $totalMonthDaysMealMember = $allUserLocationMember * $totalMonthDays;
+
+        $presentCountMember = $totalMonthDaysMealMember - $memberDietCountAbsent;
+
+
         // Non Member Calculation
         $allNonMemberIds = UserLocation::where('user_locations.location_id', $locationId)
             ->join('users', 'users.id', '=', 'user_locations.user_id')
             ->where('users.role', '=', 'Non Member')
+            ->where('president_flag', 0)
+            ->whereNotIn('users.id', $allSettlementIds)
             ->distinct()
             ->pluck('user_locations.user_id');
 
@@ -771,7 +848,9 @@ class BillController extends Controller
         $allUserLocationNonMember = UserLocation::where('user_locations.location_id', $locationId)
             ->join('users', 'users.id', '=', 'user_locations.user_id')
             ->where('users.role', '=', 'Non Member')
-            ->distinct('user_id')
+            ->distinct('user_locations.user_id')
+            ->whereNotIn('users.id', $allSettlementIds)
+            ->where('users.president_flag', 0)
             ->count('user_id');
 
         $totalMonthDaysMeal =  ($allUserLocationNonMember *  $totalMonthDays);
@@ -785,7 +864,6 @@ class BillController extends Controller
         $presidentCountAll = 0;
 
         if ($presidentId) {
-
             $presidentAbsent = AttendanceAbsent::whereIn('calendar_id', $calendarIds)
                 ->where('user_id', $presidentId)
                 ->where('absent_flag', 1)
@@ -797,10 +875,9 @@ class BillController extends Controller
         $guestCount = Guest::whereIn('calendar_id', $calendarIds)->where('location_id', $locationId)
             ->sum('guest_count');
 
-        $previousMonth = Carbon::now()->subMonth()->startOfMonth()->format('Y-m');
-        $individualSettlementDiet = Bill::where('generate_month', $previousMonth)->where('status', 1)->sum('total_diets') ?? 0;
 
-        $totalDiets = $presentCountAll + $presidentCountAll + $guestCount;
+
+        $totalDiets = $presentCountMember + $presidentCountAll + $guestCount + $individualSettlementDiet + $presentCountNonMember;
 
         $netChargeableDiet = $totalDiets - ($presidentCountAll + $guestCount + $individualSettlementDiet + $presentCountNonMember);
 
@@ -837,7 +914,6 @@ class BillController extends Controller
         ]);
     }
 
-
     public function monthlyStore(Request $request)
     {
         DB::beginTransaction();
@@ -871,7 +947,6 @@ class BillController extends Controller
 
             // Generate bill number
             $billNumber = $this->generateBillNumber($locationShortCode);
-        
 
             // Create main monthly bill
             $monthlyBill = Bill::create([
@@ -937,6 +1012,10 @@ class BillController extends Controller
                     return redirect()->back()->with('error', 'User not found with ID: ' . $userId);
                 }
 
+                if ($user->president_flag == 1) {
+                    continue;
+                }
+
                 if ($user->role == 'Member') {
                     $this->createMemberBill($userId, $monthlyBill, $locationId, $previousMonth, $rateMaster);
                 } elseif ($user->role == 'Non Member') {
@@ -966,6 +1045,253 @@ class BillController extends Controller
                 ->withInput();
         }
     }
+
+
+
+    public function monthlyUserList($id)
+    {
+        $bill = Bill::with('details', 'details.user')->where('id', $id)->first();
+        $bill->details = $bill->details
+            ->sortBy(fn($detail) => $detail->user?->first_name)
+            ->values();
+        return view('bill.monthly.user_list', compact('bill'));
+    }
+    public function monthlyEdit($id)
+    {
+        $authUser = Auth::user();
+
+        // Check if user has permission
+        if ($authUser->role !== 'Canteen Administrator') {
+            return redirect()->back()->with('error', 'You do not have permission to edit bills.');
+        }
+
+        // Find the bill
+        $bill = Bill::where('id', $id)->first();
+
+        if (!$bill) {
+            return redirect()->back()->with('error', 'Bill not found.');
+        }
+
+        // Check if bill is submitted (status != draft)
+        if ($bill->status == 1) {
+            return redirect()->back()->with('error', 'Submitted bills cannot be editable.');
+        }
+
+        try {
+            // Calculate totals (if needed)
+            // You might want to calculate these values from the bill data
+            $totalDiets = $bill->total_diets ?? 0;
+            $individualSettlementDiet = $bill->individual_set_diet ?? 0;
+            $guestDiet = $bill->guest_diet ?? 0;
+            $nonMemberDiet = $bill->non_member_diet ?? 0;
+            $presidentDiet = $bill->president_diet ?? 0;
+            $netChargeableDiet = $bill->net_chargeable_diet ?? 0;
+
+            // Expense values
+            $individualExpense = $bill->individual_expenses ?? 0;
+            $guestExpense = $bill->guest_expenses ?? 0;
+            $nonMemberExpenses = $bill->non_member_expenses ?? 0;
+            $totalExpenses = $bill->total_expenses ?? 0;
+
+            return view('bill.monthly.edit', compact(
+                'bill',
+                'totalDiets',
+                'individualSettlementDiet',
+                'guestDiet',
+                'nonMemberDiet',
+                'presidentDiet',
+                'netChargeableDiet',
+                'individualExpense',
+                'guestExpense',
+                'nonMemberExpenses',
+                'totalExpenses'
+            ));
+        } catch (\Exception $e) {
+            \Log::error('Error edit bill: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Error edit bill: ' . $e->getMessage());
+        }
+    }
+
+    public function monthlyUpdate(Request $request, $id)
+    {
+        $authUser = Auth::user();
+
+        // Check if user has permission
+        if ($authUser->role !== 'Canteen Administrator') {
+            return redirect()->back()->with('error', 'You do not have permission to update bills.');
+        }
+
+        // Find the existing bill first
+        $existingBill = Bill::find($id);
+
+        if (!$existingBill) {
+            return redirect()->back()->with('error', 'Bill not found.');
+        }
+
+        // Check if bill is already submitted
+        if ($existingBill->status == 1) {
+            return redirect()->back()->with('error', 'Submitted bills cannot be updated.');
+        }
+
+        // Validate request
+        $validated = $request->validate([
+            'generate_month' => 'required|date_format:Y-m',
+            'bill_date' => 'required|date',
+            'bill_no' => 'required',
+            'total_diets' => 'required|integer|min:0',
+            'individual_settlement_diet' => 'required|integer|min:0',
+            'guest_diet' => 'required|integer|min:0',
+            'non_member_diet' => 'required|integer|min:0',
+            'president_diet' => 'required|integer|min:0',
+            'net_chargeable_diet' => 'required|integer|min:0',
+            'total_expenses' => 'required|numeric|min:0',
+            'individual_expenses' => 'required|numeric|min:0',
+            'guest_expenses' => 'required|numeric|min:0',
+            'net_monthly_expenses' => 'required|numeric|min:1',
+            'non_member_expenses' => 'required|numeric|min:1',
+            'per_diet_calculation' => 'required|numeric|min:1',
+            'per_diet_calculation_manual' => 'required|numeric|min:1',
+        ]);
+
+        // Get location details
+        $locationId = $authUser->location_id;
+        $locationShortCode = Location::where('id', $locationId)->value('short_code');
+        $previousMonth = $validated['generate_month'];
+
+        try {
+            DB::beginTransaction();
+
+            // Delete existing bill details
+            BillDetail::where('bill_id', $id)->delete();
+
+            // Update the existing bill instead of creating new one
+            $existingBill->update([
+                'type' => 'Monthly',
+                'generate_date' => $request->bill_date,
+                'generate_month' => $request->generate_month,
+                'calendar_id' => 0,
+                'bill_no' => $validated['bill_no'],
+                'bill_date' => $validated['bill_date'],
+                'total_diets' => $validated['total_diets'],
+                'individual_set_diet' => $validated['individual_settlement_diet'],
+                'president_diet' => $validated['president_diet'],
+                'guest_diet' => $validated['guest_diet'],
+                'non_member_diet' => $validated['non_member_diet'],
+                'net_chargeable_diet' => $validated['net_chargeable_diet'],
+                'total_expenses' => $validated['total_expenses'],
+                'guest_expenses' => $validated['guest_expenses'],
+                'non_member_expenses' => $validated['non_member_expenses'],
+                'individual_expenses' => $validated['individual_expenses'],
+                'net_monthly_expenses' => $validated['net_monthly_expenses'],
+                'per_diet_calculation' => $validated['per_diet_calculation_manual'],
+                'per_diet_calculation_auto' => $validated['per_diet_calculation'],
+                'status' => 2, // Draft status
+                'charge_date' => $validated['bill_date'],
+                'balance' => 0,
+            ]);
+
+            // Update rate master
+            $previousStart = Carbon::parse($previousMonth)->startOfMonth();
+
+            RateMaster::where('location_id', $locationId)
+                ->whereDate('effective_from_date', $previousStart->format('Y-m-d'))
+                ->where('status', 1)
+                ->update(['member_rate' => $validated['per_diet_calculation_manual']]);
+
+            // Get all users for this location
+            $allUserIds = UserLocation::where('location_id', $locationId)
+                ->distinct()
+                ->pluck('user_id');
+
+            // Exclude users who already have settlement for this month
+            $alreadySettlementIds = Bill::whereIn('user_id', $allUserIds)
+                ->where('generate_month', $previousMonth)
+                ->where('id', '!=', $id) // Exclude current bill
+                ->pluck('user_id');
+
+            $remainingUserIds = $allUserIds->diff($alreadySettlementIds)->values();
+
+            $rateMaster = RateMaster::where('location_id', $locationId)
+                ->whereDate('effective_from_date', $previousStart->format('Y-m-d'))
+                ->where('status', 1)
+                ->first();
+
+            if (!$rateMaster) {
+                DB::rollBack();
+                return redirect()->back()->with('error', 'Rate master not found for ' . $previousStart->format('F Y'));
+            }
+
+            // Generate bills for each user
+            foreach ($remainingUserIds as $userId) {
+                $user = User::find($userId);
+
+                if (!$user) {
+                    DB::rollBack();
+                    return redirect()->back()->with('error', 'User not found with ID: ' . $userId);
+                }
+
+                if ($user->president_flag == 1) {
+                    continue;
+                }
+
+                if ($user->role == 'Member') {
+                    $this->createMemberBill($userId, $existingBill, $locationId, $previousMonth, $rateMaster);
+                } elseif ($user->role == 'Non Member') {
+                    $this->createNonMemberBill($userId, $existingBill, $locationId, $previousMonth, $rateMaster);
+                }
+            }
+
+            DB::commit();
+
+            return redirect()
+                ->route('bill-generate.monthly.user_list', $existingBill->id)
+                ->with('success', 'Monthly bill updated successfully with user-wise entries.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error updating monthly bill: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Error updating bill: ' . $e->getMessage());
+        }
+    }
+    public function monthlyDelete($id)
+    {
+        $authUser = Auth::user();
+
+        // Check if user has permission
+        if ($authUser->role !== 'Canteen Administrator') {
+            return redirect()->back()->with('error', 'You do not have permission to delete bills.');
+        }
+
+        // Find the bill
+        $bill = Bill::where('id', $id)->first();
+
+        if (!$bill) {
+            return redirect()->back()->with('error', 'Bill not found.');
+        }
+
+        // Check if bill is submitted (status != draft)
+        if ($bill->status == 1) {
+            return redirect()->back()->with('error', 'Submitted bills cannot be deleted.');
+        }
+
+        try {
+            // Delete BillDetail first (foreign key constraint)
+            $billDetailDeleted = BillDetail::where('bill_id', $id)->delete();
+
+            // Delete Bill
+            $billDeleted = $bill->delete();
+
+            if ($billDeleted) {
+                return redirect()->back() // Update route name as needed
+                    ->with('success', 'Bill and its details deleted successfully.');
+            } else {
+                return redirect()->back()->with('error', 'Failed to delete bill.');
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error deleting bill: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Error deleting bill: ' . $e->getMessage());
+        }
+    }
+
 
     private function createMemberBill($userId, $monthlyBill, $locationId, $previousMonth, $rateMaster)
     {
@@ -1081,13 +1407,6 @@ class BillController extends Controller
         }
     }
 
-    public function monthlyUserList($id)
-    {
-        $bill = Bill::with('details', 'details.user')->where('id', $id)->first();
-
-        return view('bill.monthly.user_list', compact('bill'));
-    }
-
     /**
      * Generate a unique bill number
      */
@@ -1119,5 +1438,21 @@ class BillController extends Controller
         }
 
         return $locationShortCode . '/' . $financialYear . '/' . $newNumber;
+    }
+
+    public function monthlyFinalSubmit($id)
+    {
+        Bill::where('id', $id)->update(['status' => 1]);
+
+        return redirect()->route('bill-generate.monthly')->with('success', 'Mpnthly Bill Final Submit Successfully');
+    }
+
+    public function monthlyShow($id)
+    {
+        $bill = Bill::with('details', 'details.user')->where('id', $id)->first();
+        $bill->details = $bill->details
+            ->sortBy(fn($detail) => $detail->user?->first_name)
+            ->values();
+        return view('bill.monthly.show', compact('bill'));
     }
 }
