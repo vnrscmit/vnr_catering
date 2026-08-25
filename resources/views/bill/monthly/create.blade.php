@@ -180,17 +180,14 @@
                                                 readonly>
                                         </td>
                                     </tr>
-
                                 </table>
-
                             </div>
-
 
                             <div class="col-md-6">
                                 <table class="table table-bordered">
 
                                     <tr>
-                                        <th>Total Expense <span class="text-danger">*</span></th>
+                                        <th>Total Monthly Expense <span class="text-danger">*</span></th>
                                         <td class="text-end">
                                             <input type="text"
                                                 name="total_expenses"

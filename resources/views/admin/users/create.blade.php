@@ -557,7 +557,7 @@
                             <button type="submit" class="btn btn-primary">
                                 <i class="fa fa-save"></i> Submit
                             </button>
-                            <button type="reset" class="btn" onclick="resetFormWithSweetAlert()" style="background-color: #117a8b; border-color: #10707f; color: white;">
+                            <button type="reset" class="btn" onclick="resetFormWithSweetAlert()" style="background-color: #F6C842; border-color: #F6C842; color: white;">
                                 <i class="fa fa-undo"></i> Reset
                             </button>
                             <a href="{{ route('admin.users.index') }}" class="btn btn-secondary">

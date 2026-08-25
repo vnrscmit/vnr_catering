@@ -30,6 +30,8 @@ class Bill extends Model
         'net_monthly_expenses',
         'per_diet_calculation',
         'per_diet_calculation_auto',
+        'payment_flag',
+        'total_payment_amount',
         'balance',
         'remarks',
         'status'
