@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Models\CompanyParameter;
 use App\Models\User;
 use App\Models\Order;
+use App\Models\UserEvent;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -21,6 +22,7 @@ use App\Models\DayStatus;
 use Carbon\Carbon;
 use App\Models\DailyMenu;
 use App\Models\Guest;
+use App\Models\LocationEvent;
 use App\Models\MultipleLocation;
 use Illuminate\Support\Facades\DB;
 
@@ -36,24 +38,51 @@ class AdminController extends Controller
         $this->shareOrderStatistics();
     }
 
-    public function index($locationId = null)
+    public function index($locationId = null, $eventId = null)
     {
         $UserData = Auth::user();
         if ($locationId === null) {
             $locationId = $UserData->location_id;
         }
 
-
         if (!$locationId) {
             return redirect()->route('admin.dashboard')
                 ->with('error', 'The selected location was not found.');
         }
 
+        if ($eventId === null) {
+            $eventId = UserEvent::where('user_id', $UserData->id)->value('event_id');
+        }
+
+        if (!$eventId) {
+            return redirect()->route('admin.dashboard')
+                ->with('error', 'The selected event was not found.');
+        }
+
+        if ($UserData->role == 'Member' || $UserData->role == 'Non Member') {
+            $eventIds = UserEvent::where('user_id', $UserData->id)->pluck('event_id')->toArray();
+
+            $eventList = LocationEvent::with('event')
+                ->where('location_id', $UserData->location_id)
+                ->whereIn('event_id', $eventIds)
+                ->where('status', 1)
+                ->get()
+                ->pluck('event.name', 'event.id');
+        } else if ($UserData->role == 'Canteen Administrator' || $UserData->role == 'Canteen Incharge') {
+
+            $eventList = LocationEvent::with('event')
+                ->where('location_id', $UserData->location_id)
+                ->where('status', 1)
+                ->get()
+                ->pluck('event.name', 'event.id');
+        }
+
+
         $formattedSalesData = [];
         $today = Carbon::today()->format('Y-m-d');
         $dayStatus = DayStatus::where('date', $today)->where('location_id', $locationId)->first();
 
-        $companyParameter = CompanyParameter::where('location_id', $locationId)->where('status', 1)->first();
+        $companyParameter = CompanyParameter::where('location_id', $locationId)->where('event_id', $eventId)->where('status', 1)->first();
 
         if (!$companyParameter) {
             return redirect()->route('admin.dashboard')->with('error', 'Company parameter is not configured for your location.');
@@ -87,6 +116,7 @@ class AdminController extends Controller
         //     : [];
 
         $dailyMenuList = DailyMenu::with('items.menu', 'items.submenu')
+            ->where('event_id', $eventId)
             ->where('calendar_id', $dayStatus->id)
             ->where('location_id', $locationId)
             ->where('menu_date', $today)
@@ -100,7 +130,7 @@ class AdminController extends Controller
             'Roti'            => 5,
             'Rice'            => 6,
             'Accompaniments'  => 7,
-             'Dessert'         => 8,
+            'Dessert'         => 8,
         ];
 
         $todayMenu = $dailyMenuList
@@ -117,23 +147,24 @@ class AdminController extends Controller
             ->values()
             ->toArray()
             : [];
-            
-            $checkDate = DayStatus::where('id', $UserData->start_calendar_id)->value('date');
- 
-$startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locationId)->value('date');
 
-$upComingDays = DayStatus::where('day_statuses.date', '>', $today);
+        $checkDate = DayStatus::where('id', $UserData->start_calendar_id)->value('date');
+
+        $startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locationId)->value('date');
+
+        $upComingDays = DayStatus::where('day_statuses.date', '>', $today);
 
 
-if ($startDate) {
-    $upComingDays->where('day_statuses.date', '>=', $startDate);
-}
+        if ($startDate) {
+            $upComingDays->where('day_statuses.date', '>=', $startDate);
+        }
 
         $upComingDays = $upComingDays
-            ->leftJoin('attendance_absents', function ($join) use ($locationId) {
+            ->leftJoin('attendance_absents', function ($join) use ($locationId, $eventId) {
                 $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
                     ->where('attendance_absents.user_id', auth()->id())
                     ->where('attendance_absents.location_id', $locationId)
+                    ->where('attendance_absents.event_id', $eventId)
                     ->where('attendance_absents.absent_flag', 1);
             })
             ->select(
@@ -149,10 +180,11 @@ if ($startDate) {
             ->get();
 
         $todaysAttendance =  DayStatus::where('day_statuses.date', '=', $today)
-            ->leftJoin('attendance_absents', function ($join) use ($locationId) {
+            ->leftJoin('attendance_absents', function ($join) use ($locationId, $eventId) {
                 $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
                     ->where('attendance_absents.user_id', auth()->id())
                     ->where('attendance_absents.location_id', $locationId)
+                    ->where('attendance_absents.event_id', $eventId)
                     ->where('attendance_absents.absent_flag', 1);
             })
             ->select(
@@ -172,7 +204,7 @@ if ($startDate) {
         $officeguestCount   = 0;
 
         // Guest Calculation
-        $query = Guest::where('calendar_id', $dayStatus->id)->where('location_id', $locationId);
+        $query = Guest::where('calendar_id', $dayStatus->id)->where('location_id', $locationId)->where('event_id', $eventId);
         if ($UserData->personal_guest_flag == 1) {
             $guestAllowed = 1;
             if ($UserData->role == 'Admin' || $UserData->role == 'Super Admin') {
@@ -229,9 +261,15 @@ if ($startDate) {
         $usersAttendance = [];
 
         if (($UserData->role == 'Canteen Incharge' || $UserData->role == 'Canteen Administrator')) {
+
+            $eventUserIds = UserEvent::where('event_id', $eventId)
+                ->pluck('user_id')
+                ->toArray();
+
             $singleLinkedUserIds = User::where('location_id', $locationId)
                 ->whereNotNull('start_calendar_id')
                 ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge', 'Canteen Administrator'])
+                ->whereIn('id', $eventUserIds)
                 ->where('status', 1)
                 ->pluck('id');
 
@@ -239,6 +277,7 @@ if ($startDate) {
                 ->where('multiple_locations.location_id', $locationId)
                 ->where('users.status', 1)
                 ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge', 'Canteen Administrator'])
+                ->whereIn('users.id', $eventUserIds)
                 ->pluck('multiple_locations.user_id');
 
             $allLinkedUserIds = $singleLinkedUserIds
@@ -246,15 +285,13 @@ if ($startDate) {
                 ->unique()
                 ->values();
 
-
-
             $totalUsers = $allLinkedUserIds->count();
-
 
             $absentCount = AttendanceAbsent::where('calendar_id', $dayStatus->id)
                 ->where('location_id', $locationId)
                 ->where('absent_flag', 1)
                 ->whereIn('user_id', $allLinkedUserIds)
+                ->where('event_id', $eventId)
                 ->count();
 
 
@@ -262,12 +299,14 @@ if ($startDate) {
 
             $officialGuestCount = Guest::where('calendar_id', $dayStatus->id)
                 ->where('location_id',  $locationId)
+                ->where('event_id', $eventId)
                 ->where('guest_type', 'Office Guest')
                 ->sum('guest_count');
 
             $personalGuestCount = Guest::where('calendar_id', $dayStatus->id)
                 ->where('location_id',  $locationId)
                 ->where('guest_type', 'Personal Guest')
+                ->where('event_id', $eventId)
                 ->sum('guest_count');
 
 
@@ -279,9 +318,10 @@ if ($startDate) {
                 ->join('departments', 'users.department_id', '=', 'departments.id')
                 ->whereNotNull('users.start_calendar_id')
                 ->where('users.start_calendar_id', '<=', $dayStatus->id)
-                ->leftJoin('attendance_absents', function ($join) use ($dayStatus, $locationId) {
+                ->leftJoin('attendance_absents', function ($join) use ($dayStatus, $locationId, $eventId) {
                     $join->on('users.id', '=', 'attendance_absents.user_id')
                         ->where('attendance_absents.location_id', $locationId)
+                        ->where('attendance_absents.event_id', $eventId)
                         ->where('attendance_absents.calendar_id', $dayStatus->id);
                 })
                 ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge', 'Canteen Administrator'])
@@ -290,6 +330,7 @@ if ($startDate) {
                     'users.first_name',
                     'users.role',
                     'departments.name as department_name',
+                    DB::raw("'{$eventId}' as event_id"),
                     DB::raw('COALESCE(attendance_absents.absent_flag, 0) as absent_flag'),
                     DB::raw("
             CASE
@@ -305,10 +346,10 @@ if ($startDate) {
         }
 
 
-            $startDate = DayStatus::where('id', $UserData->start_calendar_id)->value('date');
+        $startDate = DayStatus::where('id', $UserData->start_calendar_id)->value('date');
         $summaryCurrentMonth = Null;
         $allLocations = [];
-            if ((($UserData->role == 'Member' || $UserData->role == 'Non Member') &&  $startDate)) {
+        if ((($UserData->role == 'Member' || $UserData->role == 'Non Member') &&  $startDate)) {
 
             $currentStart = Carbon::now()->startOfMonth();
             $currentEnd   = Carbon::now()->endOfMonth();
@@ -319,9 +360,10 @@ if ($startDate) {
                 $currentEnd->format('Y-m-d')
             ])
                 ->where('day_statuses.date', '>=', $startDate)
-                ->leftJoin('attendance_absents', function ($join)  use ($UserData, $locationId) {
+                ->leftJoin('attendance_absents', function ($join)  use ($UserData, $locationId, $eventId) {
                     $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
                         ->where('attendance_absents.location_id', $locationId)
+                        ->where('attendance_absents.event_id', $eventId)
                         ->where('attendance_absents.user_id', $UserData->id);
                 })
                 ->where('date', '<=', Carbon::today()->toDateString())
@@ -385,15 +427,17 @@ if ($startDate) {
                 ->unique('location_id')
                 ->values();
         }
-        
-               $mainCardLock = false;
+
+        $mainCardLock = false;
         if ($UserData->role == 'Member' || $UserData->role == 'Non Member') {
             if ($today < $startDate) {
                 $mainCardLock = true;
             }
         }
-    
-     
+
+        $selectedEventId = $eventId;
+
+
         return view('admin.dashboard', compact(
             'formattedSalesData',
             'todayMenu',
@@ -418,6 +462,9 @@ if ($startDate) {
             'summaryCurrentMonth',
             'allLocations',
             'mainCardLock',
+            'eventList',
+            'selectedEventId',
+            'locationId'
         ));
     }
 
@@ -435,49 +482,49 @@ if ($startDate) {
         return view('admin.edit-my-profile', compact('user'));
     }
 
-  public function updateMyProfile(UpdateProfileRequest $request)
-{
-    $user = Auth::User();
-    $validated = $request->validated();
+    public function updateMyProfile(UpdateProfileRequest $request)
+    {
+        $user = Auth::User();
+        $validated = $request->validated();
 
-    $user->first_name = $validated['first_name'];
-    $user->last_name = $validated['first_name'];
-    $user->email = $validated['email'];
-    $user->mobile = $validated['mobile'];
+        $user->first_name = $validated['first_name'];
+        $user->last_name = $validated['first_name'];
+        $user->email = $validated['email'];
+        $user->mobile = $validated['mobile'];
 
-    // Handle profile photo upload from cropped image
-    if ($request->filled('cropped_image')) {
-        // Delete old profile photo if exists
-        if ($user->profile_picture) {
-            Storage::disk('public')->delete('profile-picture/' . $user->profile_picture);
+        // Handle profile photo upload from cropped image
+        if ($request->filled('cropped_image')) {
+            // Delete old profile photo if exists
+            if ($user->profile_picture) {
+                Storage::disk('public')->delete('profile-picture/' . $user->profile_picture);
+            }
+
+            // Get the base64 image data
+            $imageData = $request->input('cropped_image');
+
+            // Remove the data URL prefix (data:image/jpeg;base64,)
+            $imageData = str_replace('data:image/jpeg;base64,', '', $imageData);
+            $imageData = str_replace(' ', '+', $imageData);
+
+            // Generate a unique filename
+            $fileName = time() . '_' . uniqid() . '.jpg';
+
+            // Decode and save the image
+            $imageDecoded = base64_decode($imageData);
+
+            // Store the image
+            Storage::disk('public')->put('profile-picture/' . $fileName, $imageDecoded);
+
+            // Update user's profile picture
+            $user->profile_picture = $fileName;
         }
 
-        // Get the base64 image data
-        $imageData = $request->input('cropped_image');
-        
-        // Remove the data URL prefix (data:image/jpeg;base64,)
-        $imageData = str_replace('data:image/jpeg;base64,', '', $imageData);
-        $imageData = str_replace(' ', '+', $imageData);
-        
-        // Generate a unique filename
-        $fileName = time() . '_' . uniqid() . '.jpg';
-        
-        // Decode and save the image
-        $imageDecoded = base64_decode($imageData);
-        
-        // Store the image
-        Storage::disk('public')->put('profile-picture/' . $fileName, $imageDecoded);
-        
-        // Update user's profile picture
-        $user->profile_picture = $fileName;
+        // Save the updated user data
+        $user->save();
+
+        // Return success message
+        return back()->with('success', 'Profile updated successfully.');
     }
-
-    // Save the updated user data
-    $user->save();
-
-    // Return success message
-    return back()->with('success', 'Profile updated successfully.');
-}
 
 
     public function showChangePasswordForm()

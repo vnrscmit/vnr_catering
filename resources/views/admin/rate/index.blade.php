@@ -54,8 +54,8 @@
                 },
 
                 {
-                    data: 'location',
-                    name: 'location_name'
+                    data: 'event',
+                    name: 'event'
                 },
 
 
@@ -193,12 +193,12 @@
                             <tr>
 
                                 <th width="5%">#</th>
-                                <th>Location</th>
+                                <th>Event</th>
                                 <th>Effective Month</th>
                                 <th>Member Rate</th>
                                 <th>Non Member Rate</th>
                                 <th>Guest Rate</th>
-                                  <th>Minimum Day Rate</th>
+                                <th>Minimum Day Rate</th>
                                 <th width="10%">Feast Day</th>
                                 <th>Status</th>
                                 <th width="15%">Action</th>

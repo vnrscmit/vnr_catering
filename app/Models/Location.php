@@ -22,4 +22,9 @@ class Location extends Model
     {
         return $this->belongsTo(Organization::class);
     }
+
+    public function locationEvents()
+    {
+        return $this->hasMany(LocationEvent::class, 'location_id');
+    }
 }

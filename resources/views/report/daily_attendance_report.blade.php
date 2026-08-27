@@ -25,7 +25,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.3/css/buttons.dataTables.min.css">
 
-
 <script src="https://cdn.datatables.net/buttons/2.2.3/js/dataTables.buttons.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.2.3/js/buttons.print.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.2.3/js/buttons.html5.min.js"></script>
@@ -33,24 +32,19 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
 
-
 <script type="text/javascript">
     $(function() {
         var table = $('.data-table').DataTable({
             processing: true,
             serverSide: true,
-            ajax: "{{ route('locations.index') }}",
-            columns: [{
+            ajax: "{{ route('admin.roles.index') }}",
+            columns: [
+                {
                     data: 'DT_RowIndex',
                     name: 'DT_RowIndex',
                     orderable: false,
                     searchable: false
                 },
-                {
-                    data: 'organization_name',
-                    name: 'organization_name'
-                },
-
                 {
                     data: 'name',
                     name: 'name'
@@ -59,12 +53,6 @@
                     data: 'short_code',
                     name: 'short_code'
                 },
-
-                {
-                    data: 'event_name',
-                    name: 'event_name'
-                },
-
                 {
                     data: 'status',
                     name: 'status'
@@ -82,8 +70,8 @@
                 [10, 25, 50, 100, "All"]
             ],
             order: [
-                [4, 'desc']
-            ], // Sort by created_at desc
+                [1, 'asc']
+            ], // Sort by name asc
             language: {
                 search: "Search:",
                 lengthMenu: "Show _MENU_ entries",
@@ -97,7 +85,6 @@
                 'excel',
                 'pdf'
             ],
-
         });
     });
 
@@ -106,14 +93,14 @@
         $('#deleteModal').on('show.bs.modal', function(event) {
             var button = $(event.relatedTarget);
             var id = button.data('id');
-            var actionUrl = "{{ route('locations.destroy', ':id') }}".replace(':id', id);
+            var actionUrl = "{{ route('admin.roles.destroy', ':id') }}".replace(':id', id);
             $('#deleteForm').attr('action', actionUrl);
         });
     });
 </script>
 @endpush
 
-@section('title', 'Location Master')
+@section('title', 'Role Master')
 @section('content')
 
 <div class="main-panel">
@@ -122,23 +109,19 @@
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
-                    <i class="fa fa-map-marker-alt me-2"></i> Location Master
-                </h5>
-                <a href="{{ route('locations.create') }}" class="btn btn-primary btn-sm">
-                    <i class="fa fa-plus"></i> Add Location
+                <h5 class="card-title mb-0">Role Master - {{ auth()->user()->location->name ?? 'N/A' }}</h5>
+                <a href="{{ route('admin.roles.create') }}" class="btn btn-primary btn-sm">
+                    <i class="fa fa-plus"></i> Add Role
                 </a>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-bordered data-table" id="departments-table">
+                    <table class="table table-bordered data-table" id="roles-table">
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th>Organization</th>
-                                <th>Location</th>
+                                <th>Name</th>
                                 <th>Short Code</th>
-                                <th>Event</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -157,7 +140,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        Are you sure you want to delete this department?
+                        Are you sure you want to delete this role?
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

@@ -24,7 +24,6 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-
   $(document).ready(function() {
 
     $('#member_filter, #attendance_filter').on('change', function() {
@@ -63,6 +62,7 @@
     attendanceStatus = currentButton.data('status');
 
     $('#override_user_id').val($(this).data('user-id'));
+    $('#override_event_id').val($(this).data('event-id'));
     $('#userName').text($(this).data('user-name'));
     $('#departmentName').text($(this).data('department'));
     $('#overrideRemark').val('');
@@ -111,6 +111,7 @@
       data: {
         _token: "{{ csrf_token() }}",
         user_id: button.data('user-id'),
+        event_id: button.data('event-id'),
         absent_flag: button.data('status')
       },
 
@@ -166,6 +167,7 @@
       data: {
         _token: "{{ csrf_token() }}",
         user_id: $('#override_user_id').val(),
+        event_id: $('#override_event_id').val(),
         absent_flag: attendanceStatus,
         remarks: $('#overrideRemark').val()
       },
@@ -457,22 +459,42 @@
     <!-- ============ ADD THIS ============ -->
     <div class="row">
       <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center flex-wrap">
-          <div>
-            <h4 class="card-title mb-0 fw-bold">
+        <div class="d-flex align-items-center flex-nowrap">
+
+          {{-- Dashboard --}}
+          <div class="flex-shrink-0 me-4">
+            <h3 class="card-title mb-0 fw-bold">
               <i class="fa fa-calendar-check-o me-2 text-primary"></i>
               Dashboard
-            </h4>
+            </h3>
           </div>
-          <div class="d-flex align-items-center gap-3 mt-2 mt-sm-0">
+
+          {{-- Events --}}
+          <div class="d-flex align-items-center justify-content-center flex-grow-1" style="gap: 4px;">
+            @foreach($eventList as $eventId => $eventName)
+            <a href="{{ route('admin.dashboard', [
+                        'locationId' => $locationId,
+                        'eventId' => $eventId
+                    ]) }}"
+              class="btn {{ $eventId == $selectedEventId ? 'btn-primary active' : 'btn-outline-primary' }}">
+              {{ $eventName }}
+            </a>
+            @endforeach
+          </div>
+
+          {{-- Date --}}
+          <div class="d-flex align-items-center gap-3 flex-shrink-0 ms-4">
             <div class="text-end">
-              <div class="fw-bold" style="font-size: 1.1rem; color: #2c3e50;">
+              <div class="fw-bold" style="font-size: 1.3rem; color: #2c3e50;">
                 {{ \Carbon\Carbon::now()->format('l, F j, Y') }}
               </div>
             </div>
-            <div class="vr" style="height: 30px;"></div>
+
+            <div class="vr" style="height: 35px;"></div>
           </div>
+
         </div>
+
         <hr class="my-2">
       </div>
     </div>
@@ -570,13 +592,14 @@
       </div>
       @endif
 
+
       <!-- Second Condition  -->
       @if(
       $UserData->role !== 'Canteen Incharge' &&
       $UserData->role !== 'Super Admin' &&
       $UserData->role !== 'Canteen Administrator'
       )
-         @if(!$mainCardLock)
+      @if(!$mainCardLock)
       <div class="col-12 col-lg-6 mb-4">
         <div class="card lunch-card">
           <div class="card-body">
@@ -609,7 +632,7 @@
             <div class="menu-box mt-3">
               <h6>Today's Menu</h6>
 
-                <div class="row">
+              <div class="row">
                 @php
                 $half = ceil(count($todayMenu) / 2);
                 $firstColumn = array_slice($todayMenu, 0, $half);
@@ -644,7 +667,7 @@
                   @endforeach
                 </div>
               </div>
-              
+
             </div>
 
             @else
@@ -703,7 +726,7 @@
                     <i class="fa fa-utensils me-2"></i>
                     {{ $menu['name'] }}
                     @if($menu['special_flag'] == 1)
-                       <i class="fa fa-star text-warning" title="Special"></i>
+                    <i class="fa fa-star text-warning" title="Special"></i>
                     @endif
                   </div>
                 </div>
@@ -765,7 +788,7 @@
           </div>
         </div>
       </div>
-           @endif
+      @endif
       <!-- ......................................Upcoming days...................................... -->
       <div class="col-12 col-lg-6 mb-4">
         <div class="card upcoming-card">
@@ -1096,6 +1119,7 @@
                         <button
                           class="btn btn-sm attendance-btn {{ $user->absent_flag == 1 ? 'btn-outline-primary' : 'btn-outline-danger' }}"
                           data-user-id="{{ $user->id }}"
+                          data-event-id="{{ $user->event_id }}"
                           data-status="{{ $user->absent_flag }}">
                           {{ $user->absent_flag == 1 ? 'Mark Present' : 'Mark Absent' }}
                         </button>
@@ -1111,6 +1135,7 @@
                           data-bs-toggle="modal"
                           data-bs-target="#overrideModal"
                           data-user-id="{{ $user->id }}"
+                          data-event-id="{{ $user->event_id }}"
                           data-user-name="{{ $user->first_name }}"
                           data-department="{{ $user->department_name }}"
                           data-status="{{ $user->absent_flag }}">
@@ -1205,6 +1230,8 @@
         <div class="modal-body">
 
           <input type="hidden" id="override_user_id">
+          <input type="hidden" id="override_event_id">
+
 
           <!-- User Card -->
 
@@ -1279,7 +1306,11 @@
 
 <script>
   // Pass data from Laravel to JavaScript properly
-  let remainingSeconds = {{ isset($remainingSeconds) ? (int)$remainingSeconds : 0 }};
+  let remainingSeconds = {
+    {
+      isset($remainingSeconds) ? (int) $remainingSeconds : 0
+    }
+  };
 
   function updateCountdown() {
     const countdown = document.getElementById('countdown');

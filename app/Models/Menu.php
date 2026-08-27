@@ -9,7 +9,7 @@ class Menu extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['location_id', 'name', 'status'];
+    protected $fillable = ['location_id', 'event_id',  'name', 'status'];
 
     public function subMenus()
     {
@@ -19,5 +19,10 @@ class Menu extends Model
     public function location()
     {
         return $this->belongsTo(Location::class, 'location_id');
+    }
+
+    public function event()
+    {
+        return $this->belongsTo(EventMaster::class, 'event_id');
     }
 }

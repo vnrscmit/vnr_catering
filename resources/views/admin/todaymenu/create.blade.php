@@ -24,6 +24,41 @@
             allowClear: true
         });
     });
+
+    $(document).ready(function() {
+        $('#event_id').on('change', function() {
+            var eventId = $(this).val();
+
+            if (eventId === '') {
+                $('#menuTableContainer').html('<div class="text-center py-4"><i class="fa fa-info-circle"></i> Please select an event to load menus</div>');
+                return;
+            }
+
+            // Show loading
+            $('#menuTableContainer').html('<div class="text-center py-4"><i class="fa fa-spinner fa-spin"></i> Loading menus...</div>');
+
+            // AJAX request
+            $.ajax({
+                url: "{{ route('admin.get-menus-by-event') }}",
+                type: "GET",
+                data: {
+                    event_id: eventId,
+                    location_id: $('select[name="location_id"]').val() // If you have location select
+                },
+                success: function(response) {
+                    if (response.status) {
+                        $('#menuTableContainer').html(response.html);
+                    } else {
+                        $('#menuTableContainer').html('<div class="alert alert-danger">' + response.message + '</div>');
+                    }
+                },
+                error: function(xhr) {
+                    $('#menuTableContainer').html('<div class="alert alert-danger">Error loading menus. Please try again.</div>');
+                    console.log(xhr.responseText);
+                }
+            });
+        });
+    });
 </script>
 @endpush
 
@@ -43,23 +78,25 @@
         {{-- Link Locations --}}
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">Add Today Menu</h5>
+                <h5 class="card-title mb-0">Add Today Menu - {{ auth()->user()->location->name ?? 'N/A' }}</h5>
             </div>
             <div class="card-body">
 
                 <form action="{{ route('today-menu.store') }}" method="POST">
                     @csrf
 
-                    <div class="row mb-3">
+                    <div class="row mb-4">
+
+                        <input type="hidden" value="{{ $locationId }}" name="location_id">
 
                         <div class="col-md-4">
-                            <label><strong>Select Date <span class="text-danger">*</span></strong></label>
+                            <label>Select Date <span class="text-danger">*</span></label>
 
                             <input
                                 type="date"
                                 name="menu_date"
                                 class="form-control @error('menu_date') is-invalid @enderror"
-                                value="{{ old('menu_date') }}"
+                            value="{{ date('Y-m-d') }}"
                                 min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}"
                                 max="{{ \Carbon\Carbon::today()->addDays(6)->format('Y-m-d') }}"
                                 required>
@@ -70,30 +107,27 @@
                         </div>
 
                         <div class="col-md-4">
-                            <label><strong>Select Location <span class="text-danger">*</span></strong></label>
+                            <label class="form-label">
+                                Event <span class="text-danger">*</span>
+                            </label>
+                            <select name="event_id" id="event_id" class="form-control" required>
+                                <option value="">Select Event</option>
 
-                            <select name="location_id"
-                                class="form-control @error('location_id') is-invalid @enderror"
-                                required>
-                                <option value="">-- Select Location --</option>
-
-                                @foreach($locations as $location)
-                                <option value="{{ $location->id }}" selected
-                                    {{ old('location_id') == $location->id ? 'selected' : '' }}>
-                                    {{ $location->name }}
+                                @foreach($eventList as $eventId => $eventName)
+                                <option value="{{ $eventId }}">
+                                    {{ $eventName }}
                                 </option>
                                 @endforeach
-
                             </select>
 
-                            @error('location_id')
+                            @error('event_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
 
                         <!-- Guest Allowed -->
                         <div class="col-md-4">
-                            <label><strong>Feast Day<span class="text-danger"> *</span></strong></label>
+                            <label>Feast Day<span class="text-danger"> *</span></label>
                             <div class="d-flex align-items-center gap-4">
                                 <div class="form-check me-4">
                                     <input class="form-check-input"
@@ -126,14 +160,15 @@
 
                     </div>
 
-                    <table class="table table-bordered">
+                    <div id="menuTableContainer"></div>
+
+                    <!-- <table class="table table-bordered">
                         <thead class="table-light">
                             <tr>
                                 <th width="30%">Menu Section</th>
                                 <th width="70%">Menu Items</th>
                             </tr>
                         </thead>
-
                         <tbody>
                             @foreach($menus as $menu)
                             <tr>
@@ -141,7 +176,6 @@
                                     <strong>{{ $menu->name }}</strong>
                                     <input type="hidden" name="menu_id[]" value="{{ $menu->id }}">
                                 </td>
-
                                 <td>
                                     <div class="row">
                                         @foreach($menu->submenus as $submenu)
@@ -154,14 +188,11 @@
                                                     id="submenu_{{ $menu->id }}_{{ $submenu->id }}"
                                                     class="form-check-input submenu-checkbox"
                                                     data-menu-id="{{ $menu->id }}"
-                                                    data-submenu-id="{{ $submenu->id }}"
-                                                    {{ (old('submenu_id.'.$menu->id) && in_array($submenu->id, old('submenu_id.'.$menu->id))) ? 'checked' : '' }}>
+                                                    data-submenu-id="{{ $submenu->id }}">
                                                 <label
                                                     class="form-check-label"
                                                     for="submenu_{{ $menu->id }}_{{ $submenu->id }}">
                                                     {{ $submenu->name }}
-
-                                                    {{-- Show special indicator if submenu is special --}}
                                                     @if($submenu->special_flag == 1)
                                                     <i class="fa fa-star text-warning" title="Special"></i>
                                                     @endif
@@ -174,48 +205,48 @@
                             </tr>
                             @endforeach
                         </tbody>
-                    </table>
+                    </table> -->
 
 
-<div class="d-flex justify-content-end mt-2">
-    <div class="mb-3">
+                    <div class="d-flex justify-content-end mt-2">
+                        <div class="mb-3">
 
-        <button type="draft"
-                class="btn me-2"
-                id="draftBtn"
-                name="action"
-                value="2"
-                style="width: 135px;
+                            <button type="draft"
+                                class="btn me-2"
+                                id="draftBtn"
+                                name="action"
+                                value="2"
+                                style="width: 135px;
                        height: 42px;
                        border: none;
                        border-radius: 6px;
                        font-weight: 600;
                        background: linear-gradient(135deg, #d96f00, #cc6900);
                        color: #fff;">
-            <i class="fa fa-file"></i> Save Draft
-        </button>
+                                <i class="fa fa-file"></i> Save Draft
+                            </button>
 
-        <button type="submit"
-                class="btn btn-primary me-2"   name="action"
-                value="1"
-                style="width: 130px;
+                            <button type="submit"
+                                class="btn btn-primary me-2" name="action"
+                                value="1"
+                                style="width: 130px;
                        height: 42px;
                        border-radius: 6px;
                        font-weight: 600;">
-            <i class="fa fa-file"></i> Publish
-        </button>
+                                <i class="fa fa-file"></i> Publish
+                            </button>
 
-        <a href="{{ route('today-menu.index') }}"
-           class="btn btn-secondary"
-           style="width: 130px;
+                            <a href="{{ route('today-menu.index') }}"
+                                class="btn btn-secondary"
+                                style="width: 130px;
                   height: 42px;
                   border-radius: 6px;
                   font-weight: 600;">
-            <i class="fa fa-arrow-left"></i> Back
-        </a>
+                                <i class="fa fa-arrow-left"></i> Back
+                            </a>
 
-    </div>
-</div>
+                        </div>
+                    </div>
                 </form>
 
             </div>

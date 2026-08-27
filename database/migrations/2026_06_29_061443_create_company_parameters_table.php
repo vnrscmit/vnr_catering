@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
 
             $table->unsignedBigInteger('location_id');
+            $table->unsignedBigInteger('event_id');
 
             $table->time('attendance_out_time');
             $table->time('canteen_start_time');
@@ -33,9 +34,6 @@ return new class extends Migration
             $table->boolean('status')->default(1);
 
             $table->timestamps();
-
-            // One parameter record per location
-            $table->unique('location_id');
 
             // Optional Foreign Key
             /*

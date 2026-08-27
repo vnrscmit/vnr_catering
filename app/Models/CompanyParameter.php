@@ -8,6 +8,7 @@ class CompanyParameter extends Model
 {
     protected $fillable = [
         'location_id',
+        'event_id',
         'attendance_out_time',
         'lunch_out_time',
         'max_day_show',

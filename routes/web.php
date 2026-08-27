@@ -339,6 +339,8 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
         Route::get('/today-menu-create', [MenuController::class, 'createTodayMenu'])
             ->name('today-menu.create');
 
+        Route::get('/get-menus-by-event', [MenuController::class, 'getMenusByEvent'])->name('admin.get-menus-by-event');
+
         Route::post('/today-menu-store', [MenuController::class, 'storeTodayMenu'])
             ->name('today-menu.store');
 
@@ -396,13 +398,15 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
     Route::get('/monthly', [BillController::class, 'monthly'])->name('bill-generate.monthly');
     Route::get('/monthly/create', [BillController::class, 'monthlyCreate'])->name('bill-generate.monthly.create');
     Route::post('/monthly/store', [BillController::class, 'monthlyStore'])->name('bill-generate.monthly.store');
-        Route::get('/monthly/show/{id}', [BillController::class, 'monthlyShow'])->name('bill-generate.monthly.show');
+    Route::get('/monthly/show/{id}', [BillController::class, 'monthlyShow'])->name('bill-generate.monthly.show');
     Route::get('/monthly/user-list/{id}', [BillController::class, 'monthlyUserList'])->name('bill-generate.monthly.user_list');
     Route::get('/monthly/edit/{id}', [BillController::class, 'monthlyEdit'])->name('bill-generate.monthly.edit');
     Route::put('/monthly/update/{id}', [BillController::class, 'monthlyUpdate'])->name('bill-generate.monthly.update');
     Route::get('/monthly/delete/{id}', [BillController::class, 'monthlyDelete'])->name('bill-generate.monthly.delete');
     Route::get('/monthly/final-submit/{id}', [BillController::class, 'monthlyFinalSubmit'])->name('bill-generate.monthly.finalSubmit');
-    Route::get('/{id?}', [AdminController::class, 'index'])->name('admin.dashboard');
+  // In web.php
+Route::get('/{locationId?}/{eventId?}', [AdminController::class, 'index'])
+    ->name('admin.dashboard');
 
     Route::post('/attendance/update', [AttendanceController::class, 'update'])->name('attendance.update');
 });

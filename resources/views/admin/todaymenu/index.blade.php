@@ -56,8 +56,8 @@
                 },
 
                 {
-                    data: 'location',
-                    name: 'location'
+                    data: 'event',
+                    name: 'event'
                 },
 
                 {
@@ -66,7 +66,7 @@
                     orderable: false,
                     searchable: false
                 },
-                     {
+                {
                     data: 'status',
                     name: 'status',
                     orderable: false,
@@ -82,7 +82,7 @@
 
             pageLength: 10,
 
-         
+
 
             dom: 'lBfrtip',
 
@@ -127,9 +127,9 @@
                             <tr>
                                 <th>#</th>
                                 <th>Date</th>
-                                  <th>Location</th>
+                                <th>Event</th>
                                 <th>Menu Items</th>
-                                      <th>Status</th>
+                                <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>

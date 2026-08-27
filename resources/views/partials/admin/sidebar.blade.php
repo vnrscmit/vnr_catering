@@ -89,7 +89,7 @@
               </a>
             </li>
             <li class="nav-item {{ request()->route()->named('company-parameters.*') ? 'active-nav' : '' }}">
-              <a class="nav-link" href="{{ route('company-parameters.index') }}">
+              <a class="nav-link" href="{{ route('company-parameters.create') }}">
                 <i class="fa fa-cogs menu-icon"></i>
                 <span class="menu-title">Canteen Parameter</span>
               </a>
@@ -171,7 +171,7 @@
               </a>
             </li>
             <li class="nav-item {{ request()->route()->named('company-parameters.*') ? 'active-nav' : '' }}">
-              <a class="nav-link" href="{{ route('company-parameters.index') }}">
+              <a class="nav-link" href="{{ route('company-parameters.create') }}">
                 <i class="fa fa-cogs menu-icon"></i>
                 <span class="menu-title">Canteen Parameter</span>
               </a>

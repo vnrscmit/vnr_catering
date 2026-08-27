@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\MultipleLocation;
 use App\Models\User;
+use App\Models\UserEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
@@ -18,7 +19,7 @@ class UserController extends Controller
         return view('auth.login');
     }
 
-   public function apilogin(Request $request)
+    public function apilogin(Request $request)
     {
         // Validate request
         $request->validate([
@@ -79,14 +80,25 @@ class UserController extends Controller
                 ->merge($multiLocationData)
                 ->unique('location_id')
                 ->values();
-                
-                   if ($user->start_calendar_id == null) {
+
+            if ($user->start_calendar_id == null) {
                 return response()->json([
                     'status' => false,
                     'message' => 'Your start Date is not set please contact to your canteen incharge',
                     'data' => null
                 ], 500);
             }
+
+            $userEventData = UserEvent::with('event:id,name')
+                ->where('user_id', $user->id)
+                ->get(['event_id'])
+                ->map(function ($item) {
+                    return [
+                        'event_id'   => $item->event_id,
+                        'event_name' => $item->event?->name,
+                    ];
+                })
+                ->values();
 
             return response()->json([
                 'status' => true,
@@ -109,10 +121,11 @@ class UserController extends Controller
                     'profile_picture' => $user->profile_picture,
                     'multilocation_flag' => $user->multilocation_flag,
                     'personal_guest_flag' => $user->personal_guest_flag,
-                       'generate_code' => $user->generate_code,
+                    'generate_code' => $user->generate_code,
                     'token' => $token,
                 ],
                 'multiLocationData' => $allLocations,
+                'userEvent' =>  $userEventData
 
             ], 200);
         } catch (\Exception $e) {
@@ -259,8 +272,8 @@ class UserController extends Controller
             'message' => 'Password changed successfully.',
         ]);
     }
-    
-     public function generatePin(Request $request)
+
+    public function generatePin(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'user_id' => 'required|exists:users,id',

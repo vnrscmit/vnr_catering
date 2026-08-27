@@ -11,6 +11,8 @@ use App\Models\DailyMenu;
 use App\Models\Location;
 use Carbon\Carbon;
 use Yajra\DataTables\Facades\DataTables;
+use App\Http\Controllers\Traits\AdminViewSharedDataTrait;
+use App\Models\LocationEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -19,15 +21,30 @@ use Illuminate\Validation\Rule;
 class MenuController extends Controller
 {
 
+    use AdminViewSharedDataTrait;
+
+    public function __construct()
+    {
+        $this->shareAdminViewData();
+    }
+
+
     public function index(Request $request)
     {
-
         $user = Auth::user();
-
         if ($user->role == 'Canteen Administrator') {
-            $locationList = Location::where('status', 1)->where('id',  $user->location_id)->get();
+            $locationId = Location::where('status', 1)->where('id',  $user->location_id)->value('id');
+            $eventList = LocationEvent::with('event')
+                ->where('location_id', $user->location_id)
+                ->where('status', 1)
+                ->get()
+                ->pluck('event.name', 'event.id');
         } elseif ($user->role == 'Super Admin') {
-            $locationList = Location::where('status', 1)->get();
+            $locationId = Location::where('status', 1)->where('id',  $user->location_id)->value('id');
+            $eventList = LocationEvent::with('event')
+                ->where('status', 1)
+                ->get()
+                ->pluck('event.name', 'event.id');
         } else {
             return redirect()->back()->with('error', 'You do not have permission to access this page.');
         }
@@ -36,32 +53,34 @@ class MenuController extends Controller
 
             // $query = Menu::with('subMenus', 'location')
             //     ->orderBy('name', 'ASC');
-            $query = Menu::with('subMenus', 'location')
+            $query = Menu::with('subMenus', 'location', 'event')
                 ->orderByRaw("
+        (SELECT seq_no FROM event_masters WHERE event_masters.id = menus.event_id) ASC,
         CASE
-            WHEN FIELD(name,
+            WHEN FIELD(menus.name,
                 'Starters',
                 'Refresher',
                 'Vegetable',
                 'Dal',
                 'Roti',
                 'Rice',
-                'Accompaniments'
+                'Accompaniments',
                 'Dessert'
             ) = 0 THEN 999
-            ELSE FIELD(name,
+            ELSE FIELD(menus.name,
                 'Starters',
                 'Refresher',
                 'Vegetable',
                 'Dal',
                 'Roti',
                 'Rice',
-                'Accompaniments'
+                'Accompaniments',
                 'Dessert'
             )
         END
     ")
-                ->orderBy('name');
+                ->orderBy('menus.name');
+
 
             if ($user->role == 'Canteen Administrator') {
                 $query->where('location_id', $user->location_id);
@@ -96,8 +115,8 @@ class MenuController extends Controller
         Add New
     </a>';
                 })
-                ->addColumn('location', function ($row) {
-                    return $row->location->name ?? '';
+                ->addColumn('event', function ($row) {
+                    return $row->event->name ?? '';
                 })
                 ->addColumn('status', function ($row) {
                     return $row->status == 1
@@ -113,17 +132,18 @@ class MenuController extends Controller
             data-bs-target="#editMenuModal"
             data-id="' . $row->id . '"
             data-location_id="' . $row->location_id . '"
+             data-event_id="' . $row->event_id . '"
             data-name="' . e($row->name) . '"
             data-status="' . $row->status . '">
             <i class="fa fa-edit"></i>
         </button>';
                 })
 
-                ->rawColumns(['submenus', 'status', 'action', 'location'])
+                ->rawColumns(['submenus', 'status', 'action', 'location', 'event'])
                 ->make(true);
         }
 
-        return view('admin.menu.index', compact('locationList'));
+        return view('admin.menu.index', compact('eventList', 'locationId'));
     }
 
     public function store(Request $request)
@@ -136,11 +156,13 @@ class MenuController extends Controller
                 }),
             ],
             'location_id' => 'required|exists:locations,id',
+            'event_id' => 'required|exists:event_masters,id',
             'status' => 'required'
         ]);
 
         Menu::create([
             'location_id' => $request->location_id,
+            'event_id' => $request->event_id,
             'name' => $request->name,
             'status' => $request->status,
         ]);
@@ -167,64 +189,69 @@ class MenuController extends Controller
         return redirect()->route('admin.menus.index')->with('success', 'Menu deleted successfully!');
     }
 
-  public function menuListToday(Request $request)
-{
-    $user = Auth::user();
+    public function menuListToday(Request $request)
+    {
+        $user = Auth::user();
 
-    if ($request->ajax()) {
+        if ($request->ajax()) {
 
-        $query = DailyMenu::with([
-            'location',
-            'items.menu',
-            'items.submenu'
-        ]);
+            $query = DailyMenu::with([
+                'location',
+                'items.menu',
+                'items.submenu',
+                'event',
+            ]);
 
-        // Role Wise Filter
-        if ($user->role == 'Canteen Incharge' || $user->role == 'Canteen Administrator') {
-            $query->where('location_id', $user->location_id);
-        }
+            // Role Wise Filter
+            if ($user->role == 'Canteen Incharge' || $user->role == 'Canteen Administrator') {
+                $query->where('location_id', $user->location_id);
+            }
 
-        $data = $query->orderBy('menu_date', 'desc')->get();
+            $data = $query->select('daily_menus.*')
+                ->join('event_masters', 'daily_menus.event_id', '=', 'event_masters.id')
+                ->orderBy('event_masters.seq_no', 'asc')
+                ->orderBy('daily_menus.menu_date', 'desc')
+                ->get();
 
-        return DataTables::of($data)
-            ->addIndexColumn()
+            return DataTables::of($data)
+                ->addIndexColumn()
 
-            ->addColumn('location', function ($row) {
-                return $row->location->name ?? '-';
-            })
+                ->addColumn('event', function ($row) {
+                    return $row->event->name ?? '-';
+                })
 
-            ->editColumn('menu_date', function ($row) {
-                return Carbon::parse($row->menu_date)->format('d-m-Y');
-            })
+                ->editColumn('menu_date', function ($row) {
+                    return Carbon::parse($row->menu_date)->format('d-m-Y');
+                })
 
-            ->addColumn('menu_items', function ($row) {
-                if ($row->items->isNotEmpty()) {
-                    $submenuNames = [];
-                    foreach ($row->items as $item) {
-                        if ($item->submenu) {
-                            $name = $item->submenu->name;
-                            if ($item->submenu->special_flag == 1) {
-                                $name .= ' <i class="fa fa-star text-warning" title="Special"></i>';
+                ->addColumn('menu_items', function ($row) {
+                    if ($row->items->isNotEmpty()) {
+                        $submenuNames = [];
+                        foreach ($row->items as $item) {
+                            if ($item->submenu) {
+                                $name = $item->submenu->name;
+                                if ($item->submenu->special_flag == 1) {
+                                    $name .= ' <i class="fa fa-star text-warning" title="Special"></i>';
+                                }
+                                $submenuNames[] = $name;
                             }
-                            $submenuNames[] = $name;
                         }
+                        $submenus = implode(', ', $submenuNames);
+                    } else {
+                        $submenus = '<span class="text-muted">No items</span>';
                     }
-                    $submenus = implode(', ', $submenuNames);
-                } else {
-                    $submenus = '<span class="text-muted">No items</span>';
-                }
 
-                return $submenus;
-            })
+                    return $submenus;
+                })
 
-            ->addColumn('action', function ($row) {
+                ->addColumn('action', function ($row) {
 
-                // Past date => No Edit/Delete
-                if (Carbon::parse($row->menu_date)->lt(Carbon::today())) {
-                    return '<span class="text-muted">Past Date</span>';
-                }
+                    // Past date => No Edit/Delete
+                    if (Carbon::parse($row->menu_date)->lt(Carbon::today())) {
+                        return '<span class="text-muted">Past Date</span>';
+                    }
 
-                return '
+                    return '
                 <a href="' . route('today-menu.edit', $row->id) . '" class="btn btn-warning btn-sm">
                     <i class="fa fa-edit"></i>
                 </a>
@@ -237,20 +264,20 @@ class MenuController extends Controller
                     data-id="' . $row->id . '">
                     <i class="fa fa-trash"></i>
                 </button>';
-            })
-            
-              ->addColumn('status', function ($row) {
+                })
+
+                ->addColumn('status', function ($row) {
                     return $row->status == 1
                         ? '<span class="badge bg-primary">Publish</span>'
                         : '<span class="badge bg-warning">Draft</span>';
                 })
 
-            ->rawColumns(['menu_items', 'action', 'status']) // <-- Added 'menu_items' here
-            ->make(true);
-    }
+                ->rawColumns(['menu_items', 'action', 'status']) // <-- Added 'menu_items' here
+                ->make(true);
+        }
 
-    return view('admin.todaymenu.index');
-}
+        return view('admin.todaymenu.index');
+    }
 
     public function createTodayMenu()
     {
@@ -260,14 +287,20 @@ class MenuController extends Controller
             abort(403, 'This action is not available for this role.');
         }
         if ($user->role == 'Canteen Incharge' || $user->role == 'Canteen Administrator') {
-            $locations = Location::where('status', 1)
-                ->where('id', $user->location_id)
-                ->orderBy('name')
-                ->get();
+            $locationId = Location::where('status', 1)->where('id',  $user->location_id)->value('id');
+
+            $eventList = LocationEvent::with('event')
+                ->where('location_id', $user->location_id)
+                ->where('status', 1)
+                ->get()
+                ->pluck('event.name', 'event.id');
         } else {
-            $locations = Location::where('status', 1)
-                ->orderBy('name')
-                ->get();
+            $locationId = Location::where('status', 1)->where('id',  $user->location_id)->value('id');
+
+            $eventList = LocationEvent::with('event')
+                ->where('status', 1)
+                ->get()
+                ->pluck('event.name', 'event.id');
         }
 
         $menus = Menu::with('subMenus')
@@ -298,7 +331,7 @@ class MenuController extends Controller
     ")
             ->get();
 
-        return view('admin.todaymenu.create', compact('menus', 'locations'));
+        return view('admin.todaymenu.create', compact('menus', 'locationId', 'eventList'));
     }
     public function storeTodayMenu(Request $request)
     {
@@ -308,6 +341,7 @@ class MenuController extends Controller
             'submenu_id.*' => 'array',
             'submenu_id.*.*' => 'exists:sub_menus,id',
             'location_id' => 'required|exists:locations,id',
+            'event_id' => 'required|exists:event_masters,id',
             'special_flag' => 'required|in:0,1',
             'action' => 'required|in:1,2',
         ]);
@@ -326,7 +360,7 @@ class MenuController extends Controller
             ]);
         }
 
-        $checkExistingMenu = DailyMenu::where('menu_date', $request->menu_date)->where('location_id', $request->location_id)->first();
+        $checkExistingMenu = DailyMenu::where('menu_date', $request->menu_date)->where('location_id', $request->location_id)->where('event_id', $request->event_id)->first();
 
         if ($checkExistingMenu) {
             return back()->withErrors([
@@ -337,10 +371,11 @@ class MenuController extends Controller
         $dailyMenu = DailyMenu::create([
             'calendar_id' => $dayStatus->id,
             'location_id' => $request->location_id,
+            'event_id' => $request->event_id,
             'special_flag' => $request->special_flag,
             'menu_date' => $request->menu_date,
             'remarks' => $request->remarks,
-             'status' => $request->action,
+            'status' => $request->action,
             'created_by' => auth()->id(),
         ]);
 
@@ -366,46 +401,55 @@ class MenuController extends Controller
 
         $dailyMenu = DailyMenu::with('items')->findOrFail($id);
 
-        if ($user->role == 'Canteen Incharge' || $user->role == 'Canteen Administrator') {
-            $locations = Location::where('status', 1)
-                ->where('id', $user->location_id)
-                ->orderBy('name')
-                ->get();
+        // Get event list based on user role
+        if ($user->role == 'Canteen Administrator') {
+            $locationId = Location::where('status', 1)->where('id', $user->location_id)->value('id');
+            $eventList = LocationEvent::with('event')
+                ->where('location_id', $user->location_id)
+                ->where('status', 1)
+                ->get()
+                ->pluck('event.name', 'event.id');
+        } elseif ($user->role == 'Super Admin') {
+            $locationId = Location::where('status', 1)->where('id', $user->location_id)->value('id');
+            $eventList = LocationEvent::with('event')
+                ->where('status', 1)
+                ->get()
+                ->pluck('event.name', 'event.id');
         } else {
-            $locations = Location::where('status', 1)
-                ->orderBy('name')
-                ->get();
+            return redirect()->back()->with('error', 'You do not have permission to access this page.');
         }
 
+        // Get menus based on location and event
         $menus = Menu::with('subMenus')
-            ->where('location_id', $user->location_id)
+            ->where('location_id', $dailyMenu->location_id)
+            ->where('event_id', $dailyMenu->event_id)
             ->orderByRaw("
-        CASE
-            WHEN FIELD(name,
-                'Starters',
-                'Refresher',
-                'Vegetable',
-                'Dal',
-                'Roti',
-                'Rice',
-                'Accompaniments',
-                'Dessert'
-            ) = 0 THEN 999
-            ELSE FIELD(name,
-                'Starters',
-                'Refresher',
-                'Vegetable',
-                'Dal',
-                'Roti',
-                'Rice',
-                'Accompaniments',
-                'Dessert'
-            )
-        END
-    ")
+            CASE
+                WHEN FIELD(name,
+                    'Starters',
+                    'Refresher',
+                    'Vegetable',
+                    'Dal',
+                    'Roti',
+                    'Rice',
+                    'Accompaniments',
+                    'Dessert'
+                ) = 0 THEN 999
+                ELSE FIELD(name,
+                    'Starters',
+                    'Refresher',
+                    'Vegetable',
+                    'Dal',
+                    'Roti',
+                    'Rice',
+                    'Accompaniments',
+                    'Dessert'
+                )
+            END
+        ")
             ->get();
-        $selectedSubmenus = [];
 
+        $selectedSubmenus = [];
         foreach ($dailyMenu->items as $item) {
             $selectedSubmenus[$item->menu_id][] = $item->submenu_id;
         }
@@ -414,20 +458,21 @@ class MenuController extends Controller
             'dailyMenu',
             'menus',
             'selectedSubmenus',
-            'locations'
+            'locationId',
+            'eventList'
         ));
     }
-
     public function updateTodayMenu(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
             'location_id' => 'required|exists:locations,id',
+            'event_id' => 'required|exists:event_masters,id',
             'menu_date' => [
                 'required',
                 'date',
                 Rule::unique('daily_menus')
                     ->where(function ($query) use ($request) {
-                        return $query->where('location_id', $request->location_id);
+                        return $query->where('event_id', $request->event_id)->where('location_id', $request->location_id);
                     })
                     ->ignore($id),
             ],
@@ -436,7 +481,7 @@ class MenuController extends Controller
             'submenu_id.*' => 'array',
             'submenu_id.*.*' => 'exists:sub_menus,id',
             'special_flag' => 'required|in:0,1',
-             'action' => 'required|in:1,2',
+            'action' => 'required|in:1,2',
 
 
         ], [
@@ -465,7 +510,7 @@ class MenuController extends Controller
             'menu_date' => $request->menu_date,
             'remarks' => $request->remarks,
             'special_flag' => $request->special_flag,
-              'status' => $request->action,
+            'status' => $request->action,
         ]);
 
         // Delete old items
@@ -487,5 +532,98 @@ class MenuController extends Controller
         return redirect()
             ->route('today-menu.index')
             ->with('success', 'Menu updated successfully.');
+    }
+
+    public function destroyTodayMenu($id)
+    {
+        try {
+            $user = Auth::user();
+
+            // Find the daily menu
+            $dailyMenu = DailyMenu::with('items')->findOrFail($id);
+
+            // Check permissions based on user role
+            if ($user->role == 'Canteen Administrator') {
+                // Only allow deletion if the menu belongs to the user's location
+                if ($dailyMenu->location_id != $user->location_id) {
+                    return redirect()
+                        ->back()
+                        ->with('error', 'You do not have permission to delete this menu.');
+                }
+            } elseif ($user->role == 'Super Admin') {
+                // Super Admin can delete any menu
+                // No additional check needed
+            } else {
+                return redirect()
+                    ->back()
+                    ->with('error', 'You do not have permission to delete this menu.');
+            }
+
+            // Delete related items first
+            $dailyMenu->items()->delete();
+
+            // Delete the daily menu
+            $dailyMenu->delete();
+
+            return redirect()
+                ->back()
+                ->with('success', 'Today\'s menu deleted successfully.');
+        } catch (\Exception $e) {
+            return redirect()
+                ->back()
+                ->with('error', 'Error deleting menu: ' . $e->getMessage());
+        }
+    }
+
+    public function getMenusByEvent(Request $request)
+    {
+        $user = Auth::user();
+        $eventId = $request->event_id;
+        $locationId = $request->location_id ?? $user->location_id;
+
+        // Fetch menus based on event and location
+        $menus = Menu::with('subMenus')
+            ->where('location_id', $locationId)
+            ->where('event_id', $eventId)
+            ->orderByRaw("
+        CASE
+            WHEN FIELD(name,
+                'Starters',
+                'Refresher',
+                'Vegetable',
+                'Dal',
+                'Roti',
+                'Rice',
+                'Accompaniments',
+                'Dessert'
+            ) = 0 THEN 999
+            ELSE FIELD(name,
+                'Starters',
+                'Refresher',
+                'Vegetable',
+                'Dal',
+                'Rice',
+                'Roti',
+                'Accompaniments',
+                'Dessert'
+            )
+        END
+    ")
+            ->get();
+
+        if ($menus->isEmpty()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'No menus found for this event.'
+            ]);
+        }
+
+        // Render the table HTML
+        $html = view('admin.todaymenu.partial.menu_table', compact('menus'))->render();
+
+        return response()->json([
+            'status' => true,
+            'html' => $html
+        ]);
     }
 }

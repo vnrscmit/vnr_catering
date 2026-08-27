@@ -54,8 +54,8 @@
                 },
 
                 {
-                    data: 'location',
-                    name: 'location'
+                    data: 'event',
+                    name: 'event'
                 },
 
                 {
@@ -109,10 +109,12 @@
 
 
     $(document).on('click', '.editMenuBtn', function() {
+        var eventId = $(this).data('event_id');
         $('#edit_id').val($(this).data('id'));
         $('#edit_location_id').val($(this).data('location_id'));
         $('#edit_name').val($(this).data('name'));
         $('#edit_status').val($(this).data('status'));
+        $('#edit_event_id').val(eventId);
 
     });
 
@@ -120,9 +122,6 @@
         e.preventDefault();
 
         let id = $('#edit_id').val();
-
-        console.log(id); // Check this first
-
         $.ajax({
             url: "/admin/menu/" + id,
             type: "POST",
@@ -208,7 +207,7 @@
                         <thead>
                             <tr>
                                 <th width="5%">#</th>
-                                <th width="20%">Location</th>
+                                <th width="20%">Event</th>
                                 <th width="20%">Menu Section</th>
                                 <th width="60%">Menu Items</th>
                                 <th width="10%">Status</th>
@@ -303,17 +302,17 @@
 
                 <div class="modal-body">
 
+                    <input type="hidden" value="{{ $locationId }}" name="location_id">
+
                     <div class="mb-3">
                         <label class="form-label">
-                            Location <span class="text-danger">*</span>
+                            Event <span class="text-danger">*</span>
                         </label>
-
-                        <select name="location_id" class="form-control" required>
-                            <option value="">-- Select Location --</option>
-
-                            @foreach($locationList as $location)
-                            <option value="{{ $location->id }}" selected>
-                                {{ $location->name }}
+                        <select name="event_id" class="form-control" required>
+                            <option value="">Select Event</option>
+                            @foreach($eventList as $eventId => $eventName)
+                            <option value="{{ $eventId }}">
+                                {{ $eventName }}
                             </option>
                             @endforeach
                         </select>
@@ -375,12 +374,17 @@
 
                 <div class="modal-body">
 
+                    <input type="hidden" value="{{ $locationId }}" name="location_id">
+
                     <div class="mb-3">
-                        <label>Location <span class="text-danger">*</span></label>
-                        <select name="location_id" id="edit_location_id" class="form-control">
-                            @foreach($locationList as $location)
-                            <option value="{{ $location->id }}">
-                                {{ $location->name }}
+                        <label class="form-label">
+                            Event <span class="text-danger">*</span>
+                        </label>
+                        <select name="event_id" id="edit_event_id" class="form-control" required>
+                            <option value="">Select Event</option>
+                            @foreach($eventList as $eventId => $eventName)
+                            <option value="{{ $eventId }}">
+                                {{ $eventName }}
                             </option>
                             @endforeach
                         </select>
@@ -403,13 +407,13 @@
 
                 <div class="modal-footer">
                     <button class="btn btn-primary">Update</button>
-                     <button type="button"
-                    class="btn btn-secondary"
-                    data-bs-dismiss="modal">
-                    Cancel
-                </button>
+                    <button type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                        Cancel
+                    </button>
                 </div>
-               
+
 
             </div>
         </form>

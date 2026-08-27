@@ -106,7 +106,7 @@
         // Set initial values for location dropdowns
         var initialDepartmentId = $('#department_id').val();
         var initialLocationId = '{{ $userToEdit->location_id }}';
-        
+
         if (initialDepartmentId) {
             loadLocations(initialDepartmentId, initialLocationId);
         }
@@ -136,7 +136,7 @@
         // Function to load locations
         function loadLocations(departmentId, selectedLocationId) {
             $('#location_id').html('<option value="">Select Location</option>');
-            
+
             if (departmentId) {
                 $.ajax({
                     url: "{{ url('admin/get-location') }}/" + departmentId,
@@ -178,7 +178,7 @@
         $('#password, #password_confirmation').on('keyup', function() {
             var password = $('#password').val();
             var confirmPassword = $('#password_confirmation').val();
-            
+
             if (password.length > 0 || confirmPassword.length > 0) {
                 if (password !== confirmPassword) {
                     $('#password_confirmation').addClass('is-invalid');
@@ -187,34 +187,27 @@
                 }
             }
         });
-       
+
+        // Auto-generate username from first name
+        function generateUsername() {
+            const firstName = $('#first_name').val().trim();
+            if (firstName) {
+                // Generate username: lowercase first name + random number
+                const base = firstName.toLowerCase().replace(/\s+/g, '');
+                const randomNum = Math.floor(100 + Math.random() * 900);
+                const username = base + randomNum;
+                $('#username').val(username);
+            }
+        }
 
         // Trigger username generation on first name change
         $('#first_name').on('input', generateUsername);
 
-
-        // Add username hint
-        $('#username_field').append(`
-            <small class="text-muted">Auto-generates from full name</small>
-        `);
-     
-    });
-
-    // Global functions for button clicks
-    function generateUserCode() {
-        const firstName = $('#first_name').val().trim();
-        if (firstName) {
-            const code = firstName.substring(0, 3).toUpperCase();
-            $('#user_code').val(code);
-        }
-    }
-    
-    
-    
-    $('#generate_code_btn').on('click', function() {
-        let code = Math.floor(1000 + Math.random() * 9000);
-
-        $('#generate_code').val(code);
+        // Generate Code Button
+        $('#generate_code_btn').on('click', function() {
+            let code = Math.floor(1000 + Math.random() * 9000);
+            $('#generate_code').val(code);
+        });
     });
 </script>
 @endpush
@@ -261,7 +254,7 @@
                 <form action="{{ route('admin.users.update', $userToEdit->id) }}" method="POST">
                     @csrf
                     @method('PUT')
-                    
+
                     <div class="row">
                         <!-- Role Dropdown -->
                         <div class="col-md-6 mb-3">
@@ -355,7 +348,7 @@
                             @enderror
                         </div>
 
-                        <!-- Username - NEW FIELD wrapped in div for hiding -->
+                        <!-- Username - wrapped in div for hiding -->
                         <div class="col-md-6 mb-3" id="username_field">
                             <label for="username" class="form-label">Username <span class="text-danger">*</span></label>
                             <input type="text"
@@ -394,7 +387,7 @@
                         <!-- Department Dropdown -->
                         <div class="col-md-6 mb-3">
                             <label for="department_id" class="form-label">Department <span class="text-danger">*</span></label>
-                            <select class="form-control @error('department_id') is-invalid @enderror" id="department_id" name="department_id" required>
+                            <select class="form-control @error('department_id') is-invalid @enderror" id="department_id_change" name="department_id" required>
                                 <option value="">Select Department</option>
                                 @foreach($departments as $department)
                                 <option value="{{ $department->id }}" {{ old('department_id', $userToEdit->department_id) == $department->id ? 'selected' : '' }}>
@@ -432,24 +425,35 @@
                             @enderror
                         </div>
 
-                        <!-- Additional Locations Dropdown -->
+                        <!-- Additional Locations Dropdown (changed to match create page style) -->
                         <div class="col-md-6 mb-3">
-                            <label for="other_location_id" class="form-label">Additional Canteen Locations</label>
-                            <select class="form-control select2 @error('other_location_id') is-invalid @enderror" 
-                                    id="other_location_id" 
-                                    name="other_location_id[]" 
-                                    multiple>
+                            <label class="form-label">
+                                Additional Canteen Locations
+                            </label>
+
+                            <div class="d-flex flex-wrap gap-3">
                                 @foreach($allLocations as $location)
-                                    <option value="{{ $location->id }}" 
-                                        {{ in_array($location->id, old('other_location_id', $otherLocationIds ?? [])) ? 'selected' : '' }}>
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        name="other_location_id[]"
+                                        id="other_location_{{ $location->id }}"
+                                        value="{{ $location->id }}"
+                                        {{ in_array($location->id, old('other_location_id', $otherLocationIds ?? [])) ? 'checked' : '' }}>
+                                    <label
+                                        class="form-check-label ms-1"
+                                        for="other_location_{{ $location->id }}">
                                         {{ $location->name }}
-                                    </option>
+                                    </label>
+                                </div>
                                 @endforeach
-                            </select>
+                            </div>
+
                             @error('other_location_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
+                            <span class="text-danger">{{ $message }}</span>
                             @enderror
-                        </div>  
+                        </div>
 
                         <!-- Security Amount -->
                         <div class="col-md-6 mb-3">
@@ -461,9 +465,10 @@
                                 id="security_amount"
                                 name="security_amount"
                                 value="{{ old('security_amount', $userToEdit->security_amount ?? 0) }}"
-                                step="0.01">
+                                step="0.01"
+                                min="0">
                             @error('security_amount')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
                             @enderror
                         </div>
 
@@ -506,7 +511,7 @@
                         <!-- Password -->
                         <div class="col-md-6 mb-3">
                             <label for="password" class="form-label">
-                                Password 
+                                Password
                                 <small class="text-muted">(Leave blank to keep current password)</small>
                             </label>
                             <input type="password" class="form-control @error('password') is-invalid @enderror" id="password" name="password" maxlength="8" placeholder="Enter new password">
@@ -523,8 +528,8 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
-                        
-                                <!-- Generate Code -->
+
+                        <!-- Generate Code -->
                         <div class="col-md-6 mb-3" id="generate_pin">
                             <label for="generate_code" class="form-label">Generate Code <span class="text-danger">*</span></label>
 
@@ -544,6 +549,38 @@
 
                             @error('generate_code')
                             <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- Events Section - ADDED FROM CREATE PAGE -->
+                        <div class="mb-3 col-6">
+                            <label class="form-label">
+                                Event <span class="text-danger">*</span>
+                            </label>
+
+                            <div class="d-flex flex-wrap gap-3">
+                                @foreach($events as $locationEvent)
+                                @if($locationEvent->event)
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        name="event_ids[]"
+                                        id="event_{{ $locationEvent->event->id }}"
+                                        value="{{ $locationEvent->event->id }}"
+                                        {{ in_array($locationEvent->event->id, old('event_ids', $userEventIds ?? [])) ? 'checked' : '' }}>
+                                    <label
+                                        class="form-check-label"
+                                        for="event_{{ $locationEvent->event->id }}">
+                                        {{ $locationEvent->event->name }}
+                                    </label>
+                                </div>
+                                @endif
+                                @endforeach
+                            </div>
+
+                            @error('event_ids')
+                            <span class="text-danger">{{ $message }}</span>
                             @enderror
                         </div>
 
@@ -648,9 +685,6 @@
                         <div class="mb-3">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fa fa-save"></i> Update
-                            </button>
-                            <button type="button" class="btn" onclick="resetFormWithSweetAlert()" style="background-color: #117a8b; border-color: #10707f; color: white;">
-                                <i class="fa fa-undo"></i> Reset
                             </button>
                             <a href="{{ route('admin.users.index') }}" class="btn btn-secondary">
                                 <i class="fa fa-arrow-left"></i> Back

@@ -8,8 +8,9 @@ class Guest extends Model
 {
     protected $fillable = [
         'guest_type',
-        'department_id', 
+        'department_id',
         'location_id',
+        'event_id',
         'calendar_id',
         'guest_name',
         'guest_count',
@@ -39,5 +40,10 @@ class Guest extends Model
     public function location()
     {
         return $this->belongsTo(Location::class, 'location_id');
+    }
+
+    public function event()
+    {
+        return $this->belongsTo(EventMaster::class, 'event_id');
     }
 }

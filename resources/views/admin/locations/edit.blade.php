@@ -68,6 +68,38 @@
 
                         <div class="mb-3 col-6">
                             <label class="form-label">
+                                Event <span class="text-danger">*</span>
+                            </label>
+
+                            <div class="d-flex flex-wrap me-4">
+
+                                @foreach($events as $event)
+
+                                <div class="form-check me-3">
+
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        name="event_ids[]"
+                                        id="event_{{ $event->id }}"
+                                        value="{{ $event->id }}"
+                                        {{ in_array($event->id, old('event_ids', $selectedEventIds)) ? 'checked' : '' }}>
+
+                                    <label
+                                        class="form-check-label"
+                                        for="event_{{ $event->id }}">
+                                        {{ $event->name }}
+                                    </label>
+                                </div>
+                                @endforeach
+                            </div>
+                            @error('event_ids')
+                            <span class="text-danger">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3 col-6">
+                            <label class="form-label">
                                 Status <span class="text-danger">*</span>
                             </label>
 
@@ -101,7 +133,7 @@
                             @enderror
                         </div>
                     </div>
-                    
+
                     <div class="d-flex justify-content-end">
                         <div class="mb-3">
                             <button type="submit" class="btn btn-primary">

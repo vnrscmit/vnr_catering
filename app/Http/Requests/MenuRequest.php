@@ -15,6 +15,7 @@ class MenuRequest extends FormRequest
     {
         return [
             'location_id' => 'required',
+            'event_id' => 'required',
             'name' => 'required|string|max:255',
             'status' => 'required|string|max:50',
         ];
