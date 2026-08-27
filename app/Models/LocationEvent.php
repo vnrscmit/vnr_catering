@@ -4,24 +4,22 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class DailyMenu extends Model
+class LocationEvent extends Model
 {
+    protected $table = 'location_event';
+
     public $timestamps = true;
+
     protected $fillable = [
-        'calendar_id',
         'location_id',
         'event_id',
-        'special_flag',
-        'menu_date',
-        'remarks',
         'status',
-        'created_by',
     ];
 
-    public function items()
-    {
-        return $this->hasMany(DailyMenuItem::class);
-    }
+    protected $casts = [
+        'timestamp' => 'datetime',
+        'status' => 'integer',
+    ];
 
     public function location()
     {

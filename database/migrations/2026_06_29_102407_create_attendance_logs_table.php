@@ -16,6 +16,7 @@ return new class extends Migration
 
             $table->unsignedBigInteger('calendar_id');
             $table->unsignedBigInteger('user_id');
+             $table->unsignedBigInteger('event_id');
 
             $table->boolean('absent_flag')->default(0);
 

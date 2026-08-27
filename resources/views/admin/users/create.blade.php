@@ -57,7 +57,7 @@
 
 
             // Check if selected role is "Canteen Administration Role"
-             if (roleName.trim() == 'Canteen Administrator') {
+            if (roleName.trim() == 'Canteen Administrator') {
                 // Hide the fields
                 $('#mobile_field').hide();
                 $('#email_field').hide();
@@ -157,8 +157,8 @@
         $('input[name="personal_guest_flag"]').on('change', toggleGuestFields);
         toggleGuestFields();
     });
-    
-           $('#generate_code_btn').on('click', function() {
+
+    $('#generate_code_btn').on('click', function() {
         let code = Math.floor(1000 + Math.random() * 9000);
 
         $('#generate_code').val(code);
@@ -337,7 +337,7 @@
                         <!-- Department Dropdown -->
                         <div class="col-md-6 mb-3">
                             <label for="department_id" class="form-label">Department <span class="text-danger">*</span></label>
-                            <select class="form-control @error('department_id') is-invalid @enderror" id="department_id" name="department_id" required>
+                            <select class="form-control @error('department_id') is-invalid @enderror" id="department_id_change" name="department_id" required>
                                 <option value="">Select Department</option>
                                 @foreach($departments as $department)
                                 <option value="{{ $department->id }}" {{ old('department_id') == $department->id ? 'selected' : '' }}>
@@ -383,14 +383,38 @@
 
                         <!-- Other Location Dropdown -->
                         <div class="col-md-6 mb-3">
-                            <label for="other_location_id" class="form-label">Additional Canteen Locations </label>
-                            <select class="form-control select2 @error('other_location_id') is-invalid @enderror" id="other_location_id" name="other_location_id[]" multiple>
-                                @foreach($locations as $location)
-                                <option value="{{ $location->id }}" {{ in_array($location->id, old('other_location_id', [])) ? 'selected' : '' }}>
-                                    {{ $location->name }}
-                                </option>
+                            <label class="form-label">
+                                Additional Canteen Locations
+                            </label>
+
+                            <div class="d-flex flex-wrap gap-3">
+
+                                @foreach($multiLocations as $location)
+
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        name="other_location_id[]"
+                                        id="other_location_{{ $location->id }}"
+                                        value="{{ $location->id }}"
+                                        {{ in_array($location->id, old('other_location_id', [])) ? 'checked' : '' }}>
+
+                                    <label
+                                        class="form-check-label ms-1"
+                                        for="other_location_{{ $location->id }}">
+                                        {{ $location->name }}
+                                    </label>
+                                </div>
+
                                 @endforeach
-                            </select>
+
+                            </div>
+
+                            @error('other_location_id')
+                            <span class="text-danger">{{ $message }}</span>
+                            @enderror
+
                         </div>
 
                         <!-- Security Amount -->
@@ -438,8 +462,8 @@
                                 </div>
                             </div>
                         </div>
-                        
-                                  <!-- Generate Code -->
+
+                        <!-- Generate Code -->
                         <div class="col-md-6 mb-3" id="generate_pin">
                             <label for="generate_code" class="form-label">Generate Code <span class="text-danger">*</span></label>
 
@@ -489,6 +513,42 @@
                                     </label>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="mb-3 col-6">
+                            <label class="form-label">
+                                Event <span class="text-danger">*</span>
+                            </label>
+
+                            <div class="d-flex flex-wrap gap-3">
+
+                                @foreach($events as $locationEvent)
+
+                                @if($locationEvent->event)
+
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        name="event_ids[]"
+                                        id="event_{{ $locationEvent->event->id }}"
+                                        value="{{ $locationEvent->event->id }}">
+                                    <label
+                                        class="form-check-label"
+                                        for="event_{{ $locationEvent->event->id }}">
+                                        {{ $locationEvent->event->name }}
+                                    </label>
+                                </div>
+
+                                @endif
+
+                                @endforeach
+
+                            </div>
+
+                            @error('event_ids')
+                            <span class="text-danger">{{ $message }}</span>
+                            @enderror
                         </div>
 
                         <!-- Status -->

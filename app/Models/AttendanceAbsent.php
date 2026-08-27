@@ -10,6 +10,7 @@ class AttendanceAbsent extends Model
         'calendar_id',
         'user_id',
         'location_id',
+        'event_id',
         'absent_flag',
         'absent_remarks',
         'override_flag',

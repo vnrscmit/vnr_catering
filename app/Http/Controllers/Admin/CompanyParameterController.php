@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Traits\AdminViewSharedDataTrait;
 use App\Models\CompanyParameterLog;
+use App\Models\LocationEvent;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Exception;
@@ -118,23 +119,46 @@ class CompanyParameterController extends Controller
     {
         $user = Auth::user();
 
+        // Role-based access control
         if (in_array($user->role, ['Member', 'Non Member', 'Canteen Incharge'])) {
             abort(403, 'Canteen Parameter is not available for this role.');
         }
 
+        // Get locations and event data based on user role
         if ($user->role == 'Canteen Administrator') {
             $locations = Location::where('status', 1)
                 ->where('id', $user->location_id)
                 ->orderBy('name')
                 ->get();
-                
+
+            $eventData = LocationEvent::with('event')
+                ->where('location_id', $user->location_id)
+                ->get();
         } else {
             $locations = Location::where('status', 1)
                 ->orderBy('name')
                 ->get();
+            $eventData = LocationEvent::with('event')
+                ->get();
         }
 
-        return view('admin.companysetting.create', compact('locations'));
+        // =============================================
+        // LOAD EXISTING DATA FOR EACH EVENT
+        // =============================================
+        foreach ($eventData as $event) {
+            // Get existing parameter for this location & event
+            $existingParameter = CompanyParameter::where('location_id', $user->location_id)
+                ->where('event_id', $event->event_id)
+                ->where('status', 1) // Only active records
+                ->first();
+
+            // Store the existing data on the event object
+            $event->existing_data = $existingParameter;
+        }
+
+
+
+        return view('admin.companysetting.create', compact('locations', 'eventData'));
     }
 
     public function getByLocation($locationId)
@@ -147,75 +171,214 @@ class CompanyParameterController extends Controller
         ]);
     }
 
+
+    /**
+     * Store a newly created resource or update existing.
+     */
     public function store(Request $request)
     {
-        $user = Auth::user();
-
-        $request->validate([
-            'location_id'          => 'required|exists:locations,id',
-            'attendance_out_time'  => 'required',
-            'canteen_start_time'   => 'required',
-            'canteen_end_time'     => 'required|after:canteen_start_time',
-            'max_day_show'         => 'required|integer|min:1',
-            'min_day'              => 'required|integer|min:0',
-            'security_deposit_applicable' => 'required|in:yes,no',
-            'security_deposit_amount' => 'required_if:security_deposit_applicable,yes|nullable|numeric|min:0',
-        ]);
-
-        DB::beginTransaction();
-
         try {
+            // Validation rules
+            $validator = Validator::make($request->all(), [
+                'location_id' => 'required|exists:locations,id',
+                'event_id' => 'required|exists:event_masters,id',
+                'attendance_out_time' => 'required|date_format:H:i',
+                'canteen_start_time' => 'required|date_format:H:i',
+                'canteen_end_time' => 'required|date_format:H:i|after:canteen_start_time',
+                'max_day_show' => 'required|integer|min:1|max:31',
+                'min_day' => 'required|integer|min:0|max:31',
+                'member_rate' => 'nullable|numeric|min:0',
+                'non_member_rate' => 'nullable|numeric|min:0',
+                'guest_rate' => 'nullable|numeric|min:0',
+                'security_deposit_applicable' => 'required|in:yes,no',
+                'security_deposit_amount' => 'nullable|required_if:security_deposit_applicable,yes|numeric|min:0',
+                'status' => 'boolean',
+            ]);
 
+            // If validation fails
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $user = Auth::user();
+            $locationId = $request->location_id;
+            $eventId = $request->event_id;
+
+            // Get last month's end date for calendar
             $lastDate = Carbon::now()->subMonth()->endOfMonth()->format('Y-m-d');
 
             $calendarId = DayStatus::where('date', $lastDate)
-                ->where('location_id', $request->location_id)
+                ->where('location_id', $locationId)
                 ->value('id');
 
-            // Previous Active Record Inactive
-            CompanyParameter::where('location_id', $request->location_id)
-                ->where('status', 1)
-                ->update([
-                    'status'                  => 0,
-                    'active_till_calendar_id' => $calendarId,
-                    'inactive_user_id'        => $user->id,
-                    'active_till_date'        => Carbon::today()->format('Y-m-d'),
-                ]);
+            DB::beginTransaction();
 
-            // New Record
-            CompanyParameter::create([
-                'location_id'          => $request->location_id,
-                'attendance_out_time'  => $request->attendance_out_time,
-                'lunch_out_time'       => $request->lunch_out_time,
-                'canteen_start_time'   => $request->canteen_start_time,
-                'canteen_end_time'     => $request->canteen_end_time,
-                'max_day_show'         => $request->max_day_show,
-                'min_day'              => $request->min_day,
-                'security_deposit_applicable' => $request->security_deposit_applicable,
-                'security_deposit_amount' => $request->security_deposit_applicable == 'yes'
-                    ? $request->security_deposit_amount
-                    : null,
-                'status'               => 1,
-                'active_till_date'     => null,
-                'active_till_calendar_id' => null,
-                'inactive_user_id'     => null,
-            ]);
+            try {
+                // =============================================
+                // Check if parameter exists for this location & event
+                // =============================================
+                $existingParameter = CompanyParameter::where('location_id', $locationId)
+                    ->where('event_id', $eventId)
+                    ->where('status', 1)
+                    ->first();
 
-            DB::commit();
+                if ($existingParameter) {
+                    // =============================================
+                    // UPDATE EXISTING RECORD
+                    // =============================================
+                    $existingParameter->update([
+                        'attendance_out_time' => $request->attendance_out_time,
+                        'lunch_out_time' => $request->lunch_out_time ?? $existingParameter->lunch_out_time,
+                        'canteen_start_time' => $request->canteen_start_time,
+                        'canteen_end_time' => $request->canteen_end_time,
+                        'max_day_show' => $request->max_day_show,
+                        'min_day' => $request->min_day,
+                        'member_rate' => $request->member_rate ?? 0,
+                        'non_member_rate' => $request->non_member_rate ?? 0,
+                        'guest_rate' => $request->guest_rate ?? 0,
+                        'security_deposit_applicable' => $request->security_deposit_applicable,
+                        'security_deposit_amount' => $request->security_deposit_applicable == 'yes'
+                            ? $request->security_deposit_amount
+                            : null,
+                        'updated_at' => now(),
+                    ]);
 
-            return redirect()
-                ->route('company-parameters.index')
-                ->with('success', 'Company Parameter saved successfully.');
+                    $message = 'Company Parameter updated successfully.';
+                    $parameter = $existingParameter;
+                    $isUpdate = true;
+                } else {
+                    // =============================================
+                    // CHECK FOR INACTIVE RECORD TO REACTIVATE
+                    // =============================================
+                    $inactiveParameter = CompanyParameter::where('location_id', $locationId)
+                        ->where('event_id', $eventId)
+                        ->where('status', 0)
+                        ->first();
+
+                    if ($inactiveParameter) {
+                        // =============================================
+                        // REACTIVATE INACTIVE RECORD
+                        // =============================================
+                        $inactiveParameter->update([
+                            'attendance_out_time' => $request->attendance_out_time,
+                            'lunch_out_time' => $request->lunch_out_time ?? $inactiveParameter->lunch_out_time,
+                            'canteen_start_time' => $request->canteen_start_time,
+                            'canteen_end_time' => $request->canteen_end_time,
+                            'max_day_show' => $request->max_day_show,
+                            'min_day' => $request->min_day,
+                            'member_rate' => $request->member_rate ?? 0,
+                            'non_member_rate' => $request->non_member_rate ?? 0,
+                            'guest_rate' => $request->guest_rate ?? 0,
+                            'security_deposit_applicable' => $request->security_deposit_applicable,
+                            'security_deposit_amount' => $request->security_deposit_applicable == 'yes'
+                                ? $request->security_deposit_amount
+                                : null,
+                            'status' => 1,
+                            'active_till_date' => null,
+                            'active_till_calendar_id' => null,
+                            'inactive_user_id' => null,
+                            'updated_at' => now(),
+                        ]);
+
+                        $message = 'Company Parameter reactivated successfully.';
+                        $parameter = $inactiveParameter;
+                        $isUpdate = true;
+                    } else {
+                        // =============================================
+                        // CREATE NEW RECORD
+                        // =============================================
+                        // First, deactivate any other active records for this location & event
+                        // (This ensures only one active record per location & event)
+                        CompanyParameter::where('location_id', $locationId)
+                            ->where('event_id', $eventId)
+                            ->where('status', 1)
+                            ->update([
+                                'status' => 0,
+                                'active_till_calendar_id' => $calendarId,
+                                'inactive_user_id' => $user?->id,
+                                'active_till_date' => Carbon::today()->format('Y-m-d'),
+                            ]);
+
+                        // Create new parameter
+                        $parameter = CompanyParameter::create([
+                            'location_id' => $locationId,
+                            'event_id' => $eventId,
+                            'attendance_out_time' => $request->attendance_out_time,
+                            'lunch_out_time' => $request->lunch_out_time ?? null,
+                            'canteen_start_time' => $request->canteen_start_time,
+                            'canteen_end_time' => $request->canteen_end_time,
+                            'max_day_show' => $request->max_day_show,
+                            'min_day' => $request->min_day,
+                            'member_rate' => $request->member_rate ?? 0,
+                            'non_member_rate' => $request->non_member_rate ?? 0,
+                            'guest_rate' => $request->guest_rate ?? 0,
+                            'security_deposit_applicable' => $request->security_deposit_applicable,
+                            'security_deposit_amount' => $request->security_deposit_applicable == 'yes'
+                                ? $request->security_deposit_amount
+                                : null,
+                            'status' => 1,
+                            'active_till_date' => null,
+                            'active_till_calendar_id' => null,
+                            'inactive_user_id' => null,
+                        ]);
+
+                        $message = 'Company Parameter created successfully.';
+                        $isUpdate = false;
+                    }
+                }
+
+                DB::commit();
+
+                // Return success response for AJAX
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'status' => 'success',
+                        'message' => $message,
+                        'data' => $parameter,
+                        'is_update' => $isUpdate ?? false
+                    ]);
+                }
+
+                // Return redirect for normal form submission
+                return redirect()
+                    ->route('company-parameters.index')
+                    ->with('success', $message);
+            } catch (\Exception $e) {
+                DB::rollBack();
+
+                // Return error response for AJAX
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Failed to save parameter: ' . $e->getMessage()
+                    ], 500);
+                }
+
+                return redirect()
+                    ->back()
+                    ->withInput()
+                    ->with('error', 'Failed to save parameter: ' . $e->getMessage());
+            }
         } catch (\Exception $e) {
-
-            DB::rollBack();
+            // Return error response for AJAX
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Something went wrong: ' . $e->getMessage()
+                ], 500);
+            }
 
             return redirect()
                 ->back()
                 ->withInput()
-                ->with('error', $e->getMessage());
+                ->with('error', 'Something went wrong: ' . $e->getMessage());
         }
     }
+
 
     public function edit(CompanyParameter $companyParameter)
     {
@@ -256,10 +419,9 @@ class CompanyParameterController extends Controller
         if ($request->ajax()) {
 
             $query = RateMaster::join('locations', 'rate_masters.location_id', '=', 'locations.id')
-                ->select(
-                    'rate_masters.*',
-                    'locations.name as location_name'
-                );
+                ->join('event_masters', 'rate_masters.event_id', '=', 'event_masters.id')
+                ->select('rate_masters.*', 'locations.name as location_name', 'event_masters.name as event_name')
+                ->where('rate_masters.status', 1);
 
             // Role Wise Filter
             if (in_array($user->role, ['Canteen Administrator'])) {
@@ -273,8 +435,8 @@ class CompanyParameterController extends Controller
             return DataTables::of($data)
                 ->addIndexColumn()
 
-                ->addColumn('location', function ($row) {
-                    return $row->location_name;
+                ->addColumn('event', function ($row) {
+                    return $row->event_name;
                 })
 
                 ->editColumn('effective_from_date', function ($row) {
@@ -352,14 +514,23 @@ class CompanyParameterController extends Controller
         $UserData = Auth::user();
 
         if ($UserData->role == 'Admin' || $UserData->role == 'Super Admin') {
-            $locations = Location::where('status', 1)->get();
+            $locationId = Location::where('status', 1)->where('id',  $UserData->location_id)->value('id');
+            $eventList = LocationEvent::with('event')
+                ->where('status', 1)
+                ->get()
+                ->pluck('event.name', 'event.id');
         } elseif ($UserData->role == 'Canteen Administrator') {
-            $locations = Location::where('status', 1)->where('id', $UserData->location_id)->get();
+            $locationId = Location::where('status', 1)->where('id',  $UserData->location_id)->value('id');
+            $eventList = LocationEvent::with('event')
+                ->where('location_id', $UserData->location_id)
+                ->where('status', 1)
+                ->get()
+                ->pluck('event.name', 'event.id');
         } else {
             return redirect()->back()->with('error', 'Rate Master not allowed .');
         }
 
-        return view('admin.rate.create', compact('locations'));
+        return view('admin.rate.create', compact('locationId', 'eventList'));
     }
 
     // Store Rate
@@ -367,14 +538,14 @@ class CompanyParameterController extends Controller
 
     public function rateMasterStore(Request $request)
     {
-
         $validator = Validator::make($request->all(), [
             'location_id'      => 'required|exists:locations,id',
-            'effective_month'  => 'required',
+            'event_id'         => 'required|exists:event_masters,id',
+            'effective_month'  => 'required|date_format:Y-m',
             'member_rate'      => 'required|numeric|min:0',
             'guest_rate'       => 'required|numeric|min:0',
             'non_member_rate'  => 'required|numeric|min:0',
-            'min_day_rate'  => 'required|numeric|min:0',
+            'min_day_rate'     => 'required|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -382,8 +553,6 @@ class CompanyParameterController extends Controller
                 ->withErrors($validator)
                 ->withInput();
         }
-
-
 
         $effective_from_date = $request->effective_month . '-01';
 
@@ -398,53 +567,181 @@ class CompanyParameterController extends Controller
                 ->with('error', 'Calendar not found for Effective From Date.');
         }
 
-        // Check Existing Rate
-        // $checkExist = RateMaster::where('location_id', $request->location_id)
-        //     ->where('status', 1)
-        //     ->whereDate('effective_from_date', '>=', $effective_from_date)
-        //     ->where(function ($query) use ($effective_from_date) {
-        //         $query->whereNull('effective_to_date')
-        //             ->orWhereDate('effective_to_date', '>=', $effective_from_date);
-        //     })
-        //     ->exists();
+        // Check Existing Rate for same location, event, and month
+        $checkExist = RateMaster::where('location_id', $request->location_id)
+            ->where('event_id', $request->event_id)
+            ->whereMonth('effective_from_date', date('m', strtotime($effective_from_date)))
+            ->whereYear('effective_from_date', date('Y', strtotime($effective_from_date)))
+            ->where('status', 1)
+            ->exists();
 
-        // if ($checkExist) {
-        //     return back()
-        //         ->withInput()
-        //         ->withErrors([
-        //             'effective_month' => 'A rate already exists for the selected month.'
-        //         ]);
-        // }
+        if ($checkExist) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'effective_month' => 'A rate already exists for the selected location, event, and month.'
+                ]);
+        }
 
-        RateMaster::create([
-            'location_id'                => $request->location_id,
-            'effective_from_date'        => $effective_from_date,
-            'effective_from_calendar_id' => $fromCalendar->id,
-            'member_rate'                => $request->member_rate,
-            'guest_rate'                 => $request->guest_rate,
-            'non_member_rate'            => $request->non_member_rate,
-            'min_day_rate'                => $request->min_day_rate,
-            'created_by'                 => Auth::id(),
-            'status'                     => 1,
-        ]);
+        DB::beginTransaction();
 
-        DB::commit();
+        try {
+            RateMaster::create([
+                'location_id'                => $request->location_id,
+                'event_id'                   => $request->event_id,
+                'effective_from_date'        => $effective_from_date,
+                'effective_from_calendar_id' => $fromCalendar->id,
+                'member_rate'                => $request->member_rate,
+                'guest_rate'                 => $request->guest_rate,
+                'non_member_rate'            => $request->non_member_rate,
+                'min_day_rate'               => $request->min_day_rate,
+                'created_by'                 => Auth::id(),
+                'status'                     => 1,
+            ]);
 
-        return redirect()
-            ->route('rate-masters.index')
-            ->with('success', 'Rate Master created successfully.');
+            DB::commit();
+
+            return redirect()
+                ->back()
+                ->with('success', 'Rate Master created successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()
+                ->withInput()
+                ->with('error', 'Error creating rate: ' . $e->getMessage());
+        }
     }
 
     // Edit Rate
+
     public function rateMasterEdit($id)
     {
-        //
-    }
+        $user = Auth::user();
 
+        // Find the rate master record
+        $rateMaster = RateMaster::with(['location', 'event'])->findOrFail($id);
+
+        // Check permission
+        if ($user->role == 'Canteen Administrator') {
+            if ($rateMaster->location_id != $user->location_id) {
+                return redirect()
+                    ->route('rate-master.index')
+                    ->with('error', 'You do not have permission to edit this rate.');
+            }
+        }
+
+        // Get locations based on role
+        if ($user->role == 'Canteen Administrator') {
+            $locationId = Location::where('status', 1)->where('id',  $user->location_id)->value('id');
+        } else {
+          $locationId = Location::where('status', 1)->where('id',  $user->location_id)->value('id');
+        }
+
+        // Get events list
+        $eventList = LocationEvent::with('event')
+            ->where('location_id', $rateMaster->location_id)
+            ->where('status', 1)
+            ->get()
+            ->pluck('event.name', 'event.id');
+
+        // Get effective month for display
+        $effectiveMonth = date('Y-m', strtotime($rateMaster->effective_from_date));
+
+        return view('admin.rate.edit', compact(
+            'rateMaster',
+            'locationId',
+            'eventList',
+            'effectiveMonth'
+        ));
+    }
+ 
     // Update Rate
     public function rateMasterUpdate(Request $request, $id)
     {
-        //
+        $user = Auth::user();
+
+        $validator = Validator::make($request->all(), [
+            'location_id'      => 'required|exists:locations,id',
+            'event_id'         => 'required|exists:event_masters,id',
+            'effective_month'  => 'required|date_format:Y-m',
+            'member_rate'      => 'required|numeric|min:0',
+            'guest_rate'       => 'required|numeric|min:0',
+            'non_member_rate'  => 'required|numeric|min:0',
+            'min_day_rate'     => 'required|numeric|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $rateMaster = RateMaster::findOrFail($id);
+
+        // Check permission
+        if ($user->role == 'Canteen Administrator') {
+            if ($rateMaster->location_id != $user->location_id) {
+                return back()
+                    ->with('error', 'You do not have permission to update this rate.');
+            }
+        }
+
+        $effective_from_date = $request->effective_month . '-01';
+
+        // Check if calendar exists
+        $fromCalendar = DayStatus::whereDate('date', $effective_from_date)
+            ->where('location_id', $request->location_id)
+            ->first();
+
+        if (!$fromCalendar) {
+            return back()
+                ->withInput()
+                ->with('error', 'Calendar not found for Effective From Date.');
+        }
+
+        // Check for duplicate rate (excluding current record)
+        $checkExist = RateMaster::where('location_id', $request->location_id)
+            ->where('event_id', $request->event_id)
+            ->whereMonth('effective_from_date', date('m', strtotime($effective_from_date)))
+            ->whereYear('effective_from_date', date('Y', strtotime($effective_from_date)))
+            ->where('status', 1)
+            ->where('id', '!=', $id) // Exclude current record
+            ->exists();
+
+        if ($checkExist) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'effective_month' => 'A rate already exists for the selected location, event, and month.'
+                ]);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $rateMaster->update([
+                'location_id'                => $request->location_id,
+                'event_id'                   => $request->event_id,
+                'effective_from_date'        => $effective_from_date,
+                'effective_from_calendar_id' => $fromCalendar->id,
+                'member_rate'                => $request->member_rate,
+                'guest_rate'                 => $request->guest_rate,
+                'non_member_rate'            => $request->non_member_rate,
+                'min_day_rate'               => $request->min_day_rate,
+                'updated_by'                 => Auth::id(),
+            ]);
+
+            DB::commit();
+
+            return redirect()
+                ->back()
+                ->with('success', 'Rate Master updated successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()
+                ->withInput()
+                ->with('error', 'Error updating rate: ' . $e->getMessage());
+        }
     }
 
     // Delete Rate

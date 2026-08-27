@@ -11,6 +11,7 @@ class RateMaster extends Model
 
     protected $fillable = [
         'location_id',
+        'event_id',
         'type',
         'effective_from_date',
         'effective_to_date',
@@ -28,4 +29,14 @@ class RateMaster extends Model
         'effective_from_date' => 'date',
         'effective_to_date'   => 'date',
     ];
+
+    public function event()
+    {
+        return $this->belongsTo(EventMaster::class);
+    }
+
+    public function location()
+    {
+        return $this->belongsTo(Location::class);
+    }
 }

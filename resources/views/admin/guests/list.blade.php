@@ -73,13 +73,13 @@
                         <thead>
                             <tr>
                                 <th>#</th>
+                                <th>Event</th>
                                 <th>Date</th>
                                 <th>Name</th>
                                 <th>Type</th>
                                 <th>Count</th>
-                                <th>Location</th>
                                 <th>Department</th>
-                                <th>Attended By</th>
+                                <th>Host Employee</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -88,13 +88,13 @@
                             @forelse($guests as $guest)
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
+                                <td>{{ $guest->event->name ?? ' ' }}</td>                     
                                 <td>
                                     {{ optional($guest->calendar)->date ? \Carbon\Carbon::parse($guest->calendar->date)->format('d-m-Y') : '-' }}
                                 </td>
                                 <td>{{ $guest->guest_name }}</td>
                                 <td>{{ $guest->guest_type }}</td>
                                 <td>{{ $guest->guest_count }}</td>
-                                <td>{{ $guest->location->name ?? ' ' }}</td>
                                 <td>{{ $guest->department->name ?? ' ' }}</td>
                                 <td>{{ $guest->attendUser->first_name ?? ' ' }}</td>
 

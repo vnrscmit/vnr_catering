@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
 
             $table->unsignedBigInteger('location_id');
+            $table->unsignedBigInteger('event_id');
             $table->date('effective_from_date');
             $table->date('effective_to_date')->nullable();
 

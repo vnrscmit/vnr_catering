@@ -26,7 +26,7 @@
         <div class="card">
 
             <div class="card-header">
-                <h5 class="card-title mb-0">Create New Guest</h5>
+                <h5 class="card-title mb-0">Create New Guest - {{ auth()->user()->location->name ?? 'N/A' }} </h5>
             </div>
             <div class="card-body">
                 @if(session('error'))
@@ -45,23 +45,20 @@
                     <div class="row">
 
                         <!-- Location -->
+                        <input type="hidden" value="{{ $locationId }}" name="location_id">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">
-                                Location <span class="text-danger">*</span>
+                                Event <span class="text-danger">*</span>
                             </label>
-
-                            <select class="form-control @error('location_id') is-invalid @enderror"
-                                name="location_id" required>
-                                <option value="">Select Location</option>
-                                @foreach($locations as $location)
-                                <option value="{{ $location->id }}" selected
-                                    {{ old('location_id', $user->location_id ?? '') == $location->id ? 'selected' : '' }}>
-                                    {{ $location->name }} 
+                            <select name="event_id" class="form-control" required>
+                                <option value="">Select Event</option>
+                                @foreach($eventList as $eventId => $eventName)
+                                <option value="{{ $eventId }}">
+                                    {{ $eventName }}
                                 </option>
                                 @endforeach
                             </select>
-
-                            @error('location_id')
+                            @error('event_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -144,7 +141,7 @@
                         <!-- Employee -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">
-                                Employee
+                                Host Employee
                             </label>
 
                             <select name="attend_user_id"
@@ -176,7 +173,7 @@
                                 class="form-control @error('guest_count') is-invalid @enderror"
                                 name="guest_count"
                                 value="{{ old('guest_count',1) }}"
-                                min="1" 
+                                min="1"
                                 placeholder="Enter Guest Count" required>
 
                             @error('guest_count')

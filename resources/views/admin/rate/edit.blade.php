@@ -16,107 +16,126 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 @endpush
-
-@section('title', 'Create Role')
+@section('title', 'Edit - Rate Master')
 @section('content')
-
-
 <div class="main-panel">
     <div class="content-wrapper">
         <div class="card">
-            @include('partials.message-bag')
+                    @include('partials.message-bag')
             <div class="card-header">
-                <h5 class="card-title mb-0">Create Rate Master - {{ auth()->user()->location->name ?? 'N/A' }}</h5>
+                <h5 class="card-title mb-0">Edit Rate Master - {{ auth()->user()->location->name ?? 'N/A' }} </h5>
             </div>
             <div class="card-body">
-                <form action="{{ route('rate-masters.store') }}" method="POST">
+                <form action="{{ route('rate-masters.update', $rateMaster->id) }}" method="POST">
                     @csrf
+                    @method('PUT')
+
                     <div class="row">
-                        <input type="hidden" value="{{ $locationId }}" name="location_id">
+                        <!-- Location -->
+                         <input type="hidden" value="{{ $locationId }}" name="location_id">
                         <div class="col-md-6 mb-3">
                             <label>Effective From Month <span class="text-danger">*</span></label>
                             <input type="month"
                                 name="effective_month"
-                                id="effective_month"
                                 class="form-control @error('effective_month') is-invalid @enderror"
                                 min="{{ date('Y-m', strtotime('-1 month')) }}"
                                 max="{{ date('Y-m', strtotime('+12 months')) }}"
-                                value="{{ old('effective_month') }}"
+                                value="{{ old('effective_month', $effectiveMonth) }}"
                                 required>
                             @error('effective_month')
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+
                             <small class="text-muted">
                                 <i class="fa fa-info-circle"></i>
                                 Allowed: Current month, Future months, and Last month only
                             </small>
                         </div>
 
+                        <!-- Event -->
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">
-                                Event <span class="text-danger">*</span>
-                            </label>
-                            <select name="event_id" class="form-control" required>
+                            <label>Event <span class="text-danger">*</span></label>
+                            <select name="event_id" class="form-control @error('event_id') is-invalid @enderror" required>
                                 <option value="">Select Event</option>
                                 @foreach($eventList as $eventId => $eventName)
-                                <option value="{{ $eventId }}">
+                                <option value="{{ $eventId }}"
+                                    {{ old('event_id', $rateMaster->event_id) == $eventId ? 'selected' : '' }}>
                                     {{ $eventName }}
                                 </option>
                                 @endforeach
                             </select>
+                            @error('event_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
-                    <div class="row">
 
+
+                    <div class="row">
+                        <!-- Member Rate -->
                         <div class="col-md-3 mb-3">
                             <label>Member Rate <span class="text-danger">*</span></label>
-
                             <input type="number"
+                                name="member_rate"
+                                class="form-control @error('member_rate') is-invalid @enderror"
+                                value="{{ old('member_rate', $rateMaster->member_rate) }}"
                                 step="0.01"
                                 min="0"
-                                name="member_rate"
-                                class="form-control"
-                                value="0" required>
+                                required>
+                            @error('member_rate')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
 
+                        <!-- Guest Rate -->
+                        <div class="col-md-3 mb-3">
+                            <label>Guest Rate <span class="text-danger">*</span></label>
+                            <input type="number"
+                                name="guest_rate"
+                                class="form-control @error('guest_rate') is-invalid @enderror"
+                                value="{{ old('guest_rate', $rateMaster->guest_rate) }}"
+                                step="0.01"
+                                min="0"
+                                required>
+                            @error('guest_rate')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- Non Member Rate -->
                         <div class="col-md-3 mb-3">
                             <label>Non Member Rate <span class="text-danger">*</span></label>
                             <input type="number"
-                                step="0.01"
-                                min="0"
                                 name="non_member_rate"
-                                class="form-control"
-                                value="0" required>
+                                class="form-control @error('non_member_rate') is-invalid @enderror"
+                                value="{{ old('non_member_rate', $rateMaster->non_member_rate) }}"
+                                step="0.01"
+                                min="0"
+                                required>
+                            @error('non_member_rate')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
 
                         <div class="col-md-3 mb-3">
-                            <label>Guest Rate <span class="text-danger">*</span></label>
-
+                            <label>Min Day Rate <span class="text-danger">*</span></label>
                             <input type="number"
-                                step="0.01"
-                                min="0"
-                                name="guest_rate"
-                                class="form-control"
-                                value="0" required>
-                        </div>
-
-                        <div class="col-md-3 mb-3">
-                            <label>Minimum Days Rate <span class="text-danger">*</span></label>
-
-                            <input type="number"
-                                step="0.01"
-                                min="0"
                                 name="min_day_rate"
-                                class="form-control"
-                                value="0" required>
+                                class="form-control @error('min_day_rate') is-invalid @enderror"
+                                value="{{ old('min_day_rate', $rateMaster->min_day_rate) }}"
+                                step="0.01"
+                                min="0"
+                                required>
+                            @error('min_day_rate')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
-
                     </div>
 
                     <div class="d-flex justify-content-end">
-                        <div class="mb-3">
+                        <div class="mb-0">
                             <button class="btn btn-primary">
-                                <i class="fa fa-save"></i> Submit
+                                <i class="fa fa-save"></i> Update
                             </button>
 
                             <a href="{{ route('rate-masters.index') }}"
@@ -126,14 +145,9 @@
                             </a>
                         </div>
                     </div>
-
                 </form>
-
             </div>
-
         </div>
-
     </div>
 </div>
-
 @endsection

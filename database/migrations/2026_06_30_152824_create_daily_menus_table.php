@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('calendar_id');
             $table->unsignedBigInteger('location_id');
+            $table->unsignedBigInteger('event_id');
             $table->date('menu_date');
             $table->string('remarks')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();

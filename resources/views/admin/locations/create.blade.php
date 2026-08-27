@@ -24,13 +24,12 @@
     <div class="content-wrapper">
         <div class="card">
             <div class="card-header">
-                <h5>Create New Location</h5>
+                <h5 class="card-title mb-0"><i class="fa fa-map-marker-alt me-2"></i> Create New Location</h5>
             </div>
             <div class="card-body">
                 <form action="{{ route('locations.store') }}" method="POST">
                     @csrf
                     <div class="row">
-
                         <div class="mb-3 col-6">
                             <label for="organization_id">
                                 Organization <span class="text-danger">*</span>
@@ -61,6 +60,32 @@
                             <input type="text" class="form-control @error('short_code') is-invalid @enderror" id="short_code" name="short_code" value="{{ old('short_code') }}" placeholder="e.g., LOC" required>
                             @error('short_code')
                             <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3 col-6">
+                            <label class="form-label">
+                                Event <span class="text-danger">*</span>
+                            </label>
+
+                            <div class="d-flex flex-wrap me-4">
+                                @foreach($events as $event)
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                        type="checkbox"
+                                        name="event_ids[]"
+                                        id="event_{{ $event->id }}"
+                                        value="{{ $event->id }}">
+
+                                    <label class="form-check-label" for="event_{{ $event->id }}">
+                                        {{ $event->name }}
+                                    </label>
+                                </div>
+                                @endforeach
+                            </div>
+
+                            @error('event_ids')
+                            <span class="text-danger">{{ $message }}</span>
                             @enderror
                         </div>
 

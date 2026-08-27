@@ -10,6 +10,7 @@ class AttendanceLog extends Model
     public $timestamps = true;
     protected $fillable = [
         'calendar_id',
+        'event_id',
         'user_id',
         'absent_flag',
         'created_by',

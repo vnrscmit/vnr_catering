@@ -7,7 +7,9 @@ use App\Models\Location;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Traits\AdminViewSharedDataTrait;
 use App\Models\Department;
+use App\Models\EventMaster;
 use App\Models\Feedback;
+use App\Models\LocationEvent;
 use App\Models\Organization;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -32,25 +34,16 @@ class LocationController extends Controller
     {
         if ($request->ajax()) {
 
-            $feedbacks = Feedback::with(['user', 'location']);
+            $locations = Location::with([
+                'organization',
+                'locationEvents.event'
+            ])->orderBy('organization_id', 'asc');
 
-            return DataTables::of($feedbacks)
+            return DataTables::of($locations)
                 ->addIndexColumn()
 
-                ->addColumn('user_name', function ($row) {
-                    return $row->user ? $row->user->name : 'N/A';
-                })
-
-                ->addColumn('location_name', function ($row) {
-                    return $row->location ? $row->location->name : 'N/A';
-                })
-
-                ->editColumn('subject', function ($row) {
-                    return $row->subject ?? 'N/A';
-                })
-
-                ->editColumn('description', function ($row) {
-                    return $row->description ?? 'N/A';
+                ->addColumn('organization_name', function ($row) {
+                    return $row->organization?->organization_name ?? '-';
                 })
 
                 ->editColumn('status', function ($row) {
@@ -61,27 +54,35 @@ class LocationController extends Controller
                     return '<span class="badge bg-danger">Inactive</span>';
                 })
 
-                ->editColumn('created_at', function ($row) {
-                    return $row->created_at
-                        ? $row->created_at->format('d-m-Y h:i A')
-                        : 'N/A';
+                ->addColumn('event_name', function ($row) {
+
+                    return $row->locationEvents
+                        ->pluck('event.name')
+                        ->filter()
+                        ->implode(', ') ?: ' ';
                 })
 
                 ->addColumn('action', function ($row) {
 
-                    $edit = route('feedback.edit', $row->id);
-                    $delete = route('feedback.destroy', $row->id);
+                    $view = route('locations.show', $row->id);
+                    $edit = route('locations.edit', $row->id);
+                    $delete = route('locations.destroy', $row->id);
 
                     return '
+
                     <a href="' . $edit . '" class="btn btn-warning btn-sm">
                         <i class="fa fa-edit"></i>
                     </a>
 
-                    <button type="button"
-                            class="btn btn-danger btn-sm deleteFeedback"
-                            data-id="' . $row->id . '">
-                        <i class="fa fa-trash"></i>
-                    </button>
+                    <form action="' . $delete . '" method="POST" style="display:inline-block">
+                        ' . csrf_field() . '
+                        ' . method_field('DELETE') . '
+                        <button type="submit"
+                                class="btn btn-danger btn-sm"
+                                onclick="return confirm(\'Are you sure?\')">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </form>
                 ';
                 })
 
@@ -89,18 +90,26 @@ class LocationController extends Controller
                 ->make(true);
         }
 
-        return view('feedback.index');
+        return view('admin.locations.index');
     }
     /**
      * Show the form for creating a new resource.
      */
     public function create()
     {
-
-
         $locations = Location::where('status', 1)->get();
+
         $organizations = Organization::where('status', 1)->get();
-        return view('admin.locations.create', compact('locations', 'organizations'));
+
+        $events = EventMaster::where('status', 1)
+            ->orderBy('id', 'asc')
+            ->get();
+
+        return view('admin.locations.create', compact(
+            'locations',
+            'organizations',
+            'events'
+        ));
     }
 
     /**
@@ -122,7 +131,15 @@ class LocationController extends Controller
             'name' => 'required|string|unique:locations,name|max:255',
             'short_code' => 'required|string|unique:locations,short_code|max:4|min:2',
             'status' => 'required',
+
+            // At least one event is compulsory
+            'event_ids' => 'required|array|min:1',
+            'event_ids.*' => 'required|exists:event_masters,id',
+        ], [
+            'event_ids.required' => 'Please select at least one event.',
+            'event_ids.min' => 'Please select at least one event.',
         ]);
+
 
         $organizationCountAllowed = Organization::where('id', $request->organization_id)->value('max_location_allowed');
         $locationCount = Location::where('organization_id', $request->organization_id)->where('status', 1)->count();
@@ -132,7 +149,21 @@ class LocationController extends Controller
                 ->with('error', 'You have reached the maximum location limit. You are allowed to create only ' . $organizationCountAllowed . ' location under this organization. Currently, ' . $locationCount . ' location are already active.');
         }
 
-        Location::create($validated);
+        $location = Location::create($validated);
+
+        // Remove event_ids before creating location
+        $eventIds = $validated['event_ids'];
+        unset($validated['event_ids']);
+
+        // Create location-event mappings
+        foreach ($eventIds as $eventId) {
+            LocationEvent::create([
+                'location_id' => $location->id,
+                'event_id' => $eventId,
+                'status' => 1,
+            ]);
+        }
+
 
         return redirect()->route('locations.index')
             ->with('success', 'Location created successfully!');
@@ -153,38 +184,84 @@ class LocationController extends Controller
     public function edit($id)
     {
         $location = Location::findOrFail($id);
+
         $organizations = Organization::where('status', 1)->get();
 
-        return view('admin.locations.edit', compact('location', 'organizations'));
+        $events = EventMaster::where('status', 1)->get();
+
+        // Get already selected event IDs
+        $selectedEventIds = LocationEvent::where('location_id', $location->id)
+            ->pluck('event_id')
+            ->toArray();
+
+        return view(
+            'admin.locations.edit',
+            compact(
+                'location',
+                'organizations',
+                'events',
+                'selectedEventIds'
+            )
+        );
     }
 
     /**
      * Update the specified location in storage.
      */
+
     public function update(Request $request, $id)
     {
         $location = Location::findOrFail($id);
 
-        $request->validate([
+        $validated = $request->validate([
             'organization_id' => 'required|exists:organizations,id',
+
             'name' => 'required|string|max:255',
+
             'short_code' => [
                 'required',
                 'string',
                 'max:50',
-                Rule::unique('locations', 'short_code')->ignore($location->id),
+                Rule::unique('locations', 'short_code')
+                    ->ignore($location->id),
             ],
+
             'status' => 'required|in:0,1',
+
+            // At least one event is compulsory
+            'event_ids' => 'required|array|min:1',
+            'event_ids.*' => 'required|exists:event_masters,id',
+        ], [
+            'event_ids.required' => 'Please select at least one event.',
+            'event_ids.min' => 'Please select at least one event.',
         ]);
 
-        $location->update([
-            'organization_id' => $request->organization_id,
-            'name' => $request->name,
-            'short_code' => $request->short_code,
-            'status' => $request->status,
-        ]);
+        DB::transaction(function () use ($location, $validated) {
 
-        return redirect()->route('locations.index')
+            // Update location
+            $location->update([
+                'organization_id' => $validated['organization_id'],
+                'name' => $validated['name'],
+                'short_code' => $validated['short_code'],
+                'status' => $validated['status'],
+            ]);
+
+            // Remove old event mappings
+            LocationEvent::where('location_id', $location->id)->delete();
+
+            // Create new event mappings
+            foreach ($validated['event_ids'] as $eventId) {
+
+                LocationEvent::create([
+                    'location_id' => $location->id,
+                    'event_id' => $eventId,
+                    'status' => 1,
+                ]);
+            }
+        });
+
+        return redirect()
+            ->route('locations.index')
             ->with('success', 'Location updated successfully!');
     }
 
@@ -194,9 +271,13 @@ class LocationController extends Controller
     public function destroy($id)
     {
         $location = Location::findOrFail($id);
+
+        LocationEvent::where('location_id', $location->id)->delete();
+
         $location->delete();
 
-        return redirect()->route('locations.index')
+        return redirect()
+            ->route('locations.index')
             ->with('success', 'Location deleted successfully!');
     }
 
@@ -272,7 +353,6 @@ class LocationController extends Controller
         $user = Auth::user();
 
         $departments = Department::getByLocation($departmentId);
-
 
         if ($user->role == 'Super Admin') {
         } elseif ($user->role == 'Canteen Incharge' || $user->president_flag == 1) {
