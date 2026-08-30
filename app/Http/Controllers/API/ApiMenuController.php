@@ -15,12 +15,11 @@ use Illuminate\Support\Facades\Validator;
 
 class ApiMenuController extends Controller
 {
-
-
     public function menuListDateWise(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'location_id' => 'required|exists:locations,id',
+            'event_id' => 'required|exists:event_masters,id',
         ]);
 
         if ($validator->fails()) {
@@ -32,6 +31,7 @@ class ApiMenuController extends Controller
         }
 
         $locationId = $request->location_id;
+        $eventId = $request->event_id;
 
         $today = Carbon::today()->toDateString();
 
@@ -44,8 +44,9 @@ class ApiMenuController extends Controller
             'day_statuses.year',
             DB::raw('COALESCE(daily_menus.status, 0) as status')
         )
-            ->leftJoin('daily_menus', function ($join) use ($locationId) {
+            ->leftJoin('daily_menus', function ($join) use ($locationId, $eventId) {
                 $join->on('daily_menus.calendar_id', '=', 'day_statuses.id')
+                    ->where('daily_menus.event_id', '=', $eventId)
                     ->where('daily_menus.location_id', '=', $locationId);
             })
             ->where('day_statuses.open_flag', 1)
@@ -55,8 +56,6 @@ class ApiMenuController extends Controller
             ->limit(7)
             ->get();
 
-        foreach ($dayStatus as $data) {
-        }
 
         return response()->json([
             'status'  => true,
@@ -72,6 +71,7 @@ class ApiMenuController extends Controller
         $validator = Validator::make($request->all(), [
             'location_id' => 'required|exists:locations,id',
             'calendar_id' => 'required|exists:day_statuses,id',
+            'event_id' => 'required|exists:event_masters,id',
         ]);
 
         if ($validator->fails()) {
@@ -84,6 +84,7 @@ class ApiMenuController extends Controller
 
         $locationId = $request->location_id;
         $calendarId = $request->calendar_id;
+        $eventId = $request->event_id;
 
         $dayStatus = DayStatus::where('location_id', $locationId)
             ->where('id', $calendarId)
@@ -99,6 +100,7 @@ class ApiMenuController extends Controller
         $query = DailyMenu::with('items')
             ->where('calendar_id', $calendarId)
             ->where('location_id', $locationId)
+            ->where('event_id', $eventId)
             ->whereDate('menu_date', $dayStatus->date);
 
         if (in_array($user->role, ['Member', 'Non Member'])) {
@@ -118,6 +120,7 @@ class ApiMenuController extends Controller
             }
         ])
             ->where('location_id', $locationId)
+            ->where('event_id', $eventId)
             ->where('status', 1)
             ->orderByRaw("
         CASE name
@@ -177,6 +180,7 @@ class ApiMenuController extends Controller
         $validator = Validator::make($request->all(), [
             'location_id' => 'required|exists:locations,id',
             'calendar_id' => 'required|exists:day_statuses,id',
+            'event_id' => 'required|exists:event_masters,id',
             'status'      => 'required|in:2,1',
             'menus'       => 'required|array|min:1',
             'menus.*.menu_id'     => 'required|exists:menus,id',
@@ -212,6 +216,7 @@ class ApiMenuController extends Controller
                 [
                     'calendar_id' => $request->calendar_id,
                     'location_id' => $request->location_id,
+                    'event_id'   => $request->event_id,
                 ],
                 [
                     'menu_date'  => $dayStatus->date,

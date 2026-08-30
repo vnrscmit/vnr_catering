@@ -152,7 +152,7 @@ class MenuController extends Controller
             'name' => [
                 'required',
                 Rule::unique('menus')->where(function ($query) use ($request) {
-                    return $query->where('location_id', $request->location_id);
+                    return $query->where('location_id', $request->location_id)->where('event_id', $request->event_id);
                 }),
             ],
             'location_id' => 'required|exists:locations,id',
@@ -209,8 +209,8 @@ class MenuController extends Controller
 
             $data = $query->select('daily_menus.*')
                 ->join('event_masters', 'daily_menus.event_id', '=', 'event_masters.id')
-                ->orderBy('event_masters.seq_no', 'asc')
                 ->orderBy('daily_menus.menu_date', 'desc')
+                ->orderBy('event_masters.seq_no', 'asc')
                 ->get();
 
             return DataTables::of($data)

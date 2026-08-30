@@ -25528,7 +25528,7 @@ body.avgrund-active {
   font-family: "Inter", sans-serif;
   font-weight: 300;
   padding: 0;
-  width: 257px;
+  width: 288px;
   z-index: 11;
   transition: width 0.25s ease, background 0.25s ease;
   -webkit-transition: width 0.25s ease, background 0.25s ease;
@@ -25771,7 +25771,7 @@ body.avgrund-active {
   padding: 0;
 }
 
-.sidebar .nav.sub-menu .nav-item::before {
+/* .sidebar .nav.sub-menu .nav-item::before {
   content: '';
   width: 2px;
   height: 8px;
@@ -25780,9 +25780,9 @@ body.avgrund-active {
   top: 3px;
   border-radius: 0;
   background: #8e95aa;
-}
+} */
 
-.sidebar .nav.sub-menu .nav-item::after {
+/* .sidebar .nav.sub-menu .nav-item::after {
   content: '';
   width: 2px;
   height: 8px;
@@ -25791,7 +25791,7 @@ body.avgrund-active {
   bottom: 3px;
   border-radius: 0;
   background: #8e95aa;
-}
+} */
 
 .sidebar .nav.sub-menu .nav-item .nav-link {
     display: flex;
@@ -25808,7 +25808,7 @@ body.avgrund-active {
     color: #333333;
     line-height: 1.4;
 
-    gap: 12px;
+    gap: 2px;
 }
 
 
@@ -25950,7 +25950,7 @@ body.avgrund-active {
   line-height: 1.4;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 2px;
   /* Adds space between icon and text */
   /* OR use padding-left if you want more control */
 }

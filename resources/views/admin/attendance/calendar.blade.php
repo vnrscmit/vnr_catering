@@ -80,13 +80,13 @@
                         ...(data.data.next_month?.nextdays || [])
                     ];
                     dayData = allDays.find(d => d.date === currentDateStr);
-                    
+
                     if (dayData) {
                         absentFlag = dayData.absent_flag || 0;
                         openFlag = dayData.open_flag || 0;
                         // isLocked = (openFlag == 1 && dayData.date < moment().format('YYYY-MM-DD'));
-                        
-                         isLocked = dayData.lock_flag || 0;
+
+                        isLocked = dayData.lock_flag || 0;
 
                         if (isLocked) {
                             lockIcon = 'fa-lock';
@@ -115,14 +115,14 @@
 
                 let statusTextHtml = statusText ? `<div class="status-text ${statusClass.split(' ')[0]}-text">${statusText}</div>` : '';
                 let lockIconHtml = lockIcon ? `<i class="fas ${lockIcon} lock-icon"></i>` : '';
-                
+
                 // For Sundays, show the Sunday number style but allow interactions
                 const dayNumberClass = isSunday ? 'sunday-number' : '';
-                
+
                 // Determine if the cell should be clickable
                 // Cell is clickable if open_flag = 1 and not locked (for all days including Sundays)
                 const isClickable = !isLocked && openFlag == 1;
-                
+
                 // Add data attributes including sunday flag
                 const dataAttrs = `data-date="${currentDateStr}" data-status="${statusClass}" data-absent="${absentFlag}" data-open="${openFlag}" data-locked="${isLocked}" data-sunday="${isSunday ? 1 : 0}"`;
 
@@ -207,7 +207,7 @@
                 // Show confirmation with SweetAlert2
                 const action = newAbsentFlag == 1 ? 'mark as Absent' : 'mark as Present';
                 const color = newAbsentFlag == 1 ? '#dc3545' : '#28a745';
-                
+
                 let sundayWarning = '';
                 let sundayIcon = '';
                 if (isSunday) {
@@ -243,6 +243,7 @@
 
         function updateAttendance(date, absentFlag, $cell) {
             const locationId = $('#location_id').val();
+            const eventId = $('#event_id').val();
 
             // Show loading state
             Swal.fire({
@@ -262,6 +263,7 @@
                     date: date,
                     location_id: locationId,
                     absent_flag: absentFlag,
+                    event_id: eventId,
                     _token: "{{ csrf_token() }}"
                 },
                 beforeSend: function() {
@@ -365,11 +367,14 @@
 
         function fetchCalendarData() {
             const locationId = $('#location_id').val();
-            if (!locationId) {
+            const eventId = $('#event_id').val();
+            if (!locationId || !eventId) {
+                Swal.close();
+                $('#htmlCard').show();
                 Swal.fire({
                     icon: 'warning',
                     title: 'No Location Selected',
-                    text: 'Please select a location to view the calendar.',
+                    text: 'Please select a location and event to view the calendar.',
                     confirmButtonColor: '#3085d6',
                     confirmButtonText: 'OK'
                 });
@@ -380,13 +385,18 @@
                 url: "{{ route('calendar.events') }}",
                 type: "GET",
                 data: {
-                    location_id: locationId
+                    location_id: locationId,
+                    event_id: eventId
                 },
                 success: function(response) {
+                    Swal.close();
+                    $('#htmlCard').show();
                     calendarData = response;
                     renderCalendar(currentDate, response);
                 },
                 error: function(xhr) {
+                    Swal.close();
+                    $('#htmlCard').show();
                     console.error('Error fetching calendar data:', xhr);
 
                     let errorMsg = 'Failed to load calendar data. Please try again.';
@@ -407,6 +417,71 @@
         }
 
         $('#location_id').change(function() {
+            const locationId = $(this).val();
+
+            // Get selected event value
+            const selectedEvent = $('#event_id').val();
+            console.log('Selected Event:', selectedEvent);
+
+            // Show loading state
+            Swal.fire({
+                title: 'Updating...',
+                text: 'Please wait while we load the calendar',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Hide the card
+            $('#htmlCard').hide();
+
+            // Check if event is selected
+            if (!selectedEvent || selectedEvent === '' || selectedEvent === '0') {
+                Swal.close();
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Event Required',
+                    text: 'Please select an event to view the calendar.',
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: 'OK'
+                });
+
+                // Show empty state
+                $('#calendarGrid').html('<div class="text-center p-5 text-muted">Please select an event</div>');
+                return;
+            }
+
+            // If location and event both selected
+            if (locationId && selectedEvent) {
+                currentDate = moment();
+                fetchCalendarData();
+            } else {
+                Swal.close();
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Selection Required',
+                    text: 'Please select both location and event.',
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: 'OK'
+                });
+            }
+        });
+
+        $('#event_id').change(function() {
+
+            // Show loading state
+            Swal.fire({
+                title: 'Updating...',
+                text: 'Please wait while show the calendar',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
             currentDate = moment();
             fetchCalendarData();
         });
@@ -1084,9 +1159,20 @@
                             @endforeach
                         </select>
                     </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold mb-1">Select Event</label>
+                        <select class="form-control form-select" id="event_id" name="event_id">
+                            @foreach($eventList as $eventId => $eventName)
+                            <option value="{{ $eventId }}">
+                                {{ $eventName }}
+                            </option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
             </div>
-            <div class="card-body">
+            <div class="card-body" id="htmlCard">
                 <!-- Attendance Summary Cards -->
                 <div class="attendance-cards">
                     <div class="attendance-card">

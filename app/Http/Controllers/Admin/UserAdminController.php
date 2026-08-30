@@ -31,6 +31,7 @@ use App\Models\EventMaster;
 use App\Models\LocationEvent;
 use App\Models\Organization;
 use App\Models\UserEvent;
+use Carbon\Carbon;
 use Yajra\DataTables\DataTables;
 
 class UserAdminController extends Controller
@@ -200,7 +201,6 @@ class UserAdminController extends Controller
 
         return view('admin.users.create', compact('roles', 'departments', 'locations', 'presidentLock', 'events', 'multiLocations'));
     }
-
     public function store(CreateUserRequest $request)
     {
 
@@ -242,15 +242,31 @@ class UserAdminController extends Controller
         }
 
         // Base Locations Check
-        $orgId = Location::where('id', $request->location_id)->value('organization_id');
-        $allLocationOrg = Location::where('organization_id', $orgId)->pluck('id')->toArray();
-        $totalUserOrg = User::where('status', 1)->whereIn('location_id',  $allLocationOrg)->count();
 
-        $organizationUserCountAllowed = Organization::where('id', $orgId)->value('max_user_per_location');
+        $orgId = Location::where('id', $request->location_id)->value('organization_id');
+
+        $allLocationOrg = Location::where('organization_id', $orgId)
+            ->pluck('id')
+            ->toArray();
+
+
+        $totalUserOrg = User::where('status', 1)
+            ->whereIn('location_id', $allLocationOrg)
+            ->count();
+
+        $organizationUserCountAllowed = Organization::where('id', $orgId)
+            ->value('max_user_per_location');
 
         if ($organizationUserCountAllowed <= $totalUserOrg) {
             return redirect()->route('locations.index')
-                ->with('error', 'User limit exceeded for this location! Your organization allows maximum ' . $organizationUserCountAllowed . ' users per location. This location already has ' . $locationUserCount . ' active users. No more users can be assigned.');
+                ->with(
+                    'error',
+                    'User limit exceeded! Your organization allows a maximum of '
+                        . $organizationUserCountAllowed
+                        . ' active users. Currently, '
+                        . $totalUserOrg
+                        . ' active users are assigned across the organization locations. No more users can be assigned.'
+                );
         }
 
 
@@ -440,8 +456,6 @@ class UserAdminController extends Controller
         return view('admin.users.show', compact('user'));
     }
 
-
-    // Update an admin
     // Update an admin
     public function edit($id)
     {
@@ -747,37 +761,104 @@ class UserAdminController extends Controller
                     return;
                 }
 
+                if ($request->filled('event_ids')) {
+                    $eventIds = is_array($request->event_ids)
+                        ? $request->event_ids
+                        : [$request->event_ids];
+
+                    // Get existing event IDs for this user
+                    $existingEventIds = UserEvent::where('user_id', $user->id)
+                        ->where('status', 1)
+                        ->pluck('event_id')
+                        ->toArray();
+
+                    // Events to add (new ones)
+                    $eventsToAdd = array_diff($eventIds, $existingEventIds);
+
+                    // Events to remove (existing ones not in new list)
+                    $eventsToRemove = array_diff($existingEventIds, $eventIds);
+
+                    // Insert or update new events
+                    if (!empty($eventsToAdd)) {
+                        $userEventsData = [];
+                        foreach ($eventsToAdd as $eventId) {
+                            $userEventsData[] = [
+                                'user_id' => $user->id,
+                                'event_id' => $eventId,
+                                'status' => 1,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ];
+                        }
+
+                        UserEvent::upsert(
+                            $userEventsData,
+                            ['user_id', 'event_id'],
+                            ['status', 'updated_at']
+                        );
+                    }
+
+                    // Soft delete or deactivate removed events
+                    if (!empty($eventsToRemove)) {
+                        UserEvent::where('user_id', $user->id)
+                            ->whereIn('event_id', $eventsToRemove)
+                            ->update([
+                                'status' => 0,
+                                'updated_at' => now()
+                            ]);
+                    }
+                }
+
+
+                $latestEventIds =   UserEvent::where('user_id', $user->id)
+                    ->where('status', 1)
+                    ->pluck('event_id')
+                    ->toArray();
+                    // dd($latestEventIds);
+                   
                 /*
     |--------------------------------------------------------------------------
     | Non Member / Member - Previous Days
     |--------------------------------------------------------------------------
     */
 
-                if (in_array($latestUser->role, ['Non Member', 'Member'])) {
+               if (in_array($latestUser->role, ['Non Member', 'Member'])) {
 
-                    // Start calendar se pehle ke saare days
-                    $dayStatusesOld = DayStatus::where('id', '<', $startCalendarId)
-                        ->where('location_id', $locationId)
-                        ->get();
+    // Start calendar se pehle ke saare days
+    $dayStatusesOld = DayStatus::where('id', '<', $startCalendarId)
+        ->where('location_id', $locationId)
+        ->get();
 
-                    foreach ($dayStatusesOld as $dayStatusOld) {
+    foreach ($dayStatusesOld as $dayStatusOld) {
 
-                        AttendanceAbsent::updateOrCreate(
-                            [
-                                'calendar_id' => $dayStatusOld->id,
-                                'user_id'     => $userId,
-                                'location_id' => $locationId,
-                            ],
-                            [
-                                'absent_flag'      => 1,
-                                'absent_remarks'   => null,
-                                'override_flag'    => 0,
-                                'override_remarks' => null,
-                                'status'           => 1,
-                            ]
-                        );
-                    }
-                }
+        foreach ($latestEventIds as $eventId) {
+
+            $alreadyExists = AttendanceAbsent::where('calendar_id', $dayStatusOld->id)
+                ->where('user_id', $userId)
+                ->where('location_id', $locationId)
+                ->where('event_id', $eventId)
+                ->exists();
+
+            // Agar entry already hai to skip
+            if ($alreadyExists) {
+                continue;
+            }
+
+            // Entry nahi hai to new create
+            AttendanceAbsent::create([
+                'calendar_id'      => $dayStatusOld->id,
+                'user_id'          => $userId,
+                'location_id'      => $locationId,
+                'event_id'         => $eventId,
+                'absent_flag'      => 1,
+                'absent_remarks'   => null,
+                'override_flag'    => 0,
+                'override_remarks' => null,
+                'status'           => 1,
+            ]);
+        }
+    }
+}
 
                 /*
     |--------------------------------------------------------------------------
@@ -790,23 +871,28 @@ class UserAdminController extends Controller
                     $dayStatuses = DayStatus::where('id', '>=', $currentDayStatus->id)
                         ->where('location_id', $locationId)
                         ->get();
+                    // dd( $dayStatuses);
 
                     foreach ($dayStatuses as $dayStatus) {
 
-                        AttendanceAbsent::updateOrCreate(
-                            [
-                                'calendar_id' => $dayStatus->id,
-                                'user_id'     => $userId,
-                                'location_id' => $locationId,
-                            ],
-                            [
-                                'absent_flag'      => 1,
-                                'absent_remarks'   => null,
-                                'override_flag'    => 0,
-                                'override_remarks' => null,
-                                'status'           => 1,
-                            ]
-                        );
+                        foreach ($latestEventIds as $eventId) {
+
+                            AttendanceAbsent::updateOrCreate(
+                                [
+                                    'calendar_id' => $dayStatus->id,
+                                    'user_id'     => $userId,
+                                    'location_id' => $locationId,
+                                    'event_id' => $eventId,
+                                ],
+                                [
+                                    'absent_flag'      => 1,
+                                    'absent_remarks'   => null,
+                                    'override_flag'    => 0,
+                                    'override_remarks' => null,
+                                    'status'           => 1,
+                                ]
+                            );
+                        }
                     }
                 }
 
@@ -828,20 +914,24 @@ class UserAdminController extends Controller
 
                     foreach ($dayStatuses as $dayStatus) {
 
-                        AttendanceAbsent::updateOrCreate(
-                            [
-                                'calendar_id' => $dayStatus->id,
-                                'user_id'     => $userId,
-                                'location_id' => $locationId,
-                            ],
-                            [
-                                'absent_flag'      => 0,
-                                'absent_remarks'   => null,
-                                'override_flag'    => 0,
-                                'override_remarks' => null,
-                                'status'           => 1,
-                            ]
-                        );
+                        foreach ($latestEventIds as $eventId) {
+
+                            AttendanceAbsent::updateOrCreate(
+                                [
+                                    'calendar_id' => $dayStatus->id,
+                                    'user_id'     => $userId,
+                                    'location_id' => $locationId,
+                                    'event_id' => $eventId,
+                                ],
+                                [
+                                    'absent_flag'      => 0,
+                                    'absent_remarks'   => null,
+                                    'override_flag'    => 0,
+                                    'override_remarks' => null,
+                                    'status'           => 1,
+                                ]
+                            );
+                        }
                     }
                 }
 
@@ -869,20 +959,24 @@ class UserAdminController extends Controller
 
                         foreach ($calendarIds as $calendarId) {
 
-                            AttendanceAbsent::updateOrCreate(
-                                [
-                                    'calendar_id' => $calendarId,
-                                    'user_id'     => $userId,
-                                    'location_id' => $multiLocationId,
-                                ],
-                                [
-                                    'absent_flag'      => 1,
-                                    'absent_remarks'   => null,
-                                    'override_flag'    => 0,
-                                    'override_remarks' => null,
-                                    'status'           => 1,
-                                ]
-                            );
+                            foreach ($latestEventIds as $eventId) {
+
+                                AttendanceAbsent::updateOrCreate(
+                                    [
+                                        'calendar_id' => $calendarId,
+                                        'user_id'     => $userId,
+                                        'location_id' => $multiLocationId,
+                                        'event_id' => $eventId,
+                                    ],
+                                    [
+                                        'absent_flag'      => 1,
+                                        'absent_remarks'   => null,
+                                        'override_flag'    => 0,
+                                        'override_remarks' => null,
+                                        'status'           => 1,
+                                    ]
+                                );
+                            }
                         }
                     }
                 }
@@ -949,7 +1043,7 @@ class UserAdminController extends Controller
             $user->start_calendar_id = $dayStatus->id;
             $user->save();
 
-            $allEventIds = UserEvent::where('user_id', $request->user_id)->where('status', 1)->pluck('id')->toArray();
+            $allEventIds = UserEvent::where('user_id', $request->user_id)->where('status', 1)->pluck('event_id')->toArray();
 
             $yearDate =  DayStatus::where('id', '>=', $dayStatus->id)->where('open_flag', 1)->where('location_id', $user->location_id)->get();
             if (in_array($user->role, ['Non Member'])) {
@@ -1080,25 +1174,33 @@ class UserAdminController extends Controller
                     $locationIds = MultipleLocation::where('user_id', $user->id)
                         ->pluck('location_id');
 
+                    // Get all event IDs for these locations
+                    $allEventIds = LocationEvent::whereIn('location_id', $locationIds)
+                        ->where('status', 1)
+                        ->pluck('event_id')
+                        ->unique();
+
                     $calendarIds = DayStatus::whereIn('location_id', $locationIds)->pluck('id');
 
                     foreach ($locationIds as $locationId) {
                         foreach ($calendarIds as $calendarId) {
-                            AttendanceAbsent::firstOrCreate(
-                                [
-                                    'calendar_id' => $calendarId,
-                                    'user_id'     => $user->id,
-                                    'location_id' => $locationId,
-                                    'event_id' => 2,
-                                ],
-                                [
-                                    'absent_flag'      => 1,
-                                    'absent_remarks'   => null,
-                                    'override_flag'    => 0,
-                                    'override_remarks' => null,
-                                    'status'           => 1,
-                                ]
-                            );
+                            foreach ($allEventIds as $eventId) {
+                                AttendanceAbsent::firstOrCreate(
+                                    [
+                                        'calendar_id' => $calendarId,
+                                        'user_id'     => $user->id,
+                                        'location_id' => $locationId,
+                                        'event_id'    => $eventId,
+                                    ],
+                                    [
+                                        'absent_flag'      => 1,
+                                        'absent_remarks'   => null,
+                                        'override_flag'    => 0,
+                                        'override_remarks' => null,
+                                        'status'           => 1,
+                                    ]
+                                );
+                            }
                         }
                     }
                 }

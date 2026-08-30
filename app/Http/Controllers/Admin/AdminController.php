@@ -40,6 +40,7 @@ class AdminController extends Controller
 
     public function index($locationId = null, $eventId = null)
     {
+       
         $UserData = Auth::user();
         if ($locationId === null) {
             $locationId = $UserData->location_id;
@@ -63,12 +64,13 @@ class AdminController extends Controller
             $eventIds = UserEvent::where('user_id', $UserData->id)->pluck('event_id')->toArray();
 
             $eventList = LocationEvent::with('event')
-                ->where('location_id', $UserData->location_id)
+                ->where('location_id', $locationId)
                 ->whereIn('event_id', $eventIds)
                 ->where('status', 1)
                 ->get()
                 ->pluck('event.name', 'event.id');
-        } else if ($UserData->role == 'Canteen Administrator' || $UserData->role == 'Canteen Incharge') {
+       
+        } else if ($UserData->role == 'Canteen Administrator' || $UserData->role == 'Canteen Incharge' || $UserData->role == 'Super Admin') {
 
             $eventList = LocationEvent::with('event')
                 ->where('location_id', $UserData->location_id)
@@ -437,6 +439,7 @@ class AdminController extends Controller
 
         $selectedEventId = $eventId;
 
+   
 
         return view('admin.dashboard', compact(
             'formattedSalesData',
@@ -467,14 +470,11 @@ class AdminController extends Controller
             'locationId'
         ));
     }
-
-
     public function viewMyProfile()
     {
         $user = Auth::User();
         return view('admin.view-my-profile', compact('user'));
     }
-
 
     public function editMyProfile()
     {

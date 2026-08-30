@@ -8,6 +8,7 @@ class Guest extends Model
 {
     protected $fillable = [
         'guest_type',
+        'date',
         'department_id',
         'location_id',
         'event_id',
@@ -17,6 +18,7 @@ class Guest extends Model
         'guest_remarks',
         'attend_user_id',
         'late_flag',
+        'created_by',
         'status',
     ];
 
@@ -30,6 +32,11 @@ class Guest extends Model
     public function attendUser()
     {
         return $this->belongsTo(User::class, 'attend_user_id');
+    }
+
+     public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function department()

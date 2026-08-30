@@ -150,6 +150,16 @@ class AttendanceController extends Controller
 
     public function guestStore(Request $request)
     {
+
+        $userDataCheck = Auth::user();
+
+        if (!$userDataCheck) {
+            return back()->with('error', 'User not found.');
+        }
+
+        if ($userDataCheck->personal_guest_flag != 1) {
+            return back()->with('error', 'You are not allowed to schedule guests.');
+        }
         $validator = Validator::make($request->all(), [
             'guest_type' => 'required|in:Office Guest,Personal Guest',
             'department_id' => 'nullable|exists:departments,id',
@@ -209,6 +219,7 @@ class AttendanceController extends Controller
 
         Guest::create([
             'guest_type' => $request->guest_type,
+            'date' => $calendar->date,
             'department_id' => $request->department_id,
             'location_id' => $request->location_id,
             'event_id' => $request->event_id,
@@ -218,6 +229,7 @@ class AttendanceController extends Controller
             'guest_remarks' => $request->guest_remarks,
             'attend_user_id' => $request->attend_user_id,
             'late_flag'        => $lateFlag,
+            'created_by' => $userDataCheck->id,
             'status' => 1,
         ]);
 
@@ -399,18 +411,28 @@ class AttendanceController extends Controller
         return redirect()->back()->with('success', 'Guest deleted successfully.');
     }
 
-    public function markAttendance($id)
+    public function markAttendance($id, $eventId)
     {
         $UserData = Auth::user();
 
-        if ($UserData) {
-        } else {
+        if (!$UserData) {
             return response()->json([
                 'status' => false,
                 'message' => 'User not found.'
             ], 404);
         }
 
+        // Validation 1: Check if event exists for this user
+        $userEvent = UserEvent::where('user_id', $UserData->id)
+            ->where('event_id', $eventId)
+            ->where('status', 1)
+            ->first();
+
+        if (!$userEvent) {
+            return back()->with('error', 'Invalid event or you do not have access to this event.');
+        }
+
+        // Validation 2: Check if day status exists with conditions
         $dayStatus = DayStatus::where('id', $id)
             ->where('open_flag', 1)
             ->where('lock_flag', 0)
@@ -419,115 +441,112 @@ class AttendanceController extends Controller
             ->first();
 
         if (!$dayStatus) {
-            return back()->with('error', 'Selected day not found.');
+            return back()->with('error', 'Selected day is not available for attendance marking.');
         }
 
-        // Check calendar id and date match
-        $calendar = DayStatus::where('id', $id)
-            ->where('open_flag', 1)
-            ->where('lock_flag', 0)
-            ->where('sunday_flag', 0)
-            ->where('holiday_flag', 0)
+        // Validation 3: Check if calendar and date match (same as above, but we already have $dayStatus)
+        $calendar = $dayStatus; // Reuse the existing query result
+
+        // Validation 4: Check if event is active for this location
+        $companyParameter = CompanyParameter::where('location_id', $calendar->location_id)
+            ->where('event_id', $eventId)
+            ->where('status', 1)
             ->first();
 
-        if (!$calendar) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Invalid calendar or date.'
-            ], 404);
+        if (!$companyParameter) {
+            return back()->with('error', 'This event is not configured for the selected location.');
         }
 
+        // Validation 5: Check if event allows attendance marking today
         $today = Carbon::today()->toDateString();
-
-        $CompanyParameter = CompanyParameter::where('location_id', $calendar->location_id)->where('status', 1)->first();
 
         if ($calendar->date == $today) {
             $currentTime = Carbon::now()->format('H:i:s');
-            $maxTime = $CompanyParameter->attendance_out_time->format('H:i:s');
+            $maxTime = $companyParameter->attendance_out_time->format('H:i:s');
+
             if ($currentTime > $maxTime) {
-                $maxTime = Carbon::createFromFormat('H:i:s', $maxTime)
+                $maxTimeFormatted = Carbon::createFromFormat('H:i:s', $maxTime)
                     ->format('h:i A');
-                return back()->with('error', "Attendance cannot be marked after {$maxTime}. The maximum allowed attendance marking time has been exceeded.");
+                return back()->with('error', "Attendance cannot be marked after {$maxTimeFormatted}. The maximum allowed attendance marking time has been exceeded.");
             }
         }
 
+        // Process attendance marking
         $attendance = AttendanceAbsent::where('calendar_id', $calendar->id)
             ->where('user_id', $UserData->id)
+            ->where('event_id', $eventId) // Added event_id condition
             ->first();
-
-
 
         if ($attendance) {
             $newAbsentFlag = $attendance->absent_flag == 1 ? 0 : 1;
             $attendance->update([
                 'absent_flag' => $newAbsentFlag,
-                'status'      => 1,
+                'status' => 1,
             ]);
         } else {
             $newAbsentFlag = 1;
             AttendanceAbsent::create([
                 'calendar_id' => $calendar->id,
-                'user_id'     => $UserData->id,
+                'user_id' => $UserData->id,
+                'event_id' => $eventId, // Added event_id
                 'absent_flag' => $newAbsentFlag,
                 'location_id' => $calendar->location_id,
-                'status'      => 1,
+                'status' => 1,
             ]);
         }
 
-        // Har baar log insert hoga
+        // Log attendance
         AttendanceLog::create([
             'calendar_id' => $calendar->id,
-            'user_id'     => $UserData->id,
+            'user_id' => $UserData->id,
+            'event_id' => $eventId, // Added event_id
             'absent_flag' => $newAbsentFlag,
-            'created_by'  => auth()->id(),
-            'remarks'     => 'Attendance updated',
-            'status'      => 1,
-            'web_app'     => 'web',
+            'created_by' => auth()->id(),
+            'remarks' => 'Attendance updated',
+            'status' => 1,
+            'web_app' => 'web',
         ]);
 
-
+        // Multilocation logic with event_id
         if ($UserData->multilocation_flag == 1) {
-            // Get all locations for this user
             $multiLocationData = MultipleLocation::where('user_id', $UserData->id)->get();
 
             if ($UserData->location_id == $calendar->location_id) {
-
                 if ($newAbsentFlag == 0) {
-                    // Loop through each location and create/update attendance
                     foreach ($multiLocationData as $location) {
                         AttendanceAbsent::updateOrCreate(
                             [
                                 'calendar_id' => $calendar->id,
-                                'user_id'     => $UserData->id,
+                                'user_id' => $UserData->id,
                                 'location_id' => $location->location_id,
+                                'event_id' => $eventId, // Added event_id
                             ],
                             [
                                 'absent_flag' => 1,
-                                'status'      => 1,
+                                'status' => 1,
                             ]
                         );
                     }
                 }
             } else {
-                // Get all locations for this user
                 $location = Location::where('id', $UserData->location_id)->first();
 
                 if ($newAbsentFlag == 0) {
                     AttendanceAbsent::updateOrCreate(
                         [
                             'calendar_id' => $calendar->id,
-                            'user_id'     => $UserData->id,
+                            'user_id' => $UserData->id,
                             'location_id' => $location->id,
+                            'event_id' => $eventId, // Added event_id
                         ],
                         [
                             'absent_flag' => 1,
-                            'status'      => 1,
+                            'status' => 1,
                         ]
                     );
                 }
             }
         }
-
 
         return back()->with('success', "Attendance marked successfully.");
     }
@@ -827,6 +846,15 @@ class AttendanceController extends Controller
                 ->values();
 
             $locations = $allLocations;
+
+            $eventIds = UserEvent::where('user_id', $UserData->id)->pluck('event_id')->toArray();
+
+            $eventList = LocationEvent::with('event')
+                ->where('location_id', $UserData->location_id)
+                ->whereIn('event_id', $eventIds)
+                ->where('status', 1)
+                ->get()
+                ->pluck('event.name', 'event.id');
         } else {
             return redirect()->back()->with('error', 'Does not have a permission');
         }
@@ -836,30 +864,31 @@ class AttendanceController extends Controller
         }
 
 
-        return view('admin.attendance.calendar', compact('locations'));
+        return view('admin.attendance.calendar', compact('locations', 'eventList'));
     }
-
-
     public function calendarEvents(Request $request)
     {
         $request->validate([
             'location_id' => 'required|exists:locations,id',
+            'event_id' => 'required|exists:event_masters,id',
         ]);
 
         $userData = Auth::user();
 
         $today = Carbon::today()->toDateString();
         $locationId = $request->location_id;
+        $eventId = $request->event_id;
 
-        $query = function ($start, $end, $type) use ($userData, $today, $locationId) {
+        $query = function ($start, $end, $type) use ($userData, $today, $locationId, $eventId) {
 
             $days = DayStatus::whereBetween('day_statuses.date', [
                 $start->toDateString(),
                 $end->toDateString()
             ])
-                ->leftJoin('attendance_absents', function ($join) use ($userData, $locationId) {
+                ->leftJoin('attendance_absents', function ($join) use ($userData, $locationId, $eventId) {
                     $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
                         ->where('attendance_absents.user_id', $userData->id)
+                        ->where('attendance_absents.event_id', $eventId)
                         ->where('attendance_absents.location_id', $locationId);
                 })
                 ->select(
@@ -937,10 +966,11 @@ class AttendanceController extends Controller
             $request->validate([
                 'date' => 'required|date',
                 'location_id' => 'required',
+                'event_id' => 'required',
                 'absent_flag' => 'required|in:0,1'
             ]);
 
-            $CompanyParameter = CompanyParameter::where('location_id', $request->location_id)->where('status', 1)->first();
+            $CompanyParameter = CompanyParameter::where('location_id', $request->location_id)->where('event_id', $request->event_id)->where('status', 1)->first();
 
             $userData = User::findOrFail($authUser->id);
 
@@ -981,6 +1011,7 @@ class AttendanceController extends Controller
                     'calendar_id' => $dayStatus->id,
                     'user_id'     => $userData->id,
                     'location_id' => $request->location_id,
+                    'event_id' =>  $request->event_id,
                 ],
                 [
                     'absent_flag' => $request->absent_flag,
