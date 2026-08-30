@@ -38,6 +38,7 @@ use App\Models\CompanyParameter;
 use App\Http\Controllers\Admin\OrganizationController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\PaymenController;
+use App\Http\Controllers\ReportController;
 
 Route::get('/', [MainSiteController::class, 'home'])->name('home');
 
@@ -361,7 +362,7 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
     });
 
     // Attendance routes
-    Route::get('/mark-attendance/{id}', [AttendanceController::class, 'markAttendance'])->name('mark-attendance');
+    Route::get('/mark-attendance/{id}/{eventId}', [AttendanceController::class, 'markAttendance'])->name('mark-attendance');
     Route::get('/mark-guest-attendance/{id}', [AttendanceController::class, 'markGuestAttendance'])->name('mark-guest-attendance');
     Route::get('/guests', [AttendanceController::class, 'index'])->name('admin.guests.index');
     Route::get('/guests/create/{id}', [AttendanceController::class, 'guestCreate'])->name('admin.guests.create');
@@ -404,9 +405,9 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
     Route::put('/monthly/update/{id}', [BillController::class, 'monthlyUpdate'])->name('bill-generate.monthly.update');
     Route::get('/monthly/delete/{id}', [BillController::class, 'monthlyDelete'])->name('bill-generate.monthly.delete');
     Route::get('/monthly/final-submit/{id}', [BillController::class, 'monthlyFinalSubmit'])->name('bill-generate.monthly.finalSubmit');
-  // In web.php
-Route::get('/{locationId?}/{eventId?}', [AdminController::class, 'index'])
-    ->name('admin.dashboard');
+    // In web.php
+    Route::get('/{locationId?}/{eventId?}', [AdminController::class, 'index'])
+        ->name('admin.dashboard');
 
     Route::post('/attendance/update', [AttendanceController::class, 'update'])->name('attendance.update');
 });
@@ -424,6 +425,23 @@ Route::prefix('payment')->name('payment.')->group(function () {
     Route::delete('destroy/{id}', [PaymentController::class, 'destroy'])->name('destroy');
     Route::get('show/{id}', [PaymentController::class, 'show'])->name('show');
     Route::get('/getPaymentData', [PaymentController::class, 'getPaymentData'])->name('getPaymentData');
+});
+
+Route::prefix('report')->name('report.')->group(function () {
+
+    Route::get('/daily', [ReportController::class, 'dailyAttendance'])
+        ->name('daily');
+
+    Route::get('/daily/data', [ReportController::class, 'getAttendanceData'])
+        ->name('daily.data');
+
+    Route::get('/periodical', [ReportController::class, 'periodical'])
+        ->name('periodical');
+
+    Route::get('/guest', [ReportController::class, 'guestReport'])
+        ->name('guest');
+
+    Route::get('/guest/data', [ReportController::class, 'getGuestData'])->name('guest.data');
 });
 
 Route::get('/get-districts', [OrganizationController::class, 'getDistricts'])->name('get.districts');

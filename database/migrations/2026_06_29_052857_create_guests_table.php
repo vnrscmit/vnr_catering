@@ -19,12 +19,15 @@ return new class extends Migration
             $table->unsignedBigInteger('location_id');
             $table->unsignedBigInteger('department_id');
             $table->unsignedBigInteger('calendar_id');
+            $table->unsignedBigInteger('created_by');
 
             $table->string('guest_name');
 
             $table->unsignedInteger('guest_count')->default(1);
 
             $table->text('guest_remarks')->nullable();
+
+            $table->date('date');
 
             $table->unsignedBigInteger('attend_user_id')->nullable();
             $table->boolean('late_flag')->default(0);

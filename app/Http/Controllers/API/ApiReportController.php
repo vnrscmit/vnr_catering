@@ -30,15 +30,22 @@ class ApiReportController extends Controller
         $validator = Validator::make($request->all(), [
             'user_id' => 'required|integer|exists:users,id',
             'location_id' => 'required|integer|exists:locations,id',
+            'event_id' => 'required|integer|exists:event_masters,id',
         ], [
-            // Custom error messages
+            // Custom error messages for user_id
             'user_id.required' => 'User ID is required.',
             'user_id.integer' => 'User ID must be a valid integer.',
             'user_id.exists' => 'The selected user does not exist in our system.',
 
+            // Custom error messages for location_id
             'location_id.required' => 'Location ID is required.',
             'location_id.integer' => 'Location ID must be a valid integer.',
             'location_id.exists' => 'The selected location does not exist in our system.',
+
+            // Custom error messages for event_id
+            'event_id.required' => 'Event ID is required.',
+            'event_id.integer' => 'Event ID must be a valid integer.',
+            'event_id.exists' => 'The selected event does not exist in our system.',
         ]);
 
         // Check if validation fails
@@ -78,6 +85,8 @@ class ApiReportController extends Controller
 
         $userId = $request->user_id;
         $locationId = $request->location_id;
+        $eventId = $request->event_id;
+
         $today = Carbon::today()->toDateString();
 
         try {
@@ -98,9 +107,10 @@ class ApiReportController extends Controller
                 ->where('day_statuses.holiday_flag', 0)
                 ->where('day_statuses.open_flag', 1)
                 ->where('day_statuses.location_id', $locationId)
-                ->leftJoin('attendance_absents', function ($join) use ($userId, $locationId) {
+                ->leftJoin('attendance_absents', function ($join) use ($userId, $locationId, $eventId) {
                     $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
                         ->where('attendance_absents.location_id', $locationId)
+                        ->where('attendance_absents.event_id', $eventId)
                         ->where('attendance_absents.user_id', $userId);
                 })
                 ->selectRaw("

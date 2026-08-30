@@ -18,7 +18,7 @@ use App\Http\Controllers\Traits\MainSiteViewSharedDataTrait;
 
 class AuthController extends Controller
 {
-    
+
     use CartTrait;
     use MainSiteViewSharedDataTrait;
     use OrderNumberGeneratorTrait;
@@ -35,71 +35,63 @@ class AuthController extends Controller
         return view('auth.login');
     }
 
-     
-     // Handle the login request
-     public function login(Request $request)
-     {
-         $request->validate([
-             'username' => 'required',
-             'password' => 'required|string',
-         ]);
-     
-         $user = user::where('username', $request->username)->first();
 
-         if ($user && Hash::check($request->password, $user->password)) {
+    // Handle the login request
+    public function login(Request $request)
+    {
+        $request->validate([
+            'username' => 'required',
+            'password' => 'required|string',
+        ]);
+
+        $user = user::where('username', $request->username)->first();
+
+        if ($user && Hash::check($request->password, $user->password)) {
             $dashboardRoute = $this->getDashboardRoute($user);
-      
 
-             if ($user->status == 1) {
-                 auth()->login($user);
-                 return redirect()->route($dashboardRoute);
-             } else {
-                 session(['username' => $user->username, 'user_name' => $user->first_name]);
-     
-                 if ($user->notice === "change_password_to_activate_account") {
 
-                     return redirect()->route('auth.activate.link.request');
+            if ($user->status == 1) {
+                auth()->login($user);
+                return redirect()->route($dashboardRoute);
+            } else {
+                session(['username' => $user->username, 'user_name' => $user->first_name]);
 
-                 } elseif ($user->notice === "banned") {
+                $errorMessage = 'Your account has been in-active. Please contact your canteen administrator.';
+                return redirect()->route('auth.login')->withErrors(['account' => $errorMessage]);
+            }
+        } else {
+            return back()->withErrors(['username' => 'Invalid username or password.']);
+        }
+    }
 
-                     $errorMessage = 'Your account has been banned. Please contact Support for assistance.';
-                     return redirect()->route('auth.login')->withErrors(['account' => $errorMessage]);
-
-                 } 
-             }
-         } else {
-             return back()->withErrors(['username' => 'Invalid username or password.']);
-         }
-     }
-     
 
 
 
     // Request Activation Link
-     public function requestActivationLink(Request $request)
-     {
+    public function requestActivationLink(Request $request)
+    {
         if (!session()->has('username') || !session()->has('user_name')) {
             $errorMessage = 'Something went wrong, please try to login again.';
             return redirect()->route('auth.login')->withErrors(['error' => $errorMessage]);
         }
         $email = session('mobile');
         $user = user::where('email', $email)->first();
-       
- 
-         // Generate activation token
-         $token = Str::random(60);
- 
-         // Save the token to the user (or separate table for better security)
-         $user->activation_token = $token;
-         $user->save();
- 
-         // Send activation link email
-         Mail::to($user->email)->send(new ActivationLinkEmail($user, $token));
- 
-         return view('auth.activation-link-sent', ['email' => $user->email]);
-     }
 
-     
+
+        // Generate activation token
+        $token = Str::random(60);
+
+        // Save the token to the user (or separate table for better security)
+        $user->activation_token = $token;
+        $user->save();
+
+        // Send activation link email
+        Mail::to($user->email)->send(new ActivationLinkEmail($user, $token));
+
+        return view('auth.activation-link-sent', ['email' => $user->email]);
+    }
+
+
     // Account Activation 
     public function activateAccount()
     {
@@ -107,14 +99,14 @@ class AuthController extends Controller
             $errorMessage = 'Something went wrong, please try to login again.';
             return redirect()->route('auth.login')->withErrors(['error' => $errorMessage]);
         }
-    
+
         //send  a verification code email to the user 
 
         $user_name = session('user_name');
 
         return view('auth.activate-account', compact('user_name'));
     }
-    
+
 
     public function processApdatePassword(ChangePasswordRequest $request)
     {
@@ -143,7 +135,7 @@ class AuthController extends Controller
         $user->notice = null; // Clear any notices  
         $user->save();
 
-        
+
         // Authenticate the user
         Auth::login($user);
         session()->forget(['mobile', 'user_name']);
@@ -179,7 +171,7 @@ class AuthController extends Controller
         return view('auth.password-reset', compact('token', 'email'));
     }
 
-    
+
     // Handle the password reset
     public function resetPassword(Request $request)
     {
@@ -209,15 +201,15 @@ class AuthController extends Controller
 
     private function getDashboardRoute(User $user): string
     {
-        return in_array($user->role, ['Admin', 'Super Admin', 'Canteen Incharge', 'Member', 'Non Member', 'Canteen Administrator']) 
-            ? 'admin.dashboard' 
+        return in_array($user->role, ['Admin', 'Super Admin', 'Canteen Incharge', 'Member', 'Non Member', 'Canteen Administrator'])
+            ? 'admin.dashboard'
             : 'home';
     }
 
-      // Handle logout
-     public function logout()
-     {
-         Auth::logout();
-         return redirect()->route('auth.login')->with('success', 'Logged out successfully.');
-     }
+    // Handle logout
+    public function logout()
+    {
+        Auth::logout();
+        return redirect()->route('auth.login')->with('success', 'Logged out successfully.');
+    }
 }

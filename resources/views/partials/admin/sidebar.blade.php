@@ -132,75 +132,93 @@
               </a>
             </li>
 
+
+
+
             @endif
 
             @if ($loggedInUser->role == "Canteen Administrator")
-            <li class="nav-item {{ request()->route()->named('admin.users.*') ? 'active-nav' : '' }}">
-              <a class="nav-link" href="{{ route('admin.users.index') }}">
-                <i class="fa fa-users menu-icon"></i>
-                <span class="menu-title">User Master</span>
-              </a>
-            </li>
+            {{-- Master --}}
+            <li class="nav-item {{ 
+    request()->route()->named('admin.users.*') ||
+    request()->route()->named('admin.menus.*') ||
+    request()->route()->named('rate-masters.*') ||
+    request()->route()->named('holiday-settings.*') ||
+    request()->route()->named('company-parameters.*')
+        ? 'active' : '' 
+}}">
+              <a class="nav-link" data-toggle="collapse" href="#masterMenu"
+                aria-expanded="{{ 
+            request()->route()->named('admin.users.*') ||
+            request()->route()->named('admin.menus.*') ||
+            request()->route()->named('rate-masters.*') ||
+            request()->route()->named('holiday-settings.*') ||
+            request()->route()->named('company-parameters.*')
+                ? 'true' : 'false' 
+        }}"
+                aria-controls="masterMenu">
 
-            <li class="nav-item {{ request()->route()->named('admin.menus.*') ? 'active-nav' : '' }}">
-              <a class="nav-link" href="{{ route('admin.menus.index') }}">
-                <i class="fa fa-utensils menu-icon"></i>
-                <span class="menu-title">Menu Master</span>
-              </a>
-            </li>
-
-            <li class="nav-item {{ request()->route()->named('today-menu.*') ? 'active-nav' : '' }}">
-              <a class="nav-link" href="{{ route('today-menu.index') }}">
-                <i class="fa fa-utensils menu-icon"></i>
-                <span class="menu-title">Daily Menu Master</span>
-              </a>
-            </li>
-
-
-            <li class="nav-item {{ request()->route()->named('rate-masters.*') ? 'active-nav' : '' }}">
-              <a class="nav-link" href="{{ route('rate-masters.index') }}">
-                <i class="fa fa-money-bill-wave menu-icon"></i>
-                <span class="menu-title">Rate Master</span>
-              </a>
-            </li>
-
-            <li class="nav-item {{ request()->route()->named('holiday-settings.*') ? 'active-nav' : '' }}">
-              <a class="nav-link" href="{{ route('holiday-settings.index') }}">
-                <i class="fa fa-calendar-alt menu-icon"></i>
-                <span class="menu-title">Holiday Master</span>
-              </a>
-            </li>
-            <li class="nav-item {{ request()->route()->named('company-parameters.*') ? 'active-nav' : '' }}">
-              <a class="nav-link" href="{{ route('company-parameters.create') }}">
-                <i class="fa fa-cogs menu-icon"></i>
-                <span class="menu-title">Canteen Parameter</span>
-              </a>
-            </li>
-
-
-            <li class="nav-item">
-              <a class="nav-link {{ request()->route()->named('bill-generate.*') ? '' : 'collapsed' }}"
-                data-toggle="collapse"
-                href="#bill-generate"
-                role="button"
-                aria-expanded="{{ request()->route()->named('bill-generate.*') ? 'true' : 'false' }}"
-                aria-controls="bill-generate">
-                <i class="fa fa-file-invoice-dollar menu-icon"></i>
-                <span class="menu-title">Bill Generate</span>
+                <i class="fa fa-database menu-icon"></i>
+                <span class="menu-title">Masters</span>
                 <i class="menu-arrow"></i>
               </a>
-              <div class="collapse {{ request()->route()->named('bill-generate.*') ? 'show' : '' }}" id="bill-generate">
+
+              <div class="collapse {{ 
+        request()->route()->named('admin.users.*') ||
+        request()->route()->named('admin.menus.*') ||
+        request()->route()->named('rate-masters.*') ||
+        request()->route()->named('holiday-settings.*') ||
+        request()->route()->named('company-parameters.*')
+            ? 'show' : '' 
+    }}" id="masterMenu">
+
                 <ul class="nav flex-column sub-menu">
-                  <li class="nav-item">
-                    <a class="nav-link {{ request()->route()->named('bill-generate.individual') ? 'active' : '' }}"
-                      href="{{ route('bill-generate.individual') }}">
-                      <i class="fa fa-user me-2"></i> Individual Settlement
+
+                  {{-- User Master --}}
+                  <li class="nav-item {{ request()->route()->named('admin.users.*') ? 'active-nav' : '' }}">
+                    <a class="nav-link" href="{{ route('admin.users.index') }}">
+                      <i class="fa fa-users menu-icon"></i>
+                      <span class="menu-title">User Master</span>
                     </a>
                   </li>
-                  <li class="nav-item">
-                    <a class="nav-link {{ request()->route()->named('bill-generate.monthly') ? 'active' : '' }}"
-                      href="{{ route('bill-generate.monthly') }}">
-                      <i class="fa fa-calendar me-2"></i> Monthly Bill
+
+                  {{-- Menu Master --}}
+                  <li class="nav-item {{ request()->route()->named('admin.menus.*') ? 'active-nav' : '' }}">
+                    <a class="nav-link" href="{{ route('admin.menus.index') }}">
+                      <i class="fa fa-utensils menu-icon"></i>
+                      <span class="menu-title">Menu Master</span>
+                    </a>
+                  </li>
+
+                  {{-- Daily Menu Master --}}
+                  <li class="nav-item {{ request()->route()->named('today-menu.*') ? 'active-nav' : '' }}">
+                    <a class="nav-link" href="{{ route('today-menu.index') }}">
+                      <i class="fa fa-utensils menu-icon"></i>
+                      <span class="menu-title">Daily Menu Master</span>
+                    </a>
+                  </li>
+
+                  {{-- Rate Master --}}
+                  <li class="nav-item {{ request()->route()->named('rate-masters.*') ? 'active-nav' : '' }}">
+                    <a class="nav-link" href="{{ route('rate-masters.index') }}">
+                      <i class="fa fa-money-bill-wave menu-icon"></i>
+                      <span class="menu-title">Rate Master</span>
+                    </a>
+                  </li>
+
+                  {{-- Holiday Master --}}
+                  <li class="nav-item {{ request()->route()->named('holiday-settings.*') ? 'active-nav' : '' }}">
+                    <a class="nav-link" href="{{ route('holiday-settings.index') }}">
+                      <i class="fa fa-calendar-alt menu-icon"></i>
+                      <span class="menu-title">Holiday Master</span>
+                    </a>
+                  </li>
+
+                  {{-- Canteen Parameter --}}
+                  <li class="nav-item {{ request()->route()->named('company-parameters.*') ? 'active-nav' : '' }}">
+                    <a class="nav-link" href="{{ route('company-parameters.create') }}">
+                      <i class="fa fa-cogs menu-icon"></i>
+                      <span class="menu-title">Canteen Parameter</span>
                     </a>
                   </li>
 
@@ -208,20 +226,194 @@
               </div>
             </li>
 
-            <li class="nav-item {{ request()->route()->named('payment.*') ? 'active-nav' : '' }}">
-              <a class="nav-link" href="{{ route('payment.index') }}">
-                <i class="fa fa-credit-card menu-icon"></i>
-                <span class="menu-title">Bill Payment</span>
+            {{-- Bill Generate --}}
+            {{-- Bill Generate --}}
+            <li class="nav-item {{ 
+    request()->route()->named('bill-generate.*')
+        ? 'active' : '' 
+}}">
+
+              <a class="nav-link"
+                data-toggle="collapse"
+                href="#billGenerateMenu"
+                aria-expanded="{{ 
+            request()->route()->named('bill-generate.*')
+                ? 'true' : 'false' 
+        }}"
+                aria-controls="billGenerateMenu">
+
+                <i class="fa fa-file-invoice-dollar menu-icon"></i>
+                <span class="menu-title">Bill Generate</span>
+                <i class="menu-arrow"></i>
               </a>
+
+              <div class="collapse {{ 
+        request()->route()->named('bill-generate.*')
+            ? 'show' : '' 
+    }}" id="billGenerateMenu">
+
+                <ul class="nav flex-column sub-menu">
+
+                  {{-- Individual Settlement --}}
+                  <li class="nav-item {{ 
+                request()->route()->named('bill-generate.individual')
+                    ? 'active-nav' : '' 
+            }}">
+                    <a class="nav-link"
+                      href="{{ route('bill-generate.individual') }}">
+
+                      <i class="fa fa-user menu-icon"></i>
+                      <span class="menu-title">Individual Settlement</span>
+
+                    </a>
+                  </li>
+
+                  {{-- Monthly Bill --}}
+                  <li class="nav-item {{ 
+                request()->route()->named('bill-generate.monthly')
+                    ? 'active-nav' : '' 
+            }}">
+                    <a class="nav-link"
+                      href="{{ route('bill-generate.monthly') }}">
+
+                      <i class="fa fa-calendar menu-icon"></i>
+                      <span class="menu-title">Monthly Bill</span>
+
+                    </a>
+                  </li>
+
+                </ul>
+              </div>
+            </li>
+            {{-- Transaction --}}
+            <li class="nav-item {{ 
+    request()->route()->named('payment.*') ||
+    request()->routeIs('feedback.*')
+        ? 'active' : '' 
+}}">
+
+              <a class="nav-link"
+                data-toggle="collapse"
+                href="#transactionMenu"
+                aria-expanded="{{ 
+            request()->route()->named('payment.*') ||
+            request()->routeIs('feedback.*')
+                ? 'true' : 'false' 
+        }}"
+                aria-controls="transactionMenu">
+
+                <i class="fa fa-exchange-alt menu-icon"></i>
+                <span class="menu-title">Transactions</span>
+                <i class="menu-arrow"></i>
+              </a>
+
+              <div class="collapse {{ 
+        request()->route()->named('payment.*') ||
+        request()->routeIs('feedback.*')
+            ? 'show' : '' 
+    }}" id="transactionMenu">
+
+                <ul class="nav flex-column sub-menu">
+
+                  {{-- Bill Payment --}}
+                  <li class="nav-item {{ 
+                request()->route()->named('payment.*')
+                    ? 'active-nav' : '' 
+            }}">
+                    <a class="nav-link" href="{{ route('payment.index') }}">
+
+                      <i class="fa fa-credit-card menu-icon"></i>
+                      <span class="menu-title">Bill Payment</span>
+
+                    </a>
+                  </li>
+
+                  {{-- Feedback --}}
+                  <li class="nav-item {{ 
+                request()->routeIs('feedback.*')
+                    ? 'active-nav' : '' 
+            }}">
+                    <a class="nav-link" href="{{ route('feedback.index') }}">
+
+                      <i class="fa fa-comment-dots menu-icon"></i>
+                      <span class="menu-title">Feedback</span>
+
+                    </a>
+                  </li>
+
+                </ul>
+              </div>
             </li>
 
-            <li class="nav-item {{ request()->routeIs('feedback.*') ? 'active-nav' : '' }}">
-              <a class="nav-link" href="{{ route('feedback.index') }}">
-                <i class="fa fa-comment-dots menu-icon"></i>
-                <span class="menu-title">Feedback</span>
-              </a>
-            </li>
+            {{-- Report --}}
+            <li class="nav-item {{ 
+    request()->routeIs('report.*')
+        ? 'active' : '' 
+}}">
 
+              <a class="nav-link"
+                data-toggle="collapse"
+                href="#reportMenu"
+                aria-expanded="{{ 
+            request()->routeIs('report.*')
+                ? 'true' : 'false' 
+        }}"
+                aria-controls="reportMenu">
+
+                <i class="fa fa-file-alt menu-icon"></i>
+                <span class="menu-title">Report</span>
+                <i class="menu-arrow"></i>
+              </a>
+
+              <div class="collapse {{ 
+        request()->routeIs('report.*')
+            ? 'show' : '' 
+    }}" id="reportMenu">
+
+                <ul class="nav flex-column sub-menu">
+
+                  {{-- Daily Attendance Report --}}
+                  <li class="nav-item {{ 
+                request()->routeIs('report.daily')
+                    ? 'active-nav' : '' 
+            }}">
+                    <a class="nav-link" href="{{ route('report.daily') }}">
+
+                      <i class="fa fa-user menu-icon"></i>
+                      <span class="menu-title">Daily Attendance Report</span>
+
+                    </a>
+                  </li>
+
+                  {{-- Periodical Attendance Report --}}
+                  <!-- <li class="nav-item {{ 
+                request()->routeIs('report.periodical')
+                    ? 'active-nav' : '' 
+            }}">
+                    <a class="nav-link" href="{{ route('report.periodical') }}">
+
+                      <i class="fa fa-calendar menu-icon"></i>
+                      <span class="menu-title">Periodical Attendance Report</span>
+
+                    </a>
+                  </li> -->
+
+                  {{-- Guest Report --}}
+                  <li class="nav-item {{ 
+                request()->routeIs('report.guest')
+                    ? 'active-nav' : '' 
+            }}">
+                    <a class="nav-link" href="{{ route('report.guest') }}">
+
+                      <i class="fa fa-users menu-icon"></i>
+                      <span class="menu-title">Guest Report</span>
+
+                    </a>
+                  </li>
+
+                </ul>
+              </div>
+            </li>
             <!-- <li class="nav-item {{ request()->route()->named('bill-generate.*') ? 'active-nav' : '' }}">
               <a class="nav-link" href="{{ route('bill-generate.index') }}">
                 <i class="fa fa-file-invoice-dollar menu-icon"></i>

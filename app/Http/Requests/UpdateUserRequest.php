@@ -122,6 +122,10 @@ class UpdateUserRequest extends FormRequest
             'generate_code.required_if' => 'Generate code is required for Canteen Incharge.',
             'generate_code.digits' => 'Generate code must be exactly 4 digits.',
 
+            // ============ EVENT IDS - REQUIRED ============
+            'event_ids' => 'required|array|min:1',
+            'event_ids.*' => 'exists:event_masters,id',
+
             // User Code Messages
             'user_code.required' => 'Employee ID is required.',
             'user_code.string' => 'Employee ID must be a string.',

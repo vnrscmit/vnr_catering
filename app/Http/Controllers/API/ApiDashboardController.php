@@ -10,6 +10,7 @@ use App\Models\DayStatus;
 use App\Models\Guest;
 use App\Models\MultipleLocation;
 use App\Models\User;
+use App\Models\UserEvent;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,20 +22,22 @@ class ApiDashboardController extends Controller
     {
         $request->validate([
             'location_id' => 'required|exists:locations,id',
+            'event_id' => 'required|exists:event_masters,id',
         ]);
 
         $user = Auth::user();
         $locationId = $request->location_id;
+        $eventId = $request->event_id;
 
         if (in_array($user->role, ['Member', 'Non Member'])) {
-            return $this->memberDashboard($user, $locationId);
+            return $this->memberDashboard($user, $locationId, $eventId);
         }
         if (in_array($user->role, ['Canteen Incharge', 'Canteen Administrator'])) {
-            return $this->inchargeDashboard($user,  $locationId);
+            return $this->inchargeDashboard($user,  $locationId,  $eventId);
         }
 
         if (in_array($user->role, ['Canteen President'])) {
-            return $this->memberDashboard($user, $locationId);
+            return $this->memberDashboard($user, $locationId,  $eventId);
         }
 
         return response()->json([
@@ -43,9 +46,9 @@ class ApiDashboardController extends Controller
         ], 403);
     }
 
-    private function memberDashboard($userData, $locationId)
+    private function memberDashboard($userData, $locationId,  $eventId)
     {
-        
+
         if ($userData->start_calendar_id == null) {
             return response()->json([
                 'status' => false,
@@ -61,7 +64,7 @@ class ApiDashboardController extends Controller
             ], 400);
         }
 
-        $CompanyParameter = CompanyParameter::where('location_id', $locationId)->where('status', 1)->first();
+        $CompanyParameter = CompanyParameter::where('location_id', $locationId)->where('event_id', $eventId)->where('status', 1)->first();
 
         if (!$CompanyParameter) {
             return response()->json([
@@ -69,7 +72,7 @@ class ApiDashboardController extends Controller
                 'message' => 'Company parameter is not configured for your location.',
             ], 400);
         }
-        
+
         $today = Carbon::today()->format('Y-m-d');
         $currentStart = Carbon::now()->startOfMonth();
         $currentEnd   = Carbon::now()->endOfMonth();
@@ -80,10 +83,11 @@ class ApiDashboardController extends Controller
         $dayStatus = DayStatus::where('date', $today)->where('location_id', $locationId)->first();
 
         $todaysAttendance = DayStatus::where('day_statuses.date', $today)
-            ->leftJoin('attendance_absents', function ($join) use ($locationId) {
+            ->leftJoin('attendance_absents', function ($join) use ($locationId, $eventId) {
                 $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
                     ->where('attendance_absents.user_id', auth()->id())
                     ->where('attendance_absents.location_id', $locationId)
+                    ->where('attendance_absents.event_id', $eventId)
                     ->where('attendance_absents.absent_flag', 1);
             })
             ->select(
@@ -97,18 +101,19 @@ class ApiDashboardController extends Controller
             ->orderBy('day_statuses.date', 'asc')
             ->limit($CompanyParameter->max_day_show)
             ->get();
-           
 
-       $checkDate = DayStatus::where('id', $userData->start_calendar_id)->value('date');
- 
-$startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locationId)->value('date');
-  
+
+        $checkDate = DayStatus::where('id', $userData->start_calendar_id)->value('date');
+
+        $startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locationId)->value('date');
+
         $upComingDays = DayStatus::where('day_statuses.date', '>', $today)
-          ->where('day_statuses.date', '>=', $startDate)
-            ->leftJoin('attendance_absents', function ($join) use ($locationId) {
+            ->where('day_statuses.date', '>=', $startDate)
+            ->leftJoin('attendance_absents', function ($join) use ($locationId, $eventId) {
                 $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
                     ->where('attendance_absents.user_id', auth()->id())
                     ->where('attendance_absents.location_id', $locationId)
+                    ->where('attendance_absents.event_id', $eventId)
                     ->where('attendance_absents.absent_flag', 1);
             })
             ->select(
@@ -122,12 +127,12 @@ $startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locati
             ->orderBy('day_statuses.date', 'asc')
             ->limit($CompanyParameter->max_day_show)
             ->get();
-            
-              $checkDate = DayStatus::where('id', $userData->start_calendar_id)->value('date');
- 
-$startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locationId)->value('date');
 
-    
+        $checkDate = DayStatus::where('id', $userData->start_calendar_id)->value('date');
+
+        $startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locationId)->value('date');
+
+
 
         // Current Month Summary Data
         $summaryCurrentMonth = DayStatus::whereBetween('day_statuses.date', [
@@ -135,9 +140,10 @@ $startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locati
             $currentEnd->format('Y-m-d')
         ])
             ->where('day_statuses.date', '>=', $startDate)
-            ->leftJoin('attendance_absents', function ($join)  use ($userData, $locationId) {
+            ->leftJoin('attendance_absents', function ($join)  use ($userData, $locationId, $eventId) {
                 $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
                     ->where('attendance_absents.location_id', $locationId)
+                    ->where('attendance_absents.event_id', $eventId)
                     ->where('attendance_absents.user_id', $userData->id);
             })
             ->where('date', '<=', Carbon::today()->toDateString())
@@ -184,9 +190,10 @@ $startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locati
             $previousEnd->format('Y-m-d')
         ])
             ->where('day_statuses.id', '>=', $userData->start_calendar_id)
-            ->leftJoin('attendance_absents', function ($join)  use ($userData, $locationId) {
+            ->leftJoin('attendance_absents', function ($join)  use ($userData, $locationId, $eventId) {
                 $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
                     ->where('attendance_absents.location_id', $locationId)
+                    ->where('attendance_absents.event_id', $eventId)
                     ->where('attendance_absents.user_id', $userData->id);
             })
             ->leftJoin('guests', function ($join)  use ($userData, $locationId) {
@@ -305,12 +312,14 @@ $startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locati
             $personalguestCount = Guest::where('attend_user_id', $userData->id)
                 ->where('location_id', $locationId)
                 ->where('calendar_id', $dayStatus->id)
+                ->where('event_id', $eventId)
                 ->where('guest_type', 'Personal Guest')
                 ->sum('guest_count');
 
             $officeguestCount = Guest::where('attend_user_id', $userData->id)
                 ->where('location_id', $locationId)
                 ->where('calendar_id', $dayStatus->id)
+                ->where('event_id', $eventId)
                 ->where('guest_type', 'Office Guest')
                 ->sum('guest_count');
         } else {
@@ -331,6 +340,7 @@ $startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locati
         $dailyMenuList = DailyMenu::with('items.menu', 'items.submenu')
             ->where('calendar_id', $dayStatus->id)
             ->where('location_id', $locationId)
+            ->where('event_id', $eventId)
             ->where('menu_date', $today)
             ->first();
 
@@ -339,11 +349,11 @@ $startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locati
             'Refresher'       => 2,
             'Vegetable'       => 3,
             'Dal'             => 4,
-             'Roti'            => 5,
+            'Roti'            => 5,
             'Rice'            => 6,
             'Accompaniments'  => 7,
             'Dessert'         => 8,
-          
+
         ];
 
         $todayMenu = $dailyMenuList
@@ -360,8 +370,8 @@ $startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locati
             ->values()
             ->toArray()
             : [];
-            
-                   $startDate = Carbon::parse(
+
+        $startDate = Carbon::parse(
             DayStatus::where('id', $userData->start_calendar_id)->value('date')
         )->format('d-m-Y');
 
@@ -399,8 +409,8 @@ $startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locati
             'canteen_end_time' => $CompanyParameter->canteen_end_time
                 ? Carbon::parse($CompanyParameter->canteen_end_time)->format('h:i A')
                 : null,
-                
-             'startDate' => $startDate ?? '',
+
+            'startDate' => $startDate ?? '',
         ];
 
 
@@ -411,9 +421,9 @@ $startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locati
         ]);
     }
 
-    private function inchargeDashboard($userData)
+    private function inchargeDashboard($userData, $eventId)
     {
-        $companyParameter = CompanyParameter::where('location_id', $userData->location_id)->where('status', 1)->first();
+        $companyParameter = CompanyParameter::where('location_id', $userData->location_id)->where('event_id', $eventId)->where('status', 1)->first();
 
         if (!$companyParameter) {
             return response()->json([
@@ -433,17 +443,23 @@ $startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locati
             ], 400);
         }
 
+        $eventUserIds = UserEvent::where('event_id', $eventId)->where('status', 1)
+            ->pluck('user_id')
+            ->toArray();
+
         $singleLinkedUserIds = User::where('location_id', $userData->location_id)
             ->whereNotNull('start_calendar_id')
             ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge', 'Canteen Administrator'])
+            ->whereIn('id', $eventUserIds)
             ->where('status', 1)
             ->pluck('id');
-        
+
 
         $multiLinkedUserIds = MultipleLocation::join('users', 'multiple_locations.user_id', '=', 'users.id')
             ->where('multiple_locations.location_id', $userData->location_id)
             ->where('users.status', 1)
             ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge', 'Canteen Administrator'])
+            ->whereIn('id', $eventUserIds)
             ->pluck('multiple_locations.user_id');
 
         $allLinkedUserIds = $singleLinkedUserIds
@@ -457,21 +473,24 @@ $startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locati
             ->where('location_id', $userData->location_id)
             ->where('absent_flag', 1)
             ->whereIn('user_id', $allLinkedUserIds)
+            ->where('event_id', $eventId)
             ->count();
 
         $presentCount = $totalUsers - $absentCount;
 
         $officialGuestCount = Guest::where('calendar_id', $dayStatus->id)
             ->where('location_id', $userData->location_id)
+            ->where('event_id', $eventId)
             ->where('guest_type', 'Office Guest')
             ->sum('guest_count');
 
         $personalGuestCount = Guest::where('calendar_id', $dayStatus->id)
             ->where('location_id', $userData->location_id)
+            ->where('event_id', $eventId)
             ->where('guest_type', 'Personal Guest')
             ->sum('guest_count');
 
-        $lateChangesUserId = AttendanceAbsent::where('late_flag', 1)->where('calendar_id', $dayStatus->id)->pluck('user_id')->toArray();
+        $lateChangesUserId = AttendanceAbsent::where('late_flag', 1)->where('calendar_id', $dayStatus->id)->where('event_id', $eventId)->pluck('user_id')->toArray();
 
         $presentToAbsent = User::where('status', 1)->where('role', 'Member')->whereIn('id', $lateChangesUserId)
             ->count();
@@ -479,19 +498,19 @@ $startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locati
         $absentToPresent = User::where('status', 1)->where('role', 'Non Member')->whereIn('id', $lateChangesUserId)
             ->count();
 
-        $lateGuest = Guest::where('late_flag', 1)->where('calendar_id', $dayStatus->id)->count();
+        $lateGuest = Guest::where('late_flag', 1)->where('calendar_id', $dayStatus->id)->where('event_id', $lateChangesUserId)->sum('guest_count');
 
         $lateEntry = [
             'presentToAbsent' => $presentToAbsent,
             'absentToPresent' => $absentToPresent,
             'lateGuest' => $lateGuest,
         ];
-        
-         if ($userData->personal_guest_flag == 1) {
+
+        if ($userData->personal_guest_flag == 1) {
             $guestAllowed = 1;
-         }else{
-              $guestAllowed = 0;
-         }
+        } else {
+            $guestAllowed = 0;
+        }
 
         $data = [
             'total_users'          => $totalUsers,
@@ -512,9 +531,9 @@ $startDate  = DayStatus::where('date', $checkDate)->where('location_id', $locati
             'canteen_end_time' => $companyParameter->canteen_end_time
                 ? Carbon::parse($companyParameter->canteen_end_time)->format('h:i A')
                 : null,
-                
-                 'startDate' => '',
-                 'guestAllowed' => $guestAllowed,
+
+            'startDate' => '',
+            'guestAllowed' => $guestAllowed,
         ];
 
         return response()->json([

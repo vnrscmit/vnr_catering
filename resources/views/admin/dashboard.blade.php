@@ -469,18 +469,25 @@
             </h3>
           </div>
 
-          {{-- Events --}}
+          @if(count($allLocations) > 1)
+          @php
+          $selectedLocation = request()->route('id') ?? $locationId;
+          @endphp
+
           <div class="d-flex align-items-center justify-content-center flex-grow-1" style="gap: 4px;">
-            @foreach($eventList as $eventId => $eventName)
+            @foreach($allLocations as $location)
             <a href="{{ route('admin.dashboard', [
-                        'locationId' => $locationId,
-                        'eventId' => $eventId
-                    ]) }}"
-              class="btn {{ $eventId == $selectedEventId ? 'btn-primary active' : 'btn-outline-primary' }}">
-              {{ $eventName }}
+                  'locationId' => $location['location_id'],
+                   'eventId' => $selectedEventId ?? 0  
+             ]) }}"
+              class="btn me-2 mb-2 {{ $selectedLocation == $location['location_id'] ? 'btn-primary active' : 'btn-outline-primary' }}">
+              {{ $location['location_name'] }}
             </a>
             @endforeach
           </div>
+          @else
+          <div class="d-flex align-items-center justify-content-center flex-grow-1" style="gap: 4px;"></div>
+          @endif
 
           {{-- Date --}}
           <div class="d-flex align-items-center gap-3 flex-shrink-0 ms-4">
@@ -505,20 +512,19 @@
     <p style="color:red">Your start Date is not set please contact to your canteen incharge</p>
     @else
     <div class="row">
-      @if(count($allLocations) > 1)
+
       <div class="col-12">
         <div class="card-body">
           <div class="row">
             <div class="">
-              @php
-              $selectedLocation = request()->route('id') ?? $allLocations->first()['location_id'];
-              @endphp
-
               <div class="mb-3">
-                @foreach($allLocations as $location)
-                <a href="{{ route('admin.dashboard', ['id' => $location['location_id']]) }}"
-                  class="btn me-2 mb-2 {{ $selectedLocation == $location['location_id'] ? 'btn-primary active' : 'btn-outline-primary' }}">
-                  {{ $location['location_name'] }}
+                @foreach($eventList as $eventId => $eventName)
+                <a href="{{ route('admin.dashboard', [
+                        'locationId' => $locationId,
+                        'eventId' => $eventId
+                    ]) }}"
+                  class="btn {{ $eventId == $selectedEventId ? 'btn-primary active' : 'btn-outline-primary' }}">
+                  {{ $eventName }}
                 </a>
                 @endforeach
               </div>
@@ -527,7 +533,6 @@
         </div>
       </div>
 
-      @endif
 
       <!-- First Condition  -->
       @if($overrideLock)
@@ -744,10 +749,12 @@
               </div>
 
               <div class="col-6">
-                <a href="{{ route('mark-attendance', $dayStatus->id) }}"> <button class="btn btn-absent w-100">
+                <a href="{{ route('mark-attendance', ['id' => $dayStatus->id, 'eventId' => $selectedEventId]) }}">
+                  <button class="btn btn-absent w-100">
                     <i class="fa fa-times-circle me-2"></i>
                     Mark Absent
-                  </button></a>
+                  </button>
+                </a>
               </div>
 
             </div>
@@ -777,7 +784,7 @@
             </div>
 
             <div class="mt-4">
-              <a href="{{ route('mark-attendance', $dayStatus->id) }}"
+              <a href="{{ route('mark-attendance', ['id' => $dayStatus->id, 'eventId' => $selectedEventId]) }}"
                 class="btn btn-undo w-100">
                 <i class="fa fa-rotate-left"></i>
                 Undo - Mark Present
@@ -812,7 +819,7 @@
                   <div class="day-date">
                     {{ \Carbon\Carbon::parse($day->date)->format('d') }}
                   </div>
-                  <a href="{{ route('mark-attendance', $day->id) }}">
+                    <a href="{{ route('mark-attendance', ['id' => $day->id, 'eventId' => $selectedEventId]) }}">
                     @if($day->absent_flag)
                     <div class="status-circle absent-icon">
                       <i class="fa fa-times"></i>

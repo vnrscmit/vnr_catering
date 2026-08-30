@@ -29,4 +29,9 @@ class AttendanceAbsent extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+       public function event()
+    {
+        return $this->belongsTo(EventMaster::class);
+    }
 }
