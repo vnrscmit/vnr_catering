@@ -517,7 +517,7 @@
         <div class="card-body">
           <div class="row">
             <div class="">
-              <div class="mb-3">
+              <div class="">
                 @foreach($eventList as $eventId => $eventName)
                 <a href="{{ route('admin.dashboard', [
                         'locationId' => $locationId,
@@ -536,7 +536,7 @@
 
       <!-- First Condition  -->
       @if($overrideLock)
-      <div class="col-12 mb-4">
+      <div class="col-12">
         <div class="card-body">
           <div class="row">
 

@@ -4,18 +4,12 @@
 <link rel="stylesheet" href="/admin_resources/vendors/typicons.font/font/typicons.css">
 <link rel="stylesheet" href="/admin_resources/vendors/css/vendor.bundle.base.css">
 <link rel="stylesheet" href="/admin_resources/css/vertical-layout-light/style.css">
-
 <!-- DataTables CSS -->
 <link href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
-
-<!-- DataTables Buttons CSS -->
-<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.3/css/buttons.dataTables.min.css">
 @endpush
 
-
 @push('scripts')
-
 <script src="/admin_resources/vendors/js/vendor.bundle.base.js"></script>
 <script src="/admin_resources/js/off-canvas.js"></script>
 <script src="/admin_resources/js/hoverable-collapse.js"></script>
@@ -25,19 +19,16 @@
 
 <!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
 <!-- DataTables JS -->
 <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
-
 <!-- Bootstrap 5 JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.3/css/buttons.dataTables.min.css">
 
-<!-- DataTables Buttons -->
+
 <script src="https://cdn.datatables.net/buttons/2.2.3/js/dataTables.buttons.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.2.3/js/buttons.print.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.2.3/js/buttons.html5.min.js"></script>
-
-<!-- Export Dependencies -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>

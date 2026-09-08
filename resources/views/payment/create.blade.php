@@ -46,8 +46,8 @@
         font-weight: 600;
     }
 
-      .payment-done {
-        color:  #28a745;
+    .payment-done {
+        color: #28a745;
         font-weight: 500;
     }
 
@@ -99,24 +99,8 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-    $(document).ready(function() {
-        // Jab bhi Pay button click ho
-        $(document).on('click', '.pay-btn', function() {
-            // Button se data lein
-            var id = $(this).data('id');
-            var name = $(this).data('name');
-            var amount = $(this).data('amount');
-
-            // Modal ke fields mein data set karein
-            $('#bill_detail_id').val(id);
-            $('#userName').val(name);
-            $('#payableAmount').val(amount);
-            $('#payable_amount').val(amount);
-            // Receive amount clear karein
-            $('#receive_amount').val('');
-        });
-    });
-
+    // ===== TABLE VARIABLE GLOBAL SCOPE MEIN =====
+    var dataTable; // Global variable for DataTable
 
     $(document).ready(function() {
         // CSRF token setup for all AJAX requests
@@ -126,152 +110,20 @@
             }
         });
 
-        // Payment form submit handler
-        $('#paymentForm').on('submit', function(e) {
-            e.preventDefault();
-
-            var form = $(this);
-            var submitBtn = $('#submitPayment');
-            var spinner = $('#paymentSpinner');
-            var btnText = $('#paymentBtnText');
-            var formData = new FormData(this);
-
-            // Validation: Check if receive amount is entered
-            var receiveAmount = $('#receive_amount').val();
-            if (!receiveAmount || parseFloat(receiveAmount) <= 0) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Invalid Amount',
-                    text: 'Please enter a valid receive amount greater than 0',
-                });
-                return false;
-            }
-
-            // Show loading state
-            submitBtn.prop('disabled', true);
-            spinner.removeClass('d-none');
-            btnText.text('Processing...');
-
-            $.ajax({
-                url: "{{ route('payment.store') }}",
-                type: "POST",
-                data: formData,
-                processData: false,
-                contentType: false,
-                dataType: 'json',
-                success: function(response) {
-                    // Reset loading state
-                    submitBtn.prop('disabled', false);
-                    spinner.addClass('d-none');
-                    btnText.html('<i class="fas fa-check-circle"></i> Confirm Payment');
-
-                    if (response.success) {
-                        // Close modal
-                        $('#paymentModal').modal('hide');
-
-                        // Show success message
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Payment Successful!',
-                            text: response.message || 'Payment has been processed successfully.',
-                            timer: 3000,
-                            showConfirmButton: true
-                        }).then(function() {
-                            // Reload page to update table
-                            location.reload();
-                        });
-                    }
-                },
-                error: function(xhr) {
-                    // Reset loading state
-                    submitBtn.prop('disabled', false);
-                    spinner.addClass('d-none');
-                    btnText.html('<i class="fas fa-check-circle"></i> Confirm Payment');
-
-                    // Parse error response
-                    var errorMessage = 'Something went wrong!';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    } else if (xhr.responseJSON && xhr.responseJSON.errors) {
-                        // Validation errors
-                        var errors = xhr.responseJSON.errors;
-                        var errorList = [];
-                        $.each(errors, function(key, value) {
-                            errorList.push(value[0]);
-                        });
-                        errorMessage = errorList.join('<br>');
-                    }
-
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Payment Failed!',
-                        html: errorMessage,
-                        confirmButtonColor: '#d33',
-                    });
-                }
-            });
-        });
-
-        // Modal data population (existing code)
-        $(document).on('click', '.pay-btn', function() {
-            var id = $(this).data('id');
-            var name = $(this).data('name');
-            var amount = $(this).data('amount');
-
-            $('#bill_detail_id').val(id);
-            $('#userName').val(name || 'N/A');
-            $('#payableAmount').val(amount ? amount : '0');
-            $('#payable_amount').val(amount || 0);
-            $('#receive_amount').val('');
-            $('#balanceMessage').text('Payable Amount: ' + (amount ? parseFloat(amount).toFixed(2) : '0.00'));
-        });
-
-        // Real-time balance calculation
-        $('#receive_amount').on('keyup change', function() {
-            var payable = parseFloat($('#payable_amount').val()) || 0;
-            var receive = parseFloat($(this).val()) || 0;
-            var balance = payable - receive;
-
-            if (balance > 0) {
-                $('#balanceMessage').html('<span class="text-danger">Remaining Balance: ' + balance.toFixed(2) + '</span>');
-            } else if (balance < 0) {
-                $('#balanceMessage').html('<span class="text-warning">Overpayment: ' + Math.abs(balance).toFixed(2) + ' (Change to return)</span>');
-            } else if (balance === 0 && receive > 0) {
-                $('#balanceMessage').html('<span class="text-success">Payment fully settled! ✅</span>');
-            } else {
-                $('#balanceMessage').text('Payable Amount: ' + payable.toFixed(2));
-            }
-        });
-    });
-
-    function resetFormWithSweetAlert() {
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "All form fields will be cleared!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, reset it!',
-            cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                document.querySelector('form').reset();
-                Swal.fire(
-                    'Reset!',
-                    'All fields have been reset successfully.',
-                    'success'
-                );
-            }
-        });
-    }
-
-    $(document).ready(function() {
-        // Initialize DataTable
-        var table = $('.data-table').DataTable({
+        // ===== INITIALIZE DATATABLE =====
+        var userId = "{{ auth()->user()->id }}";
+        var billId = "{{ request()->route('id') }}";
+        
+        dataTable = $('.data-table').DataTable({
             processing: true,
             serverSide: true,
-            ajax: "{{ route('payment.getPaymentData') }}", // Create this route in your controller
+            ajax: {
+                url: "{{ route('payment.getPaymentData') }}",
+                data: function(d) {
+                    d.user_id = userId;
+                    d.bill_id = billId;
+                }
+            },
             columns: [{
                     data: 'DT_RowIndex',
                     name: 'DT_RowIndex',
@@ -312,13 +164,11 @@
                     name: 'total_amount_due',
                     className: 'center grand-total'
                 },
-
                 {
                     data: 'payment_amount',
                     name: 'payment_amount',
                     className: 'center grand-total'
                 },
-
                 {
                     data: 'action',
                     name: 'action',
@@ -326,8 +176,6 @@
                     searchable: false,
                     className: 'center'
                 }
-
-
             ],
             pageLength: 10,
             lengthMenu: [
@@ -345,52 +193,168 @@
                 infoFiltered: "(filtered from _MAX_ total entries)",
                 zeroRecords: "No records found",
             },
-            // dom: 'lBfrtip',
-            // buttons: [
-            //     'excel',
-            //     'pdf',
-            //     'print'
-            // ],
-            // Add footer callback for grand totals
+            dom: 'lBfrtip',
+            buttons: [
+                'excel',
+                'pdf',
+            ],
             footerCallback: function(row, data, start, end, display) {
                 var api = this.api();
 
-                // Calculate totals for columns 3, 5, 7 (Attendance Days, Bill Amount, Total Amount Due)
                 var totalDays = api
-                    .column(3, {
-                        page: 'current'
-                    })
+                    .column(3, { page: 'current' })
                     .data()
                     .reduce(function(a, b) {
                         return parseInt(a) + parseInt(b);
                     }, 0);
 
                 var totalAmount = api
-                    .column(5, {
-                        page: 'current'
-                    })
+                    .column(5, { page: 'current' })
                     .data()
                     .reduce(function(a, b) {
                         return parseFloat(a) + parseFloat(b);
                     }, 0);
 
                 var totalDue = api
-                    .column(7, {
-                        page: 'current'
-                    })
+                    .column(7, { page: 'current' })
                     .data()
                     .reduce(function(a, b) {
                         return parseFloat(a) + parseFloat(b);
                     }, 0);
 
-                // Update footer
                 $(api.column(3).footer()).html(totalDays);
                 $(api.column(5).footer()).html(totalAmount);
                 $(api.column(7).footer()).html(totalDue);
             }
         });
 
-        // Description counter
+     
+     // ===== PAY BUTTON CLICK - Modal data populate =====
+$(document).on('click', '.pay-btn', function() {
+    var id = $(this).data('id');
+    var name = $(this).data('name');
+    var amount = $(this).data('amount');
+    console.log('Pay button clicked for ID:', id, 'Name:', name, 'Amount:', amount);
+
+    $('#bill_detail_id').val(id);
+    $('#userName').val(name || 'N/A');
+    
+    // FIX: Set both the hidden field AND the display field
+    var formattedAmount = (amount);
+    $('#payable_amount').val(amount || 0);
+    $('#payableAmount').val(formattedAmount); // <-- Add this line
+    $('#payableAmount').attr('data-amount', amount || 0);
+    
+    $('#receive_amount').val('');
+    $('#balanceMessage').text('Payable Amount: ' + formattedAmount);
+});
+        // ===== PAYMENT FORM SUBMIT =====
+        $('#paymentForm').on('submit', function(e) {
+            e.preventDefault();
+
+            var form = $(this);
+            var submitBtn = $('#submitPayment');
+            var spinner = $('#paymentSpinner');
+            var btnText = $('#paymentBtnText');
+            var formData = new FormData(this);
+
+            // Validation
+            var receiveAmount = $('#receive_amount').val();
+            if (!receiveAmount || parseFloat(receiveAmount) < 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid Amount',
+                    text: 'Please enter a valid receive amount greater than 0',
+                });
+                return false;
+            }
+
+            // Show loading state
+            submitBtn.prop('disabled', true);
+            spinner.removeClass('d-none');
+            btnText.text('Processing...');
+
+            $.ajax({
+                url: "{{ route('payment.store') }}",
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                dataType: 'json',
+                success: function(response) {
+                    // Reset loading state
+                    submitBtn.prop('disabled', false);
+                    spinner.addClass('d-none');
+                    btnText.html('<i class="fas fa-check-circle"></i> Confirm Payment');
+
+                    if (response.success) {
+                        // Close modal
+                        $('#paymentModal').modal('hide');
+
+                        // Show success message
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Payment Successful!',
+                            text: response.message || 'Payment has been processed successfully.',
+                            timer: 3000,
+                            showConfirmButton: true
+                        }).then(function() {
+                            // ===== FIX: Table reload =====
+                            if (dataTable) {
+                                dataTable.ajax.reload(null, false);
+                            } else {
+                                location.reload();
+                            }
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    // Reset loading state
+                    submitBtn.prop('disabled', false);
+                    spinner.addClass('d-none');
+                    btnText.html('<i class="fas fa-check-circle"></i> Confirm Payment');
+
+                    // Parse error response
+                    var errorMessage = 'Something went wrong!';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                        var errors = xhr.responseJSON.errors;
+                        var errorList = [];
+                        $.each(errors, function(key, value) {
+                            errorList.push(value[0]);
+                        });
+                        errorMessage = errorList.join('<br>');
+                    }
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Payment Failed!',
+                        html: errorMessage,
+                        confirmButtonColor: '#d33',
+                    });
+                }
+            });
+        });
+
+        // ===== REAL-TIME BALANCE CALCULATION =====
+        $('#receive_amount').on('keyup change', function() {
+            var payable = parseFloat($('#payable_amount').val()) || 0;
+            var receive = parseFloat($(this).val()) || 0;
+            var balance = payable - receive;
+
+            if (balance > 0) {
+                $('#balanceMessage').html('<span class="text-danger">Remaining Balance: ' + balance.toFixed(2) + '</span>');
+            } else if (balance < 0) {
+                $('#balanceMessage').html('<span class="text-warning">Overpayment: ' + Math.abs(balance).toFixed(2) + ' (Change to return)</span>');
+            } else if (balance === 0 && receive > 0) {
+                $('#balanceMessage').html('<span class="text-success">Payment fully settled! ✅</span>');
+            } else {
+                $('#balanceMessage').text('Payable Amount: ' + payable.toFixed(2));
+            }
+        });
+
+        // ===== DESCRIPTION COUNTER =====
         const maxLength = 500;
         const description = $('#description');
         const counter = $('#descriptionCount');
@@ -413,6 +377,29 @@
 
         updateDescriptionCount();
     });
+
+    // ===== RESET FORM FUNCTION =====
+    function resetFormWithSweetAlert() {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "All form fields will be cleared!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, reset it!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.querySelector('form').reset();
+                Swal.fire(
+                    'Reset!',
+                    'All fields have been reset successfully.',
+                    'success'
+                );
+            }
+        });
+    }
 </script>
 @endpush
 
@@ -424,7 +411,7 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
-                    <i class="fas fa-money-bill-wave me-1"></i> Bill Payment
+                    <i class="fas fa-money-bill-wave me-1"></i> Bill Payment - {{ auth()->user()->location->name ?? 'N/A' }}
                 </h5>
                 <a href="{{ route('payment.index') }}" class="btn btn-secondary btn-sm">
                     <i class="fa fa-arrow-left"></i> Back
@@ -568,7 +555,7 @@
                         <i class="fas fa-times"></i> Cancel
                     </button>
 
-                    <button type="submit" class="btn btn-primary" id="submitPayment">
+                    <button type="" class="btn btn-primary" id="submitPayment">
                         <i class="fas fa-save"></i> Submit
                     </button>
 

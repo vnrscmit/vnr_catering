@@ -1,246 +1,400 @@
-@extends('layouts.admin')
+    @extends('layouts.admin')
 
-@push('styles')
-<link rel="stylesheet" href="/admin_resources/vendors/typicons.font/font/typicons.css">
-<link rel="stylesheet" href="/admin_resources/vendors/css/vendor.bundle.base.css">
-<link rel="stylesheet" href="/admin_resources/css/vertical-layout-light/style.css">
-@endpush
+    @push('styles')
+    <link rel="stylesheet" href="/admin_resources/vendors/typicons.font/font/typicons.css">
+    <link rel="stylesheet" href="/admin_resources/vendors/css/vendor.bundle.base.css">
+    <link rel="stylesheet" href="/admin_resources/css/vertical-layout-light/style.css">
+    @endpush
 
-@push('scripts')
-<script src="/admin_resources/vendors/js/vendor.bundle.base.js"></script>
-<script src="/admin_resources/js/off-canvas.js"></script>
-<script src="/admin_resources/js/hoverable-collapse.js"></script>
-<script src="/admin_resources/js/template.js"></script>
-<script src="/admin_resources/js/settings.js"></script>
-<script src="/admin_resources/js/todolist.js"></script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-@endpush
+    @push('scripts')
+    <script src="/admin_resources/vendors/js/vendor.bundle.base.js"></script>
+    <script src="/admin_resources/js/off-canvas.js"></script>
+    <script src="/admin_resources/js/hoverable-collapse.js"></script>
+    <script src="/admin_resources/js/template.js"></script>
+    <script src="/admin_resources/js/settings.js"></script>
+    <script src="/admin_resources/js/todolist.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-@section('title', 'Edit Guest')
-@section('content')
+ <script>
+    $(document).ready(function() {
+        let rowCounter = 0;
 
-<div class="main-panel">
-    <div class="content-wrapper">
-        <div class="card">
+        // Function to generate a single row HTML with optional data
+        function generateRow(guestName = '', departmentId = 0) {
+            // Escape the guest name to prevent XSS
+            let escapedGuestName = guestName.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            
+            return `
+                <tr>
+                    <td>
+                        <input type="text"
+                            name="guest_name[]"
+                            class="form-control"
+                            placeholder="Enter Guest Name"
+                            value="${escapedGuestName}"
+                            required>
+                    </td>
+                    <td>
+                        <select class="form-control" name="guest_department_id[]" required>
+                            <option value="0" ${departmentId == 0 ? 'selected' : ''}>Select Department</option>
+                            @foreach($departments as $department)
+                            <option value="{{ $department->id }}" ${departmentId == {{ $department->id }} ? 'selected' : ''}>
+                                {{ $department->name }}
+                            </option>
+                            @endforeach
+                        </select>
+                    </td>
+                    <td>
+                        <button type="button"
+                                class="btn btn-primary btn-sm addRowBtn">
+                            <i class="fa fa-plus"></i>
+                        </button>
+                        <button type="button" 
+                                class="btn btn-danger btn-sm removeRow">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
 
-            <div class="card-header">
-                <h5>Edit Guest</h5>
-            </div>
-            <div class="card-body">
-                @if(session('error'))
-                <div class="alert alert-danger alert-dismissible fade show">
-                    <i class="fa fa-exclamation-circle me-2"></i>
-                    {{ session('error') }}
-                    <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="alert"></button>
+        // Function to generate first row (without delete button) with data
+        function generateFirstRow(guestName = '', departmentId = 0) {
+            let escapedGuestName = guestName.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            
+            return `
+                <tr>
+                    <td>
+                        <input type="text"
+                            name="guest_name[]"
+                            class="form-control"
+                            placeholder="Enter Guest Name"
+                            value="${escapedGuestName}"
+                            required>
+                    </td>
+                    <td>
+                        <select class="form-control" name="guest_department_id[]" required>
+                            <option value="0" ${departmentId == 0 ? 'selected' : ''}>Select Department</option>
+                            @foreach($departments as $department)
+                            <option value="{{ $department->id }}" ${departmentId == {{ $department->id }} ? 'selected' : ''}>
+                                {{ $department->name }}
+                            </option>
+                            @endforeach
+                        </select>
+                    </td>
+                    <td>
+                        <button type="button"
+                                class="btn btn-primary btn-sm addRowBtn">
+                            <i class="fa fa-plus"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // Function to set rows based on count with data
+        function setRows(count, guestData = []) {
+            let tbody = $('#guestTable tbody');
+            tbody.empty();
+
+            if (count < 1) count = 1;
+
+            // Add first row (without delete button)
+            let firstGuestName = (guestData[0] && guestData[0].guest_name) ? guestData[0].guest_name : '';
+            let firstDeptId = (guestData[0] && guestData[0].department_id) ? guestData[0].department_id : 0;
+            tbody.append(generateFirstRow(firstGuestName, firstDeptId));
+
+            // Add remaining rows (with delete button) with data
+            for (let i = 1; i < count; i++) {
+                let guestName = (guestData[i] && guestData[i].guest_name) ? guestData[i].guest_name : '';
+                let deptId = (guestData[i] && guestData[i].department_id) ? guestData[i].department_id : 0;
+                tbody.append(generateRow(guestName, deptId));
+            }
+
+            updateGuestCount();
+        }
+
+        // Guest count change event
+        $('#guest_count').on('change keyup input', function() {
+            let count = parseInt($(this).val());
+            if (!isNaN(count) && count > 0) {
+                // Get existing guest data from hidden inputs or current rows
+                let guestData = getCurrentGuestData();
+                setRows(count, guestData);
+            } else {
+                $(this).val(1);
+                setRows(1);
+            }
+        });
+
+        // Add row functionality
+        $('#addRow').click(function() {
+            let row = generateRow();
+            $('#guestTable tbody').append(row);
+            updateGuestCount();
+        });
+
+        // Remove row functionality
+        $(document).on('click', '.removeRow', function() {
+            if ($('#guestTable tbody tr').length > 1) {
+                $(this).closest('tr').remove();
+                updateGuestCount();
+            } else {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Error',
+                    text: 'You must have at least one row!',
+                    confirmButtonText: 'OK'
+                });
+            }
+        });
+
+        // Add row from within row
+        $(document).on('click', '.addRowBtn', function() {
+            let row = generateRow();
+            $(this).closest('tr').after(row);
+            updateGuestCount();
+        });
+
+        // Update guest count
+        function updateGuestCount() {
+            let rowCount = $('#guestTable tbody tr').length;
+            $('#guest_count').val(rowCount);
+        }
+
+        // Get current guest data from table
+        function getCurrentGuestData() {
+            let guestData = [];
+            $('#guestTable tbody tr').each(function() {
+                let name = $(this).find('input[name="guest_name[]"]').val() || '';
+                let deptId = $(this).find('select[name="guest_department_id[]"]').val() || 0;
+                guestData.push({
+                    guest_name: name,
+                    department_id: parseInt(deptId)
+                });
+            });
+            return guestData;
+        }
+
+        // Initialize on page load with guest details
+        let initialCount = parseInt($('#guest_count').val()) || {{ $guest->guest_count ?? 1 }};
+        
+        // Prepare guest data from PHP
+        let guestDetails = @json($guestDetails ?? []);
+        setRows(initialCount, guestDetails);
+    });
+</script>
+    @endpush
+
+    @section('title', 'Edit Guest')
+    @section('content')
+
+    <div class="main-panel">
+        <div class="content-wrapper">
+            <div class="card">
+
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Edit Guest - {{ auth()->user()->location->name ?? 'N/A' }}</h5>
                 </div>
-                @endif
-                <form action="{{ route('admin.guests.update', $guest->id) }}" method="POST">
-                    @csrf
-                    @method('PUT')
+                <div class="card-body">
+                    @if(session('error'))
+                    <div class="alert alert-danger alert-dismissible fade show">
+                        <i class="fa fa-exclamation-circle me-2"></i>
+                        {{ session('error') }}
+                        <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="alert"></button>
+                    </div>
+                    @endif
+                    <form action="{{ route('admin.guests.update', $guest->id) }}" method="POST">
+                        @csrf
+                        @method('PUT')
 
-                    <input type="hidden" name="calendar_id" value="{{ $guest->calendar_id }}">
-                    <div class="row">
+                        <input type="hidden" name="calendar_id" value="{{ $guest->calendar_id }}">
+                        <div class="row">
 
-                        <!-- Location -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">
-                                Location <span class="text-danger">*</span>
-                            </label>
+                            <!-- Location -->
+                            <input type="hidden" value="{{ $guest->location_id }}" name="location_id">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    Event <span class="text-danger">*</span>
+                                </label>
+                                <select name="event_id" class="form-control" required>
+                                    <option value="">Select Event</option>
+                                    @foreach($eventList as $eventId => $eventName)
+                                    <option value="{{ $eventId }}" {{ old('event_id', $guest->event_id) == $eventId ? 'selected' : '' }}>
+                                        {{ $eventName }}
+                                    </option>
+                                    @endforeach
+                                </select>
+                                @error('event_id')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                            <select class="form-control @error('location_id') is-invalid @enderror" name="location_id" required>
-                                <option value="">Select Location</option>
+                            <!-- Date -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    Date <span class="text-danger">*</span>
+                                </label>
 
-                                @foreach($locations as $location)
-                                <option value="{{ $location->id }}"
-                                    {{ old('location_id', $guest->location_id) == $location->id ? 'selected' : '' }}>
-                                    {{ $location->name }}
-                                </option>
-                                @endforeach
-                            </select>
+                                <input type="date"
+                                    class="form-control @error('date') is-invalid @enderror"
+                                    name="date"
+                                    value="{{ old('date', $guest->date ?? date('Y-m-d')) }}"
+                                    min="{{ date('Y-m-d') }}"
+                                    required>
 
-                            @error('location_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
+                                @error('date')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                        <!-- Date -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">
-                                Date <span class="text-danger">*</span>
-                            </label>
+                            <!-- Department -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    Department
+                                </label>
 
-                            <input type="date"
-                                class="form-control @error('date') is-invalid @enderror"
-                                name="date"
-                                value="{{ old('date', $guest->date ?? date('Y-m-d')) }}"
-                                min="{{ date('Y-m-d') }}"
-                                required>
+                                <select class="form-control @error('department') is-invalid @enderror"
+                                    name="department_id">
+                                    <option value="">Select Department</option>
+                                    @foreach($departments as $department)
+                                    <option value="{{ $department->id }}" {{ old('department_id', $guest->department_id) == $department->id ? 'selected' : '' }}>
+                                        {{ $department->name }}
+                                    </option>
+                                    @endforeach
+                                </select>
 
-                            @error('date')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
+                                @error('department_id')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                        <!-- Guest Type -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">
-                                Guest Type<span class="text-danger">*</span>
-                            </label>
+                            <!-- Employee -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    Host Employee
+                                </label>
 
-                            <div class="d-flex mt-2">
+                                <select name="attend_user_id"
+                                    class="form-control @error('attend_user_id') is-invalid @enderror">
+                                    <option value="">Select Employee</option>
+                                    @foreach($users as $user)
+                                    <option value="{{ $user->id }}"
+                                        {{ old('attend_user_id', $guest->attend_user_id) == $user->id ? 'selected' : '' }}>
+                                        {{ $user->first_name }}
+                                    </option>
+                                    @endforeach
+                                </select>
 
-                                <div class="form-check me-4">
-                                    <input class="form-check-input"
-                                        type="radio"
-                                        name="guest_type"
-                                        value="Office Guest"
-                                        {{ old('guest_type', $guest->guest_type) == 'Office Guest' ? 'checked' : '' }}>
+                                @error('attend_user_id')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                                    <label class="form-check-label">
-                                        Official
-                                    </label>
+                            <!-- Guest Type -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    Guest Type<span class="text-danger">*</span>
+                                </label>
+
+                                <div class="d-flex mt-2">
+                                    <div class="form-check me-4">
+                                        <input class="form-check-input"
+                                            type="radio"
+                                            name="guest_type"
+                                            value="Office Guest"
+                                            {{ old('guest_type', $guest->guest_type) == 'Office Guest' ? 'checked' : '' }}>
+
+                                        <label class="form-check-label">
+                                            Official
+                                        </label>
+                                    </div>
+
+                                    <div class="form-check">
+                                        <input class="form-check-input"
+                                            type="radio"
+                                            name="guest_type"
+                                            value="Personal Guest"
+                                            {{ old('guest_type', $guest->guest_type) == 'Personal Guest' ? 'checked' : '' }}>
+
+                                        <label class="form-check-label">
+                                            Personal
+                                        </label>
+                                    </div>
                                 </div>
+                            </div>
 
-                                <div class="form-check">
-                                    <input class="form-check-input"
-                                        type="radio"
-                                        name="guest_type"
-                                        value="Personal Guest"
-                                        {{ old('guest_type', $guest->guest_type) == 'Personal Guest' ? 'checked' : '' }}>
+                            <!-- Guest Count - Input -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    Guest Count <span class="text-danger">*</span>
+                                </label>
+                                <input type="number"
+                                    id="guest_count"
+                                    class="form-control @error('guest_count') is-invalid @enderror"
+                                    name="guest_count"
+                                    value="{{ old('guest_count', $guest->guest_count) }}"
+                                    min="1">
+                                <small class="text-muted">Enter number of guests to auto-generate rows</small>
+                                @error('guest_count')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                                    <label class="form-check-label">
-                                        Personal
-                                    </label>
+                            <!-- Guest Table -->
+                            <div class="col-md-12 mb-3">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <table class="table table-bordered table-striped" id="guestTable">
+                                            <thead style="background-color:#F7F7F7;">
+                                                <tr>
+                                                    <th>Guest Name</th>
+                                                    <th>Department</th>
+                                                    <th width="150">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- Rows will be generated dynamically -->
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
+                            </div>
 
+                            <!-- Remarks -->
+                            <div class="col-md-12 mb-3">
+                                <label>Remarks</label>
+                                <textarea
+                                    name="guest_remarks" 
+                                    placeholder="Enter Remarks" 
+                                    rows="5"
+                                    class="form-control @error('guest_remarks') is-invalid @enderror">{{ old('guest_remarks', $guest->guest_remarks) }}</textarea>
+                                
+                                @error('guest_remarks')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
 
-                        <!-- Department -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">
-                                Department
-                            </label>
-
-                            <select class="form-control @error('department') is-invalid @enderror" name="department_id">
-                                <option value="">Select Department</option>
-
-                                @foreach($departments as $department)
-                                <option value="{{ $department->id }}"
-                                    {{ old('department_id', $guest->department_id) == $department->id ? 'selected' : '' }}>
-                                    {{ $department->name }}
-                                </option>
-                                @endforeach
-                            </select>
-
-                            @error('department_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                        <div class="d-flex justify-content-end">
+                            <div class="mb-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fa fa-save"></i> Update
+                                </button>
+                                <a href="{{ route('admin.dashboard') }}" class="btn btn-secondary">
+                                    <i class="fa fa-arrow-left"></i> Back
+                                </a>
+                            </div>
                         </div>
 
-                        <!-- Employee -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">
-                                Employee
-                            </label>
-
-                            <select name="attend_user_id"
-                                class="form-control @error('attend_user_id') is-invalid @enderror">
-                                <option value="">Select Employee</option>
-
-                                @foreach($users as $user)
-                                <option value="{{ $user->id }}"
-                                    {{ old('attend_user_id', $guest->attend_user_id) == $user->id ? 'selected' : '' }}>
-                                    {{ $user->first_name }}
-                                </option>
-                                @endforeach
-                            </select>
-
-                            @error('attend_user_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <!-- Guest Count -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">
-                                Guest Count <span class="text-danger">*</span>
-                            </label>
-
-                            <input type="number"
-                                class="form-control @error('guest_count') is-invalid @enderror"
-                                name="guest_count"
-                                value="{{ old('guest_count', $guest->guest_count) }}"
-                                min="1"
-                                placeholder="Enter Guest Count" required>
-
-                            @error('guest_count')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <!-- Guest Name -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">
-                                Guest Name
-                            </label>
-
-                            <input type="text"
-                                class="form-control @error('guest_name') is-invalid @enderror"
-                                name="guest_name"
-                                value="{{ old('guest_name', $guest->guest_name) }}"
-                                placeholder="e.g. Vendor Team, Client, Family">
-
-                            @error('guest_name')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="col-md-12 mb-3">
-                            <label>Remarks</label>
-                            <textarea
-                                name="guest_remarks" 
-                                placeholder="Enter Remarks"
-                                class="form-control @error('guest_remarks') is-invalid @enderror">{{ old('guest_remarks', $guest->guest_remarks) }}</textarea>
-                            
-                            @error('guest_remarks')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="d-flex justify-content-end">
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fa fa-save"></i> Update
-                            </button>
-                            <a href="{{ route('admin.dashboard') }}" class="btn btn-secondary">
-                                <i class="fa fa-arrow-left"></i> Back
-                            </a>
-                        </div>
-                    </div>
-
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<script>
-    function incrementGuest() {
-        let input = document.getElementById('guest_count');
-        input.value = parseInt(input.value) + 1;
-    }
-
-    function decrementGuest() {
-        let input = document.getElementById('guest_count');
-        if (parseInt(input.value) > 1) {
-            input.value = parseInt(input.value) - 1;
-        }
-    }
-</script>
-
-@endsection
+    @endsection

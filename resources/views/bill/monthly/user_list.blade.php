@@ -618,7 +618,7 @@
                     </td>
 
                     <td class="role">
-                        {{ $data->user?->role }}
+                        {{ $data->role }}
                     </td>
 
                     <td class="center">
@@ -634,11 +634,11 @@
                     </td>
 
                     <td class="center balance-red">
-                        0
+                          {{ $data->pre_balance }}
                     </td>
 
                     <td class="center grand-total">
-                        {{ $data->bill_amount }}
+                        {{ $data->balance }}
                     </td>
                 </tr>
                 @endforeach
@@ -670,7 +670,7 @@
                     </td>
 
                     <td class="center grand-total green-total">
-                        {{ $bill->details->sum('bill_amount') }}
+                        {{ $bill->details->sum('balance') }}
                     </td>
 
                 </tr>

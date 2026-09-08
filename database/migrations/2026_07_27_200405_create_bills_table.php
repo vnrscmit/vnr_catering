@@ -54,6 +54,8 @@ return new class extends Migration
 
             $table->integer('per_diet_calculation')->default(0);
 
+            $table->integer('security_amount')->default(0);
+
             $table->decimal('per_diet_calculation_auto', 12, 2)->default(0);
 
             $table->decimal('balance', 12, 2)->default(0);

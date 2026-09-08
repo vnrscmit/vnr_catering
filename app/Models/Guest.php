@@ -34,7 +34,7 @@ class Guest extends Model
         return $this->belongsTo(User::class, 'attend_user_id');
     }
 
-     public function createdBy()
+    public function createdBy()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
@@ -52,5 +52,10 @@ class Guest extends Model
     public function event()
     {
         return $this->belongsTo(EventMaster::class, 'event_id');
+    }
+
+    public function guestDetails()
+    {
+        return $this->hasMany(GuestDetail::class, 'guest_id');
     }
 }

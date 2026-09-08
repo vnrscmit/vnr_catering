@@ -11,6 +11,7 @@ class BillDetail extends Model
         'bill_id',
         'type',
         'user_id',
+        'role',
         'user_diets',
         'rate_per_diet',
         'bill_amount',

@@ -4,11 +4,14 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceAbsent;
+use App\Models\Bill;
+use App\Models\BillDetail;
 use App\Models\CompanyParameter;
 use App\Models\DailyMenu;
 use App\Models\DayStatus;
 use App\Models\Guest;
 use App\Models\MultipleLocation;
+use App\Models\RateMaster;
 use App\Models\User;
 use App\Models\UserEvent;
 use Carbon\Carbon;
@@ -185,122 +188,55 @@ class ApiDashboardController extends Controller
         // Previous Month Summary Data
 
 
-        $summaryMealCount = DayStatus::whereBetween('day_statuses.date', [
-            $previousStart->format('Y-m-d'),
-            $previousEnd->format('Y-m-d')
-        ])
-            ->where('day_statuses.id', '>=', $userData->start_calendar_id)
-            ->leftJoin('attendance_absents', function ($join)  use ($userData, $locationId, $eventId) {
-                $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
-                    ->where('attendance_absents.location_id', $locationId)
-                    ->where('attendance_absents.event_id', $eventId)
-                    ->where('attendance_absents.user_id', $userData->id);
-            })
-            ->leftJoin('guests', function ($join)  use ($userData, $locationId) {
-                $join->on('day_statuses.id', '=', 'guests.calendar_id')
-                    ->where('guests.guest_type', 'Personal Guest')
-                    ->where('guests.location_id', $locationId)
-                    ->where('guests.attend_user_id', $userData->id);
-            })
-            ->where('day_statuses.sunday_flag', 0)
-            ->where('day_statuses.holiday_flag', 0)
-            ->where('day_statuses.open_flag', 1)
-            ->where('day_statuses.location_id', $locationId)
-            ->selectRaw("
- COALESCE(SUM(CASE WHEN attendance_absents.absent_flag = 1 THEN 1 ELSE 0 END), 0) AS absent_days,
-             COALESCE(SUM(guests.guest_count), 0) AS guest_count
-        ")
+        // Previous Month Summary Data
+
+        $billId = Bill::where('location_id', $locationId)
+            ->where('generate_month', $previousStart->format('Y-m'))
+            ->value('id');
+
+        $billDetails = BillDetail::where('bill_id', $billId)
+            ->where('user_id', $userData->id)
             ->first();
 
-        $previousMonthDayCount = DayStatus::whereBetween('day_statuses.date', [
-            $previousStart->format('Y-m-d'),
-            $previousEnd->format('Y-m-d')
-        ])
-            ->where('day_statuses.id', '>=', $userData->start_calendar_id)
-            ->where('day_statuses.sunday_flag', 0)
-            ->where('day_statuses.holiday_flag', 0)
-            ->where('day_statuses.open_flag', 1)
-            ->where('day_statuses.location_id', $locationId)
-            ->count();
+        $guestCount = Guest::where('attend_user_id', $userData->id)
+            ->where('location_id', $locationId)
+            ->whereBetween('date', [$previousStart->format('Y-m-d'), $previousEnd->format('Y-m-d')])
+            ->sum('guest_count');
 
-        if ($previousMonthDayCount > 0) {
-            $PreviousPresentDays = ($previousMonthDayCount - $summaryMealCount->absent_days);
 
-            if ($userData->role == 'Non Member') {
-                $summaryMealCount->your_meal_count  = $PreviousPresentDays;
-                $summaryMealCount->your_meal_rate   = $CompanyParameter->non_member_rate;
-                $summaryMealCount->guest_meal_count = $summaryMealCount->guest_count;
-                $summaryMealCount->guest_meal_rate  = $CompanyParameter->guest_rate;
+            $guestRatePerDiet = RateMaster::where('location_id', $locationId)
+            ->where('effective_from_date', $previousStart->format('Y-m-d'))
+            ->where('status', 1)
+            ->value('guest_rate');
 
-                // Total Amounts
-                $summaryMealCount->your_meal_amount =
-                    $summaryMealCount->your_meal_count * $summaryMealCount->your_meal_rate;
-
-                $summaryMealCount->guest_meal_amount =
-                    $summaryMealCount->guest_meal_count * $summaryMealCount->guest_meal_rate;
-
-                // Grand Total
-                $summaryMealCount->total_amount =
-                    $summaryMealCount->your_meal_amount + $summaryMealCount->guest_meal_amount;
-            } elseif ($userData->role == 'Member') {
-                $summaryMealCount->your_meal_count  = $PreviousPresentDays;
-                $summaryMealCount->your_meal_rate   = $CompanyParameter->member_rate;
-                $summaryMealCount->guest_meal_count = $summaryMealCount->guest_count;
-                $summaryMealCount->guest_meal_rate  = $CompanyParameter->guest_rate;
-
-                // Total Amounts
-                $summaryMealCount->your_meal_amount =
-                    $summaryMealCount->your_meal_count * $summaryMealCount->your_meal_rate;
-
-                $summaryMealCount->guest_meal_amount =
-                    $summaryMealCount->guest_meal_count * $summaryMealCount->guest_meal_rate;
-
-                // Grand Total
-                $summaryMealCount->total_amount =
-                    $summaryMealCount->your_meal_amount + $summaryMealCount->guest_meal_amount;
-            } elseif ($userData->role == 'Canteen President') {
-                $summaryMealCount->your_meal_count  = $PreviousPresentDays;
-                $summaryMealCount->your_meal_rate   = $CompanyParameter->non_member_rate;
-                $summaryMealCount->guest_meal_count = $summaryMealCount->guest_count;
-                $summaryMealCount->guest_meal_rate  = $CompanyParameter->guest_rate;
-
-                // Total Amounts
-                $summaryMealCount->your_meal_amount =
-                    $summaryMealCount->your_meal_count * $summaryMealCount->your_meal_rate;
-
-                $summaryMealCount->guest_meal_amount =
-                    $summaryMealCount->guest_meal_count * $summaryMealCount->guest_meal_rate;
-
-                // Grand Total
-                $summaryMealCount->total_amount = 0;
-
-                $summaryMealCount->your_meal_count  = $PreviousPresentDays;
-                $summaryMealCount->your_meal_rate   = $CompanyParameter->member_rate;
-                $summaryMealCount->guest_meal_count = $summaryMealCount->guest_count;
-                $summaryMealCount->guest_meal_rate  = $CompanyParameter->guest_rate;
-
-                // Total Amounts
-                $summaryMealCount->your_meal_amount =
-                    $summaryMealCount->your_meal_count * $summaryMealCount->your_meal_rate;
-
-                $summaryMealCount->guest_meal_amount =
-                    $summaryMealCount->guest_meal_count * $summaryMealCount->guest_meal_rate;
-
-                // Grand Total
-                $summaryMealCount->total_amount =
-                    $summaryMealCount->your_meal_amount + $summaryMealCount->guest_meal_amount;
-            }
+        if ($billDetails) {
+            $summaryMealCount = [
+                'your_meal_count' => $billDetails->user_diets,
+                'your_meal_rate' => $billDetails->rate_per_diet,
+                'your_meal_amount' => $billDetails->bill_amount,
+                'pre_balance' => $billDetails->pre_balance,
+                'balance' => $billDetails->pre_balance,
+                'payment_flag' => $billDetails->payment_flag,
+                'guest_meal_count' => $guestCount,
+                'guest_meal_rate' => $guestRatePerDiet,
+                'guest_amount' => $guestCount * $guestRatePerDiet,
+                'total_amount' => ( ($guestCount * $guestRatePerDiet) + ($billDetails->bill_amount)),
+            ];
         } else {
+             $summaryMealCount = [
+        'your_meal_count'  => 0,
+        'your_meal_rate'   => 0,
+        'your_meal_amount' => 0,
+        'pre_balance'      => 0,
+        'balance'          => 0,
+        'payment_flag'     => 0,
 
-            $summaryMealCount->your_meal_count  = 0;
-            $summaryMealCount->your_meal_rate   = 0;
-            $summaryMealCount->guest_meal_count = 0;
-            $summaryMealCount->guest_meal_rate  = 0;
+        'guest_meal_count' => $guestCount,
+        'guest_meal_rate'  => $guestRatePerDiet,
+        'guest_amount'     => $guestCount * $guestRatePerDiet,
 
-            $summaryMealCount->your_meal_amount = 0;
-            $summaryMealCount->guest_meal_amount = 0;
-
-            $summaryMealCount->total_amount = 0;
+        'total_amount'     => $guestCount * $guestRatePerDiet,
+    ];
         }
         //End of Previous Month Summary Data
 
@@ -421,9 +357,11 @@ class ApiDashboardController extends Controller
         ]);
     }
 
-    private function inchargeDashboard($userData, $eventId)
+    private function inchargeDashboard($userData, $locationId,  $eventId)
     {
+
         $companyParameter = CompanyParameter::where('location_id', $userData->location_id)->where('event_id', $eventId)->where('status', 1)->first();
+
 
         if (!$companyParameter) {
             return response()->json([
@@ -450,7 +388,7 @@ class ApiDashboardController extends Controller
         $singleLinkedUserIds = User::where('location_id', $userData->location_id)
             ->whereNotNull('start_calendar_id')
             ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge', 'Canteen Administrator'])
-            ->whereIn('id', $eventUserIds)
+            ->whereIn('users.id', $eventUserIds)
             ->where('status', 1)
             ->pluck('id');
 
@@ -459,7 +397,7 @@ class ApiDashboardController extends Controller
             ->where('multiple_locations.location_id', $userData->location_id)
             ->where('users.status', 1)
             ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge', 'Canteen Administrator'])
-            ->whereIn('id', $eventUserIds)
+            ->whereIn('users.id', $eventUserIds)
             ->pluck('multiple_locations.user_id');
 
         $allLinkedUserIds = $singleLinkedUserIds

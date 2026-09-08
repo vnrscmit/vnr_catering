@@ -39,6 +39,7 @@ use App\Http\Controllers\Admin\OrganizationController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\PaymenController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SecurityAmountController;
 
 Route::get('/', [MainSiteController::class, 'home'])->name('home');
 
@@ -384,7 +385,6 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
     Route::get('/calendar/events', [AttendanceController::class, 'calendarEvents'])->name('calendar.events');
     Route::resource('bill-generate', BillController::class);
 
-
     // Individual Bill Routes (Without Prefix)
     Route::get('/individual', [BillController::class, 'individualSettlement'])->name('bill-generate.individual');
     Route::get('/individual/create', [BillController::class, 'individualCreate'])->name('bill-generate.individual.create');
@@ -405,8 +405,10 @@ Route::prefix('admin')->middleware(RedirectIfNotAdmin::class)->group(function ()
     Route::put('/monthly/update/{id}', [BillController::class, 'monthlyUpdate'])->name('bill-generate.monthly.update');
     Route::get('/monthly/delete/{id}', [BillController::class, 'monthlyDelete'])->name('bill-generate.monthly.delete');
     Route::get('/monthly/final-submit/{id}', [BillController::class, 'monthlyFinalSubmit'])->name('bill-generate.monthly.finalSubmit');
+    Route::get('/monthly/pdf/{id}', [BillController::class, 'monthlyPdf'])->name('bill-generate.monthly.pdf');
+    Route::get('/guest-monthly/pdf/{id}', [BillController::class, 'guestPdf'])->name('bill-generate.guest.monthly.pdf');
     // In web.php
-    Route::get('/{locationId?}/{eventId?}', [AdminController::class, 'index'])
+    Route::get('/dashboard/{locationId?}/{eventId?}', [AdminController::class, 'index'])
         ->name('admin.dashboard');
 
     Route::post('/attendance/update', [AttendanceController::class, 'update'])->name('attendance.update');
@@ -427,6 +429,23 @@ Route::prefix('payment')->name('payment.')->group(function () {
     Route::get('/getPaymentData', [PaymentController::class, 'getPaymentData'])->name('getPaymentData');
 });
 
+Route::prefix('security-amount')->name('security-amount.')->group(function () {
+    Route::get('/', [SecurityAmountController::class, 'index'])->name('index');
+    Route::get('/create', [SecurityAmountController::class, 'create'])->name('create');
+    Route::post('/store', [SecurityAmountController::class, 'store'])->name('store');
+    Route::get('/{id}', [SecurityAmountController::class, 'show'])->name('show');
+    Route::get('/{id}/edit', [SecurityAmountController::class, 'edit'])->name('edit');
+    Route::put('/{id}', [SecurityAmountController::class, 'update'])->name('update');
+    Route::delete('/{id}', [SecurityAmountController::class, 'destroy'])->name('destroy');
+    Route::post('/{id}/toggle-status', [SecurityAmountController::class, 'toggleStatus'])->name('toggle-status');
+    Route::get('/user/total/{userId}', [SecurityAmountController::class, 'getUserTotal'])->name('user-total');
+    Route::get('/summary', [SecurityAmountController::class, 'getSummary'])->name('summary');
+});
+
+// Opening Amount Routes
+Route::get('opening-amount/create', [PaymentController::class, 'openingCreate'])->name('opening-amount.create');
+Route::post('opening-amount/store', [PaymentController::class, 'openingStore'])->name('opening-amount.store');
+Route::get('opening-amount', [PaymentController::class, 'openingIndex'])->name('opening-amount.index');
 Route::prefix('report')->name('report.')->group(function () {
 
     Route::get('/daily', [ReportController::class, 'dailyAttendance'])
@@ -442,6 +461,19 @@ Route::prefix('report')->name('report.')->group(function () {
         ->name('guest');
 
     Route::get('/guest/data', [ReportController::class, 'getGuestData'])->name('guest.data');
+
+
+    Route::get('/ledger', [ReportController::class, 'ledgerReport'])
+        ->name('ledger');
+
+    Route::get('/ledger/data', [ReportController::class, 'getLedgerData'])
+        ->name('ledger.data');
+
+    Route::get('/collection_expenses', [ReportController::class, 'collectionExpenseReport'])
+        ->name('collection_expenses');
+
+    Route::get('/collection_expenses/data', [ReportController::class, 'getCollectionExpenseData'])
+        ->name('collection_expenses.data');
 });
 
 Route::get('/get-districts', [OrganizationController::class, 'getDistricts'])->name('get.districts');

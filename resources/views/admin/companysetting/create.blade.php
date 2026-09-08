@@ -487,7 +487,24 @@
                         type="button"
                         role="tab"
                         aria-selected="{{ $index == 0 ? 'true' : 'false' }}">
-                        <i class="fas fa-calendar-alt me-1"></i>
+
+                        {{-- Icon based on event type --}}
+                        @php
+                        $eventName = strtolower($locationEvent->event?->name ?? '');
+                        $icon = 'fa-calendar-alt'; // default icon
+
+                        if (str_contains($eventName, 'breakfast') || str_contains($eventName, 'morning')) {
+                        $icon = 'fa-utensils';
+                        } elseif (str_contains($eventName, 'lunch') || str_contains($eventName, 'afternoon')) {
+                        $icon = 'fa-utensil-spoon';
+                        } elseif (str_contains($eventName, 'snack') || str_contains($eventName, 'evening')) {
+                        $icon = 'fa-coffee';
+                        } elseif (str_contains($eventName, 'dinner') || str_contains($eventName, 'night')) {
+                        $icon = 'fa-moon';
+                        }
+                        @endphp
+
+                        <i class="fas {{ $icon }} me-1"></i>
                         {{ $locationEvent->event?->name ?? 'Event #' . $locationEvent->event_id }}
                     </button>
                 </li>

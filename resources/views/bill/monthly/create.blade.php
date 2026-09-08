@@ -46,7 +46,7 @@
             }
 
             $('#per_diet_calculation').val(perDiet);
-            $('#per_diet_calculation_manual').val(perDietManual);
+            // $('#per_diet_calculation_manual').val(perDietManual);
         }
 
         $('#total_expenses').on('input keyup change', function() {
@@ -234,9 +234,9 @@
                                     </tr>
 
                                     <tr class="table-success">
-                                        <th>Enter Per Diet Rate</th>
+                                        <th>Per Diet Rate</th>
                                         <td class="text-end">
-                                            <input type="text" id="per_diet_calculation_manual" name="per_diet_calculation_manual" class="form-control text-start" value="0" min="1">
+                                            <input type="text" id="per_diet_calculation_manual" name="per_diet_calculation_manual" class="form-control text-start" value="{{ $rateMaster ? $rateMaster->member_rate : '' }}" min="1" readonly>
                                         </td>
                                     </tr>
 

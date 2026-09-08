@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Bill extends Model
 {
     protected $fillable = [
-
+        'location_id',
         'type',
         'user_id',
         'charge_date',
@@ -32,6 +32,7 @@ class Bill extends Model
         'per_diet_calculation_auto',
         'payment_flag',
         'total_payment_amount',
+        'security_amount',
         'balance',
         'remarks',
         'status'
