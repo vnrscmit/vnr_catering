@@ -10,15 +10,19 @@ use App\Models\CompanyParameter;
 use App\Models\DayStatus;
 use App\Models\Department;
 use App\Models\Guest;
+use App\Models\Ledger;
 use App\Models\Location;
+use App\Models\LocationEvent;
 use App\Models\MultipleLocation;
 use App\Models\RateMaster;
 use App\Models\User;
+use App\Models\UserEvent;
 use App\Models\UserLocation;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Yajra\DataTables\Facades\DataTables;
 
 class BillController extends Controller
@@ -641,7 +645,7 @@ class BillController extends Controller
         }
 
         if ($request->ajax()) {
-            $bills = Bill::where('type', '=', 'Monthly')->get();
+            $bills = Bill::where('type', '=', 'Monthly')->where('location_id', $authUser->location_id)->get();
 
             return DataTables::of($bills)
                 ->addIndexColumn()
@@ -663,11 +667,11 @@ class BillController extends Controller
                 })
 
                 ->editColumn('net_chargeable_diet', function ($row) {
-                    return '₹ ' . number_format($row->net_monthly_expenses, 2);
+                    return '₹ ' . number_format($row->net_monthly_expenses);
                 })
 
                 ->editColumn('per_diet_calculation', function ($row) {
-                    return '₹ ' . number_format($row->per_diet_calculation, 2);
+                    return '₹ ' . number_format($row->per_diet_calculation);
                 })
 
                 ->addColumn('status', function ($row) {
@@ -701,13 +705,27 @@ class BillController extends Controller
          <i class="fa fa-trash"></i>
     </a>';
                     } else if ($row->status == 1) {
+
+                        $buttons .= '<a href="' . route('bill-generate.monthly.pdf', $row->id) . '"
+    class="btn btn-sm btn-warning me-1"
+    title="Billing PDF"
+    target="_blank">
+    <i class="fa fa-file-pdf"></i>
+</a>';
+
+                        $buttons .= '<a href="' . route('bill-generate.guest.monthly.pdf', $row->id) . '"
+    class="btn btn-sm btn-info me-1"
+    title="Guest PDF"
+    target="_blank">
+    <i class="fa fa-file-pdf"></i>
+</a>';
+
                         $buttons .= '<a href="' . route('payment.create', $row->id) . '"
         class="btn btn-sm btn-danger me-1"
         title="Payment">
-      <i class="fa fa-money-bill-wave"></i>
+        <i class="fa fa-money-bill-wave"></i>
     </a>';
                     }
-
                     return '<div class="d-flex" style="gap: 2px;">' . $buttons . '</div>';
                 })->rawColumns(['status', 'action'])
                 ->make(true);
@@ -718,201 +736,575 @@ class BillController extends Controller
 
     public function monthlyCreate(Request $request)
     {
+        $authUser = Auth::user();
 
-        $authUser = Auth::User();
         if ($authUser->role !== 'Canteen Administrator') {
-            return redirect()->back()->with('error', 'Bill generation is not available for this role.');
+            return redirect()->back()->with(
+                'error',
+                'Bill generation is not available for this role.'
+            );
         }
 
         $user = Auth::user();
 
         if (!$user) {
-            return redirect()->back()->with('error', 'User not found.');
+            return redirect()->back()->with(
+                'error',
+                'User not found.'
+            );
         }
 
         $locationId = $user->location_id;
 
+        /*
+    |--------------------------------------------------------------------------
+    | Previous Month
+    |--------------------------------------------------------------------------
+    */
         $previousStart = Carbon::now()->subMonth()->startOfMonth();
         $previousEnd   = Carbon::now()->subMonth()->endOfMonth();
 
-        $calendarIds = DayStatus::whereBetween('date', [$previousStart, $previousEnd])
-            ->where([
-                'sunday_flag' => 0,
-                'holiday_flag' => 0,
-                'open_flag' => 1,
-                'location_id' => $locationId
-            ])
+        $previousMonth = $previousStart->format('Y-m');
+
+        /*
+    |--------------------------------------------------------------------------
+    | Calendar IDs
+    |--------------------------------------------------------------------------
+    */
+        $calendarIds = DayStatus::whereBetween('date', [
+            $previousStart,
+            $previousEnd
+        ])
+            ->where('open_flag', 1)
+            ->where('location_id', $locationId)
             ->pluck('id');
 
         if ($calendarIds->isEmpty()) {
-            return redirect()->back()->with('error', 'No calendar found for previous month.');
+            return redirect()->back()->with(
+                'error',
+                'No calendar found for previous month.'
+            );
         }
 
-        $previousStartformat = Carbon::parse($previousStart)->startOfMonth()->format('Y-m');
+        /*
+    |--------------------------------------------------------------------------
+    | Active Events For Location
+    |--------------------------------------------------------------------------
+    */
+        $eventIds = LocationEvent::where('location_id', $locationId)
+            ->where('status', 1)
+            ->pluck('event_id');
 
-        $checkIndividual = Bill::where('generate_month', $previousStartformat)->where('type', 'Individual')->where('status', 2)->count();
+        if ($eventIds->isEmpty()) {
+            return redirect()->back()->with(
+                'error',
+                'No active event found for this location.'
+            );
+        }
+
+        /*
+    |--------------------------------------------------------------------------
+    | Check Pending Individual Settlement
+    |--------------------------------------------------------------------------
+    */
+        $checkIndividual = Bill::where('generate_month', $previousMonth)
+            ->where('location_id', $locationId)
+            ->where('type', 'Individual')
+            ->where('status', 2)
+            ->count();
 
         if ($checkIndividual > 0) {
-            return redirect()->back()->with('error', 'One or more individual settlement are pending so please delete or final submit than generate monthly bill.');
+            return redirect()->back()->with(
+                'error',
+                'One or more individual settlements are pending so please delete or final submit them before generating monthly bill.'
+            );
         }
 
-        $monthlyBill = Bill::where('generate_month', $previousStartformat)
+        /*
+    |--------------------------------------------------------------------------
+    | Check Existing Monthly Bill
+    |--------------------------------------------------------------------------
+    */
+        $monthlyBill = Bill::where('generate_month', $previousMonth)
+            ->where('location_id', $locationId)
             ->where('type', 'Monthly')
             ->whereIn('status', [1, 2])
             ->first();
 
         if ($monthlyBill) {
 
-            $monthName = Carbon::parse($previousStart . '-01')->format('F Y');
+            $monthName = $previousStart->format('F Y');
 
             if ($monthlyBill->status == 2) {
                 return redirect()->back()->with(
                     'error',
-                    'Monthly Bill for ' . $monthName . ' is already generated and its pending. Please delete or edit the existing bill.'
+                    'Monthly Bill for ' . $monthName .
+                        ' is already generated and pending. Please delete or edit the existing bill.'
                 );
             }
 
             if ($monthlyBill->status == 1) {
                 return redirect()->back()->with(
                     'error',
-                    'Monthly bill for ' . $monthName . ' has already been generated.'
+                    'Monthly bill for ' . $monthName .
+                        ' has already been generated.'
                 );
             }
         }
 
-        // Total Calculation
+        /*
+    |--------------------------------------------------------------------------
+    | Common Calculation
+    |--------------------------------------------------------------------------
+    */
         $totalMonthDays = $calendarIds->count();
 
-        $dietCountAbsent = AttendanceAbsent::whereIn('calendar_id', $calendarIds)
-            ->where('location_id', $locationId)
-            ->where('absent_flag', 1)
-            ->count();
+        /*
+    |--------------------------------------------------------------------------
+    | Initialize Final Total Variables
+    |--------------------------------------------------------------------------
+    */
+        $totalDiets = 0;
 
-        $allUserLocation = UserLocation::where('location_id', $locationId)->distinct('user_id')->count('user_id');
-
-        $totalMonthDaysMeal =  ($allUserLocation *  $totalMonthDays);
-
-        $presentCountAll = $totalMonthDaysMeal - $dietCountAbsent;
-
-        // Individual Settlement
-        $previousMonth = Carbon::now()->subMonth()->startOfMonth()->format('Y-m');
-        $individualSettlementDiet = Bill::where('generate_month', $previousMonth)->where('status', 1)->sum('total_diets') ?? 0;
-
-        $allSettlementIds = Bill::where('generate_month', $previousMonth)->where('status', 1)->pluck('user_id');
-
-
-        // Member Calculation
-        $allMemberIds = UserLocation::where('user_locations.location_id', $locationId)
-            ->join('users', 'users.id', '=', 'user_locations.user_id')
-            ->where('users.role', '=', 'Member')
-            ->where('president_flag', 0)
-            ->whereNotIn('users.id', $allSettlementIds)
-            ->distinct()
-            ->pluck('user_locations.user_id');
-
-        $memberDietCountAbsent = AttendanceAbsent::whereIn('calendar_id', $calendarIds)
-            ->where('location_id', $locationId)
-            ->whereIn('user_id', $allMemberIds)
-            ->where('absent_flag', 1)
-            ->count();
-
-        $allUserLocationMember = UserLocation::where('user_locations.location_id', $locationId)
-            ->join('users', 'users.id', '=', 'user_locations.user_id')
-            ->where('users.role', '=', 'Member')
-            ->where('users.president_flag', 0)
-            ->whereNotIn('users.id', $allSettlementIds)
-            ->distinct('user_id')
-            ->count('user_id');
-
-        $totalMonthDaysMealMember = $allUserLocationMember * $totalMonthDays;
-
-        $presentCountMember = $totalMonthDaysMealMember - $memberDietCountAbsent;
-
-
-        // Non Member Calculation
-        $allNonMemberIds = UserLocation::where('user_locations.location_id', $locationId)
-            ->join('users', 'users.id', '=', 'user_locations.user_id')
-            ->where('users.role', '=', 'Non Member')
-            ->where('president_flag', 0)
-            ->whereNotIn('users.id', $allSettlementIds)
-            ->distinct()
-            ->pluck('user_locations.user_id');
-
-        $nonMemberdietCountAbsent = AttendanceAbsent::whereIn('calendar_id', $calendarIds)
-            ->where('location_id', $locationId)
-            ->whereIn('user_id', $allNonMemberIds)
-            ->where('absent_flag', 1)
-            ->count();
-
-
-        $allUserLocationNonMember = UserLocation::where('user_locations.location_id', $locationId)
-            ->join('users', 'users.id', '=', 'user_locations.user_id')
-            ->where('users.role', '=', 'Non Member')
-            ->distinct('user_locations.user_id')
-            ->whereNotIn('users.id', $allSettlementIds)
-            ->where('users.president_flag', 0)
-            ->count('user_id');
-
-        $totalMonthDaysMeal =  ($allUserLocationNonMember *  $totalMonthDays);
-
-        $presentCountNonMember = $totalMonthDaysMeal - $nonMemberdietCountAbsent;
-
-        $presidentId = User::where('location_id', $locationId)
-            ->where('president_flag', 1)
-            ->value('id');
+        $individualSettlementDiet = 0;
 
         $presidentCountAll = 0;
 
-        if ($presidentId) {
-            $presidentAbsent = AttendanceAbsent::whereIn('calendar_id', $calendarIds)
-                ->where('user_id', $presidentId)
+        $guestCount = 0;
+
+        $netChargeableDiet = 0;
+
+        $guestExpense = 0;
+
+        $individualExpense = 0;
+
+        $nonMemberDiet = 0;
+
+        $nonMemberExpenses = 0;
+
+        $memberDiet = 0;
+
+        /*
+    |--------------------------------------------------------------------------
+    | Multiple Event Calculation
+    |--------------------------------------------------------------------------
+    */
+        $companyParameters = [];
+
+        $rateMasters = [];
+
+        foreach ($eventIds as $eventId) {
+
+            /*
+        |--------------------------------------------------------------------------
+        | Company Parameter
+        |--------------------------------------------------------------------------
+        */
+            $companyParameter = CompanyParameter::where(
+                'location_id',
+                $locationId
+            )
+                ->where('event_id', $eventId)
+                ->where('status', 1)
+                ->first();
+
+            $companyParameters[$eventId] = $companyParameter;
+
+
+            /*
+        |--------------------------------------------------------------------------
+        | Rate Master
+        |--------------------------------------------------------------------------
+        */
+            $rateMaster = RateMaster::where(
+                'location_id',
+                $locationId
+            )
+                ->where('event_id', $eventId)
+                ->whereDate(
+                    'effective_from_date',
+                    $previousStart->format('Y-m-d')
+                )
+                ->where('status', 1)
+                ->first();
+
+            if (!$rateMaster) {
+                return redirect()->back()->with(
+                    'error',
+                    'Rate master not found for Event ID ' .
+                        $eventId . ' for ' .
+                        $previousStart->format('F Y')
+                );
+            }
+
+            if (
+                is_null($rateMaster->non_member_rate) ||
+                is_null($rateMaster->guest_rate) ||
+                is_null($rateMaster->member_rate)
+            ) {
+                return redirect()->back()->with(
+                    'error',
+                    'Rate is not set for Event ID ' .
+                        $eventId . ' for ' .
+                        $previousStart->format('F Y')
+                );
+            }
+
+            $rateMasters[$eventId] = $rateMaster;
+
+
+            /*
+        |--------------------------------------------------------------------------
+        | Individual Settlement
+        |--------------------------------------------------------------------------
+        */
+            $eventIndividualSettlementDiet = Bill::where(
+                'generate_month',
+                $previousMonth
+            )
+                ->where('location_id', $locationId)
+                ->where('type', 'Individual')
+                ->where('status', 1)
+                ->sum('total_diets');
+
+            $individualSettlementDiet += $eventIndividualSettlementDiet;
+
+
+            /*
+        |--------------------------------------------------------------------------
+        | Users Already Settled Individually
+        |--------------------------------------------------------------------------
+        */
+            $allSettlementIds = Bill::where(
+                'generate_month',
+                $previousMonth
+            )
+                ->where('location_id', $locationId)
+                ->where('type', 'Individual')
+                ->where('status', 1)
+                ->pluck('user_id');
+
+
+            /*
+        |--------------------------------------------------------------------------
+        | Member Calculation
+        |--------------------------------------------------------------------------
+        */
+            $allMemberIds = UserLocation::where(
+                'user_locations.location_id',
+                $locationId
+            )
+                ->join(
+                    'users',
+                    'users.id',
+                    '=',
+                    'user_locations.user_id'
+                )
+                ->where('users.role', 'Member')
+                ->where('users.president_flag', 0)
+                ->whereNotIn('users.id', $allSettlementIds)
+                ->distinct()
+                ->pluck('user_locations.user_id');
+
+            /*
+        |--------------------------------------------------------------------------
+        | Member Absent
+        |--------------------------------------------------------------------------
+        */
+            $memberDietCountAbsent = AttendanceAbsent::whereIn(
+                'calendar_id',
+                $calendarIds
+            )
+                ->where('location_id', $locationId)
+                ->whereIn('user_id', $allMemberIds)
+                ->where('event_id', $eventId)
                 ->where('absent_flag', 1)
                 ->count();
 
-            $presidentCountAll = $totalMonthDays - $presidentAbsent;
+            $allUserLocationMember = $allMemberIds->count();
+
+            $totalMonthDaysMealMember =
+                $allUserLocationMember * $totalMonthDays;
+
+            $presentCountMember =
+                $totalMonthDaysMealMember - $memberDietCountAbsent;
+
+            /*
+        |--------------------------------------------------------------------------
+        | Add Member Total
+        |--------------------------------------------------------------------------
+        */
+            $memberDiet += $presentCountMember;
+
+
+            /*
+        |--------------------------------------------------------------------------
+        | Non Member Calculation
+        |--------------------------------------------------------------------------
+        */
+            $allNonMemberIds = UserLocation::where(
+                'user_locations.location_id',
+                $locationId
+            )
+                ->join(
+                    'users',
+                    'users.id',
+                    '=',
+                    'user_locations.user_id'
+                )
+                ->where('users.role', 'Non Member')
+                ->where('users.president_flag', 0)
+                ->whereNotIn('users.id', $allSettlementIds)
+                ->distinct()
+                ->pluck('user_locations.user_id');
+
+            /*
+        |--------------------------------------------------------------------------
+        | Non Member Absent
+        |--------------------------------------------------------------------------
+        */
+            $nonMemberDietCountAbsent = AttendanceAbsent::whereIn(
+                'calendar_id',
+                $calendarIds
+            )
+                ->where('location_id', $locationId)
+                ->whereIn('user_id', $allNonMemberIds)
+                ->where('event_id', $eventId)
+                ->where('absent_flag', 1)
+                ->count();
+
+            $allUserLocationNonMember = $allNonMemberIds->count();
+
+            $totalMonthDaysMealNonMember =
+                $allUserLocationNonMember * $totalMonthDays;
+
+            $presentCountNonMember =
+                $totalMonthDaysMealNonMember -
+                $nonMemberDietCountAbsent;
+
+            /*
+        |--------------------------------------------------------------------------
+        | Add Non Member Total
+        |--------------------------------------------------------------------------
+        */
+            $nonMemberDiet += $presentCountNonMember;
+
+
+            /*
+        |--------------------------------------------------------------------------
+        | President Calculation
+        |--------------------------------------------------------------------------
+        */
+            $presidentId = User::where('location_id', $locationId)
+                ->where('president_flag', 1)
+                ->value('id');
+
+            $eventPresidentCount = 0;
+
+            if ($presidentId) {
+
+                $presidentAbsent = AttendanceAbsent::whereIn(
+                    'calendar_id',
+                    $calendarIds
+                )
+                    ->where('location_id', $locationId)
+                    ->where('user_id', $presidentId)
+                    ->where('event_id', $eventId)
+                    ->where('absent_flag', 1)
+                    ->count();
+
+                $eventPresidentCount =
+                    $totalMonthDays - $presidentAbsent;
+            }
+
+            /*
+        |--------------------------------------------------------------------------
+        | Add President Total
+        |--------------------------------------------------------------------------
+        */
+            $presidentCountAll += $eventPresidentCount;
+
+
+            /*
+        |--------------------------------------------------------------------------
+        | Guest Calculation
+        |--------------------------------------------------------------------------
+        */
+            $eventGuestCount = Guest::whereIn(
+                'calendar_id',
+                $calendarIds
+            )
+                ->where('location_id', $locationId)
+                ->where('event_id', $eventId)
+                ->sum('guest_count');
+
+            /*
+        |--------------------------------------------------------------------------
+        | Add Guest Total
+        |--------------------------------------------------------------------------
+        */
+            $guestCount += $eventGuestCount;
+
+
+            /*
+        |--------------------------------------------------------------------------
+        | Event Total Diet
+        |--------------------------------------------------------------------------
+        */
+            $eventTotalDiets =
+                $presentCountMember +
+                $eventPresidentCount +
+                $eventGuestCount +
+                $eventIndividualSettlementDiet +
+                $presentCountNonMember;
+
+            /*
+        |--------------------------------------------------------------------------
+        | Add Event Total Into Final Total
+        |--------------------------------------------------------------------------
+        */
+            $totalDiets += $eventTotalDiets;
+
+
+            /*
+        |--------------------------------------------------------------------------
+        | Event Net Chargeable Diet
+        |--------------------------------------------------------------------------
+        */
+            $eventNetChargeableDiet =
+                $eventTotalDiets -
+                (
+                    $eventPresidentCount +
+                    $eventGuestCount +
+                    $eventIndividualSettlementDiet +
+                    $presentCountNonMember
+                );
+
+            /*
+        |--------------------------------------------------------------------------
+        | Add Net Chargeable Diet
+        |--------------------------------------------------------------------------
+        */
+            $netChargeableDiet += $eventNetChargeableDiet;
+
+
+            /*
+        |--------------------------------------------------------------------------
+        | Guest Expense
+        |--------------------------------------------------------------------------
+        */
+            $eventGuestExpense =
+                $eventGuestCount * $rateMaster->guest_rate;
+
+            $guestExpense += $eventGuestExpense;
+
+
+            /*
+        |--------------------------------------------------------------------------
+        | Individual Expense
+        |--------------------------------------------------------------------------
+        */
+            $eventIndividualExpense = Bill::where(
+                'generate_month',
+                $previousMonth
+            )
+                ->where('location_id', $locationId)
+                ->where('type', 'Individual')
+                ->where('status', 1)
+                ->sum('individual_expenses');
+
+            $individualExpense += $eventIndividualExpense;
+
+
+            /*
+        |--------------------------------------------------------------------------
+        | Non Member Expense
+        |--------------------------------------------------------------------------
+        */
+            $eventNonMemberExpense =
+                $presentCountNonMember *
+                $rateMaster->non_member_rate;
+
+            $nonMemberExpenses += $eventNonMemberExpense;
         }
 
-        $guestCount = Guest::whereIn('calendar_id', $calendarIds)->where('location_id', $locationId)
-            ->sum('guest_count');
 
-
-
-        $totalDiets = $presentCountMember + $presidentCountAll + $guestCount + $individualSettlementDiet + $presentCountNonMember;
-
-        $netChargeableDiet = $totalDiets - ($presidentCountAll + $guestCount + $individualSettlementDiet + $presentCountNonMember);
-
-        $rateMaster = RateMaster::where('location_id', $locationId)
-            ->whereDate('effective_from_date', $previousStart->format('Y-m-d'))
+        $rateMasterLunch = RateMaster::where(
+            'location_id',
+            $locationId
+        )
+            ->where('event_id', 2)
+            ->whereDate(
+                'effective_from_date',
+                $previousStart->format('Y-m-d')
+            )
             ->where('status', 1)
             ->first();
 
-        if (!$rateMaster) {
-            return redirect()->back()->with('error', 'Rate master not found for ' . $previousStart->format('F Y'));
-        }
 
-        $guestExpense = $guestCount * $rateMaster->guest_rate;
-
-        $individualExpense = Bill::where('generate_month', $previousMonth)->where('status', 1)->sum('individual_expenses') ?? 0;
-
-        $nonMemberExpenses = $presentCountNonMember * $rateMaster->non_member_rate;
-
+        /*
+    |--------------------------------------------------------------------------
+    | Return View
+    |--------------------------------------------------------------------------
+    */
         return view('bill.monthly.create', [
-            'generateMonth'             => $previousStart->format('Y-m'),
-            'billDate'                  => now()->format('Y-m-d'),
-            'totalMonthDays'            => $totalMonthDays,
-            'totalDiets'                => $totalDiets,
-            'individualSettlementDiet'  => $individualSettlementDiet,
-            'presidentDiet'             => $presidentCountAll,
-            'guestDiet'                 => $guestCount,
-            'netChargeableDiet'         => $netChargeableDiet,
-            'guestExpense'              => $guestExpense,
-            'individualExpense' => number_format($individualExpense, 0),
-            'guestRate'                 => $rateMaster->guest_rate,
-            'rateMaster'                => $rateMaster,
-            'nonMemberDiet'      => $presentCountNonMember,
-            'nonMemberExpenses'         => $nonMemberExpenses
+            'generateMonth' =>
+            $previousStart->format('Y-m'),
+
+            'billDate' =>
+            now()->format('Y-m-d'),
+
+            'totalMonthDays' =>
+            $totalMonthDays,
+
+            /*
+        | Final Combined Totals
+        */
+            'totalDiets' =>
+            $totalDiets,
+
+            'individualSettlementDiet' =>
+            $individualSettlementDiet,
+
+            'presidentDiet' =>
+            $presidentCountAll,
+
+            'guestDiet' =>
+            $guestCount,
+
+            'netChargeableDiet' =>
+            $netChargeableDiet,
+
+            'guestExpense' =>
+            $guestExpense,
+
+            'individualExpense' =>
+            number_format($individualExpense, 0),
+
+            'memberDiet' =>
+            $memberDiet,
+
+            'nonMemberDiet' =>
+            $nonMemberDiet,
+
+            'nonMemberExpenses' =>
+            $nonMemberExpenses,
+
+            /*
+        | Event-wise data if required later
+        */
+            'companyParameters' =>
+            $companyParameters,
+
+            'rateMaster' =>
+            $rateMasterLunch,
+
+            'eventIds' =>
+            $eventIds,
         ]);
     }
+
+
 
     public function monthlyStore(Request $request)
     {
@@ -950,6 +1342,7 @@ class BillController extends Controller
 
             // Create main monthly bill
             $monthlyBill = Bill::create([
+                'location_id' => $locationId,
                 'type' => 'Monthly',
                 'generate_date' => Carbon::today(),
                 'generate_month' => $previousMonth,
@@ -977,11 +1370,6 @@ class BillController extends Controller
             // Update rate master
             $previousStart = Carbon::parse($previousMonth)->startOfMonth();
 
-            RateMaster::where('location_id', $locationId)
-                ->whereDate('effective_from_date', $previousStart->format('Y-m-d'))
-                ->where('status', 1)
-                ->update(['member_rate' => $validated['per_diet_calculation_manual']]);
-
             // Get all users for this location
             $allUserIds = UserLocation::where('location_id', $locationId)
                 ->distinct()
@@ -994,6 +1382,7 @@ class BillController extends Controller
             $remainingUserIds = $allUserIds->diff($alreadySettlementIds)->values();
 
             $rateMaster = RateMaster::where('location_id', $locationId)
+                ->where('event_id', 2)
                 ->whereDate('effective_from_date', $previousStart->format('Y-m-d'))
                 ->where('status', 1)
                 ->first();
@@ -1077,6 +1466,20 @@ class BillController extends Controller
             return redirect()->back()->with('error', 'Submitted bills cannot be editable.');
         }
 
+        $previousMonth = $bill->generate_month;
+        $previousStart = Carbon::parse($previousMonth)->startOfMonth();
+
+        $rateMaster = RateMaster::where('location_id', $authUser->location_id)
+            ->where('event_id', 2)
+            ->whereDate('effective_from_date', $previousStart->format('Y-m-d'))
+            ->where('status', 1)
+            ->first();
+
+        if (!$rateMaster) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Rate master not found for ' . $previousStart->format('F Y'));
+        }
+
         try {
             // Calculate totals (if needed)
             // You might want to calculate these values from the bill data
@@ -1104,7 +1507,8 @@ class BillController extends Controller
                 'individualExpense',
                 'guestExpense',
                 'nonMemberExpenses',
-                'totalExpenses'
+                'totalExpenses',
+                'rateMaster',
             ));
         } catch (\Exception $e) {
             \Log::error('Error edit bill: ' . $e->getMessage());
@@ -1203,6 +1607,7 @@ class BillController extends Controller
                 ->distinct()
                 ->pluck('user_id');
 
+
             // Exclude users who already have settlement for this month
             $alreadySettlementIds = Bill::whereIn('user_id', $allUserIds)
                 ->where('generate_month', $previousMonth)
@@ -1300,13 +1705,17 @@ class BillController extends Controller
             $currentStart = Carbon::parse($previousMonth)->startOfMonth();
             $currentEnd = Carbon::parse($previousMonth)->endOfMonth();
 
+            $eventIdCount = UserEvent::where('user_id', $userId)->count();
+
+            $allEventId = UserEvent::where('user_id', $userId)->pluck('event_id')->toArray();
+
             // Get present days for the user
-            $presentDays = $this->calculatePresentDays($userId, $locationId, $currentStart, $currentEnd);
+            $presentDays = $this->calculatePresentDays($userId, $locationId, $currentStart, $currentEnd,  $eventIdCount, $allEventId);
 
             // Skip if no present days
-            if ($presentDays <= 0) {
-                return;
-            }
+            // if ($presentDays <= 0) {
+            //     return;
+            // }
 
             // Check if user is president
             $isPresident = User::where('id', $userId)->where('president_flag', 1)->exists();
@@ -1314,15 +1723,33 @@ class BillController extends Controller
             $ratePerDiet = $isPresident ? 0 : ($rateMaster->member_rate ?? 0);
             $dietAmount = $presentDays * $ratePerDiet;
 
+            // $preAmount = BillDetail::where('user_id', $userId)
+            //     ->where('type', 'Monthly')
+            //     ->where('bill_id', '!=', $monthlyBill->id)
+            //     ->where('status', 1)
+            //     ->orderByDesc('id')
+            //     ->value('pre_balance') ?? 0;
+
+            $preAmount = Ledger::where('user_id', $userId)
+                ->where('location_id', $locationId)
+                ->orderByDesc('id')
+                ->value('balance') ?? 0;
+
+            $balanceAmount = ($preAmount +  $dietAmount);
+
+            $roleName = User::where('id', $userId)->value('role');
+
             // Create Bill Detail
             BillDetail::create([
                 'bill_id' => $monthlyBill->id,
                 'type' => 'Monthly',
                 'user_id' => $userId,
+                'role' => $roleName,
                 'user_diets' => $presentDays,
                 'rate_per_diet' => $ratePerDiet,
+                'pre_balance' => $preAmount,
                 'bill_amount' => $dietAmount,
-                'balance' => $dietAmount,
+                'balance' => $balanceAmount,
                 'status' => 1,
             ]);
         } catch (\Exception $e) {
@@ -1338,13 +1765,18 @@ class BillController extends Controller
             $currentStart = Carbon::parse($previousMonth)->startOfMonth();
             $currentEnd = Carbon::parse($previousMonth)->endOfMonth();
 
+
+            $eventIdCount = UserEvent::where('user_id', $userId)->count();
+
+            $allEventId = UserEvent::where('user_id', $userId)->pluck('event_id')->toArray();
+
             // Get present days for the user
-            $presentDays = $this->calculatePresentDays($userId, $locationId, $currentStart, $currentEnd);
+            $presentDays = $this->calculatePresentDays($userId, $locationId, $currentStart, $currentEnd, $eventIdCount, $allEventId);
 
             // Skip if no present days
-            if ($presentDays <= 0) {
-                return;
-            }
+            // if ($presentDays <= 0) {
+            //     return;
+            // }
 
             // Check if user is president
             $isPresident = User::where('id', $userId)->where('president_flag', 1)->exists();
@@ -1352,15 +1784,26 @@ class BillController extends Controller
             $ratePerDiet = $isPresident ? 0 : ($rateMaster->non_member_rate ?? 0);
             $dietAmount = $presentDays * $ratePerDiet;
 
+            $preAmount = Ledger::where('user_id', $userId)
+                ->where('location_id', $locationId)
+                ->orderByDesc('id')
+                ->value('balance') ?? 0;
+
+            $balanceAmount = ($preAmount +  $dietAmount);
+
+            $roleName = User::where('id', $userId)->value('role');
+
             // Create Bill Detail
             BillDetail::create([
                 'bill_id' => $monthlyBill->id,
                 'type' => 'Monthly',
                 'user_id' => $userId,
+                'role' => $roleName,
                 'user_diets' => $presentDays,
                 'rate_per_diet' => $ratePerDiet,
+                'pre_balance' => $preAmount,
                 'bill_amount' => $dietAmount,
-                'balance' => $dietAmount,
+                'balance' => $balanceAmount,
                 'status' => 1,
             ]);
         } catch (\Exception $e) {
@@ -1369,40 +1812,78 @@ class BillController extends Controller
         }
     }
 
-    private function calculatePresentDays($userId, $locationId, $currentStart, $currentEnd)
-    {
+    private function calculatePresentDays(
+        $userId,
+        $locationId,
+        $currentStart,
+        $currentEnd,
+        $eventIdCount,
+        $allEventId
+    ) {
         try {
-            // Get absent days
-            $absentData = DayStatus::whereBetween('day_statuses.date', [
+            $absentCount = 0;
+
+            // Calculate absent days for all events
+            foreach ($allEventId as $eventId) {
+
+                $absentData = DayStatus::whereBetween('day_statuses.date', [
+                    $currentStart->format('Y-m-d'),
+                    $currentEnd->format('Y-m-d')
+                ])
+                    ->where('day_statuses.date', '<=', Carbon::today()->toDateString())
+                    ->where('day_statuses.sunday_flag', 0)
+                    ->where('day_statuses.holiday_flag', 0)
+                    ->where('day_statuses.open_flag', 1)
+                    ->where('day_statuses.location_id', $locationId)
+
+                    ->leftJoin('attendance_absents', function ($join) use (
+                        $userId,
+                        $locationId,
+                        $eventId
+                    ) {
+                        $join->on(
+                            'day_statuses.id',
+                            '=',
+                            'attendance_absents.calendar_id'
+                        )
+                            ->where('attendance_absents.location_id', $locationId)
+                            ->where('attendance_absents.user_id', $userId)
+                            ->where('attendance_absents.event_id', $eventId)
+                            ->where('attendance_absents.absent_flag', 1);
+                    })
+
+                    ->selectRaw('COUNT(attendance_absents.id) as absent_days')
+                    ->first();
+
+                $absentCount += (int) ($absentData->absent_days ?? 0);
+            }
+
+            // Get total working days
+            $monthDayCount = DayStatus::whereBetween('day_statuses.date', [
                 $currentStart->format('Y-m-d'),
                 $currentEnd->format('Y-m-d')
             ])
                 ->where('day_statuses.date', '<=', Carbon::today()->toDateString())
                 ->where('day_statuses.sunday_flag', 0)
                 ->where('day_statuses.holiday_flag', 0)
-                ->where('day_statuses.open_flag', 1)
-                ->where('day_statuses.location_id', $locationId)
-                ->leftJoin('attendance_absents', function ($join) use ($userId, $locationId) {
-                    $join->on('day_statuses.id', '=', 'attendance_absents.calendar_id')
-                        ->where('attendance_absents.location_id', $locationId)
-                        ->where('attendance_absents.user_id', $userId);
-                })
-                ->selectRaw("SUM(CASE WHEN attendance_absents.absent_flag = 1 THEN 1 ELSE 0 END) as absent_days")
-                ->first();
-
-            // Get month day count
-            $monthDayCount = DayStatus::whereBetween('day_statuses.date', [
-                $currentStart->format('Y-m-d'),
-                $currentEnd->format('Y-m-d')
-            ])
-                ->where('day_statuses.holiday_flag', 0)
                 ->where('day_statuses.location_id', $locationId)
                 ->where('day_statuses.open_flag', 1)
                 ->count();
 
-            return max(0, $monthDayCount - ($absentData->absent_days ?? 0));
+            // Total available diets for all events
+            $totalDays = $monthDayCount * $eventIdCount;
+
+            // Present days = total event days - absent days
+            $presentDays = $totalDays - $absentCount;
+
+            return max(0, $presentDays);
         } catch (\Exception $e) {
-            \Log::error('Error calculating present days for user ' . $userId . ': ' . $e->getMessage());
+            \Log::error(
+                'Error calculating present days for user ' .
+                    $userId . ': ' .
+                    $e->getMessage()
+            );
+
             throw $e;
         }
     }
@@ -1442,9 +1923,99 @@ class BillController extends Controller
 
     public function monthlyFinalSubmit($id)
     {
-        Bill::where('id', $id)->update(['status' => 1]);
+        DB::beginTransaction();
 
-        return redirect()->route('bill-generate.monthly')->with('success', 'Mpnthly Bill Final Submit Successfully');
+        try {
+            $authUser = Auth::user();
+
+            $bill = Bill::where('id', $id)->first();
+
+            if (!$bill) {
+                DB::rollBack();
+                return redirect()->route('bill-generate.monthly')->with('error', 'Bill not found!');
+            }
+
+            $billDetails = BillDetail::where('bill_id', $id)->get();
+
+            if ($billDetails->isEmpty()) {
+                DB::rollBack();
+                return redirect()->route('bill-generate.monthly')->with('error', 'No bill details found!');
+            }
+
+            $currentDate = Carbon::now()->format('Y-m-d');
+
+            foreach ($billDetails as $detail) {
+                $user = User::find($detail->user_id);
+
+                if (!$user) {
+                    DB::rollBack();
+                    return redirect()->route('bill-generate.monthly')->with('error', 'User not found for ID: ' . $detail->user_id);
+                }
+
+                $calendarId = DayStatus::where('date', $currentDate)
+                    ->where('location_id', $user->location_id)
+                    ->value('id');
+
+                // Get existing ledger for user
+                $existingLedger = Ledger::where('user_id', $user->id)
+                    ->where('location_id', $authUser->location_id)
+                    ->orderByDesc('id')
+                    ->first();
+
+                if ($existingLedger) {
+                    $newBalance = $existingLedger->balance + $detail->bill_amount;
+                    $due = $detail->bill_amount;
+                    $paid = 0;
+                } else {
+                    $newBalance = $detail->bill_amount;
+                    $due = $detail->bill_amount;
+                    $paid = 0;
+                }
+
+                // Create ledger entry
+                $ledger = Ledger::create([
+                    'user_id' => $user->id,
+                    'location_id' => $authUser->location_id,
+                    'bill_id' => $bill->id,
+                    'calendar_id' => $calendarId,
+                    'date' => $currentDate,
+                    'transaction' => 'Monthly Bill',
+                    'due' => $due,
+                    'paid' => $paid,
+                    'balance' => $newBalance,
+                    'created_by' => $authUser->id
+                ]);
+
+                if (!$ledger) {
+                    DB::rollBack();
+                    return redirect()->route('bill-generate.monthly')->with('error', 'Failed to create ledger for user: ' . $user->name);
+                }
+            }
+
+            $securityAmount = User::where('location_id', $authUser->location_id)->where('status', 1)->sum('security_amount');
+
+            // Update bill status
+            $updated = Bill::where('id', $id)->update(['status' => 1, 'security_amount' => $securityAmount]);
+
+            if (!$updated) {
+                DB::rollBack();
+                return redirect()->route('bill-generate.monthly')->with('error', 'Failed to update bill status!');
+            }
+
+            // Commit transaction if everything is successful
+            DB::commit();
+
+            return redirect()->route('bill-generate.monthly')->with('success', 'Monthly Bill Final Submit Successfully');
+        } catch (\Exception $e) {
+            // Rollback transaction on error
+            DB::rollBack();
+
+            // Log the error for debugging
+            \Log::error('Monthly Final Submit Error: ' . $e->getMessage());
+            \Log::error('Line: ' . $e->getLine() . ' in ' . $e->getFile());
+
+            return redirect()->route('bill-generate.monthly')->with('error', 'Something went wrong! Please try again. Error: ' . $e->getMessage());
+        }
     }
 
     public function monthlyShow($id)
@@ -1454,5 +2025,353 @@ class BillController extends Controller
             ->sortBy(fn($detail) => $detail->user?->first_name)
             ->values();
         return view('bill.monthly.show', compact('bill'));
+    }
+
+
+    public function monthlyPdf($id)
+    {
+        $authUser = Auth::user();
+        $bill = Bill::findOrFail($id);
+
+        if ($authUser->location_id = 1) {
+
+            $billDetails = BillDetail::select('bill_details.*')
+                ->join('users', 'users.id', '=', 'bill_details.user_id')
+                ->where('bill_details.bill_id', $id)
+                ->where('bill_details.user_diets', '!=', 0)
+                ->with('user')
+                ->orderBy('users.first_name', 'asc')
+                ->get();
+        } else {
+            $billDetails = BillDetail::select('bill_details.*')
+                ->join('users', 'users.id', '=', 'bill_details.user_id')
+                ->where('bill_details.bill_id', $id)
+                ->with('user')
+                ->orderBy('users.first_name', 'asc')
+                ->get();
+        }
+
+
+
+        $pdf = Pdf::loadView('bill.monthly.pdf', compact(
+            'bill',
+            'billDetails'
+        ));
+
+        return $pdf->download('monthly-bill-' . Carbon::parse($bill->generate_month)->format('F Y') . '.pdf');
+    }
+
+    public function guestPdf($id)
+    {
+        // Fetch the bill
+        $bill = Bill::findOrFail($id);
+
+        // Fetch bill details
+        $billDetails = BillDetail::select('bill_details.*')
+            ->join('users', 'users.id', '=', 'bill_details.user_id')
+            ->where('bill_details.bill_id', $id)
+            ->with('user')
+            ->orderBy('users.first_name', 'asc')
+            ->get();
+
+        // Calculate guest expense data
+        $guestDiet = $bill->guest_diet ?? 0;
+        $guestExpenses = $bill->guest_expenses ?? 0;
+        $mealRatePerGuest = $guestDiet > 0 ? $guestExpenses / $guestDiet : 0;
+
+        // Convert total amount to words
+        $totalAmountInWords = $this->numberToWords($guestExpenses);
+
+        $canteenAdministrator = User::where('president_flag', 1)->where('location_id', $bill->location_id)->value('first_name');
+
+        $locationName = Location::where('id', $bill->location_id)->value('name');
+
+        // Get the month range
+        $startDate = Carbon::parse($bill->generate_month)->startOfMonth();
+        $endDate = Carbon::parse($bill->generate_month)->endOfMonth();
+
+        // Get actual data with guests (your existing query)
+        $guestData = Guest::whereIn('calendar_id', function ($query) use ($bill) {
+            $query->select('id')
+                ->from('day_statuses')
+                ->whereBetween('date', [
+                    Carbon::parse($bill->generate_month)->startOfMonth()->format('Y-m-d'),
+                    Carbon::parse($bill->generate_month)->endOfMonth()->format('Y-m-d')
+                ])
+                ->where('location_id', $bill->location_id);
+        })
+            ->where('location_id', $bill->location_id)
+            ->selectRaw('DATE(date) as date, SUM(guest_count) as total_guests')
+            ->groupBy('date')
+            ->orderBy('date', 'asc')
+            ->get()
+            ->keyBy('date'); // Key by date for easy lookup
+
+        // Create full month range with zero values
+        $completeMonthData = [];
+        $currentDate = $startDate->copy();
+
+        while ($currentDate <= $endDate) {
+            $dateString = $currentDate->format('Y-m-d');
+
+            $completeMonthData[] = (object) [
+                'date' => $dateString,
+                'date_formatted' => $currentDate->format('d-M-Y'),
+                'total_guests' => isset($guestData[$dateString]) ? $guestData[$dateString]->total_guests : 0,
+                'rate_per_guest' => $mealRatePerGuest,
+                'amount' => isset($guestData[$dateString]) ? $guestData[$dateString]->total_guests * $mealRatePerGuest : 0
+            ];
+
+            $currentDate->addDay();
+        }
+
+        // Convert to collection
+        $guestData = collect($completeMonthData);
+        $sumTotalGuests = $guestData->sum('total_guests');
+        $sumTotalAmount = $guestData->sum('amount');
+
+        // Prepare data for view
+        $data = [
+            'bill' => $bill,
+            'billDetails' => $billDetails,
+            'guestDiet' => $guestDiet,
+            'guestExpenses' => $guestExpenses,
+            'mealRatePerGuest' => $mealRatePerGuest,
+            'totalAmountInWords' => $totalAmountInWords,
+            'generatedDate' => Carbon::now()->format('d-m-Y'),
+            'monthYear' => Carbon::parse($bill->generate_month)->format('F Y'),
+            'canteenAdministrator' => $canteenAdministrator,
+            'locationName' => $locationName,
+            'guestData' => $guestData,
+            'sumTotalGuests' => $sumTotalGuests,
+            'sumTotalAmount' => $sumTotalAmount
+        ];
+
+        // Generate PDF
+        $pdf = Pdf::loadView('bill.monthly.guest_pdf', $data);
+
+        // Download PDF
+        return $pdf->download('Guest-Charges-' . Carbon::parse($bill->generate_month)->format('F Y') . '.pdf');
+    }
+
+    /**
+     * Convert number to words (Indian Rupees format)
+     */
+    private function numberToWords($number)
+    {
+        $number = (int) $number;
+
+        if ($number == 0) {
+            return 'Zero';
+        }
+
+        $words = [
+            '0' => '',
+            '1' => 'One',
+            '2' => 'Two',
+            '3' => 'Three',
+            '4' => 'Four',
+            '5' => 'Five',
+            '6' => 'Six',
+            '7' => 'Seven',
+            '8' => 'Eight',
+            '9' => 'Nine',
+            '10' => 'Ten',
+            '11' => 'Eleven',
+            '12' => 'Twelve',
+            '13' => 'Thirteen',
+            '14' => 'Fourteen',
+            '15' => 'Fifteen',
+            '16' => 'Sixteen',
+            '17' => 'Seventeen',
+            '18' => 'Eighteen',
+            '19' => 'Nineteen',
+            '20' => 'Twenty',
+            '30' => 'Thirty',
+            '40' => 'Forty',
+            '50' => 'Fifty',
+            '60' => 'Sixty',
+            '70' => 'Seventy',
+            '80' => 'Eighty',
+            '90' => 'Ninety',
+        ];
+
+        $result = '';
+
+        // Crore (1,00,00,000)
+        if ($number >= 10000000) {
+            $crore = floor($number / 10000000);
+            $result .= $this->convertNumberToWords($crore, $words) . ' Crore ';
+            $number %= 10000000;
+        }
+
+        // Lakh (1,00,000)
+        if ($number >= 100000) {
+            $lakh = floor($number / 100000);
+            $result .= $this->convertNumberToWords($lakh, $words) . ' Lakh ';
+            $number %= 100000;
+        }
+
+        // Thousand (1,000)
+        if ($number >= 1000) {
+            $thousand = floor($number / 1000);
+            $result .= $this->convertNumberToWords($thousand, $words) . ' Thousand ';
+            $number %= 1000;
+        }
+
+        // Hundred
+        if ($number >= 100) {
+            $hundred = floor($number / 100);
+            $result .= $this->convertNumberToWords($hundred, $words) . ' Hundred ';
+            $number %= 100;
+        }
+
+        // Tens and Units
+        if ($number > 0) {
+            if (!empty($result)) {
+                $result .= 'and ';
+            }
+            $result .= $this->convertNumberToWords($number, $words);
+        }
+
+        return trim($result) . ' Only';
+    }
+
+    /**
+     * Helper function to convert number to words
+     */
+    private function convertNumberToWords($number, $words)
+    {
+        if ($number <= 20) {
+            return $words[$number];
+        }
+
+        $tens = floor($number / 10) * 10;
+        $units = $number % 10;
+
+        if ($units == 0) {
+            return $words[$tens];
+        }
+
+        return $words[$tens] . ' ' . $words[$units];
+    }
+
+    /**
+     * Alternative: Using a simpler number to words function
+     */
+    private function numberToWordsSimple($number)
+    {
+        $number = (int) $number;
+
+        if ($number == 0) {
+            return 'Zero Only';
+        }
+
+        $hyphen = ' ';
+        $conjunction = ' and ';
+        $separator = ', ';
+        $negative = 'Negative ';
+        $decimal = ' point ';
+        $dictionary = [
+            0 => 'Zero',
+            1 => 'One',
+            2 => 'Two',
+            3 => 'Three',
+            4 => 'Four',
+            5 => 'Five',
+            6 => 'Six',
+            7 => 'Seven',
+            8 => 'Eight',
+            9 => 'Nine',
+            10 => 'Ten',
+            11 => 'Eleven',
+            12 => 'Twelve',
+            13 => 'Thirteen',
+            14 => 'Fourteen',
+            15 => 'Fifteen',
+            16 => 'Sixteen',
+            17 => 'Seventeen',
+            18 => 'Eighteen',
+            19 => 'Nineteen',
+            20 => 'Twenty',
+            30 => 'Thirty',
+            40 => 'Forty',
+            50 => 'Fifty',
+            60 => 'Sixty',
+            70 => 'Seventy',
+            80 => 'Eighty',
+            90 => 'Ninety',
+            100 => 'Hundred',
+            1000 => 'Thousand',
+            100000 => 'Lakh',
+            10000000 => 'Crore'
+        ];
+
+        if ($number < 0) {
+            return $negative . $this->numberToWordsSimple(abs($number));
+        }
+
+        $string = $fraction = null;
+
+        if (strpos($number, '.') !== false) {
+            list($number, $fraction) = explode('.', $number);
+        }
+
+        switch (true) {
+            case $number < 21:
+                $string = $dictionary[$number];
+                break;
+            case $number < 100:
+                $tens = floor($number / 10) * 10;
+                $units = $number % 10;
+                $string = $dictionary[$tens];
+                if ($units) {
+                    $string .= $hyphen . $dictionary[$units];
+                }
+                break;
+            case $number < 1000:
+                $hundreds = floor($number / 100);
+                $remainder = $number % 100;
+                $string = $dictionary[$hundreds] . ' ' . $dictionary[100];
+                if ($remainder) {
+                    $string .= $conjunction . $this->numberToWordsSimple($remainder);
+                }
+                break;
+            case $number < 100000:
+                $thousands = floor($number / 1000);
+                $remainder = $number % 1000;
+                $string = $this->numberToWordsSimple($thousands) . ' ' . $dictionary[1000];
+                if ($remainder) {
+                    $string .= $separator . $this->numberToWordsSimple($remainder);
+                }
+                break;
+            case $number < 10000000:
+                $lakhs = floor($number / 100000);
+                $remainder = $number % 100000;
+                $string = $this->numberToWordsSimple($lakhs) . ' ' . $dictionary[100000];
+                if ($remainder) {
+                    $string .= $separator . $this->numberToWordsSimple($remainder);
+                }
+                break;
+            default:
+                $crores = floor($number / 10000000);
+                $remainder = $number % 10000000;
+                $string = $this->numberToWordsSimple($crores) . ' ' . $dictionary[10000000];
+                if ($remainder) {
+                    $string .= $separator . $this->numberToWordsSimple($remainder);
+                }
+                break;
+        }
+
+        if ($fraction !== null && is_numeric($fraction)) {
+            $string .= $decimal;
+            $words = [];
+            foreach (str_split((string) $fraction) as $digit) {
+                $words[] = $dictionary[$digit];
+            }
+            $string .= implode(' ', $words);
+        }
+
+        return $string . ' Only';
     }
 }

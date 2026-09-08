@@ -259,7 +259,7 @@
                         <!-- Role Dropdown -->
                         <div class="col-md-6 mb-3">
                             <label for="role_id" class="form-label">Role <span class="text-danger">*</span></label>
-                            <select class="form-control @error('role_id') is-invalid @enderror" id="role_id" name="role_id" required>
+                            <select class="form-control @error('role_id') is-invalid @enderror" id="role_id" name="role_id" required readonly>
                                 <option value="">Select Role</option>
                                 @foreach($roles as $role)
                                 <option value="{{ $role->id }}" {{ old('role_id', $userToEdit->role_id) == $role->id ? 'selected' : '' }}>
@@ -455,6 +455,38 @@
                             @enderror
                         </div>
 
+                              <!-- Events Section - ADDED FROM CREATE PAGE -->
+                        <div class="mb-3 col-6">
+                            <label class="form-label">
+                                Event <span class="text-danger">*</span>
+                            </label>
+
+                            <div class="d-flex flex-wrap gap-3">
+                                @foreach($events as $locationEvent)
+                                @if($locationEvent->event)
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        name="event_ids[]"
+                                        id="event_{{ $locationEvent->event->id }}"
+                                        value="{{ $locationEvent->event->id }}"
+                                        {{ in_array($locationEvent->event->id, old('event_ids', $userEventIds ?? [])) ? 'checked' : '' }}>
+                                    <label
+                                        class="form-check-label"
+                                        for="event_{{ $locationEvent->event->id }}">
+                                        {{ $locationEvent->event->name }}
+                                    </label>
+                                </div>
+                                @endif
+                                @endforeach
+                            </div>
+
+                            @error('event_ids')
+                            <span class="text-danger">{{ $message }}</span>
+                            @enderror
+                        </div>
+
                         <!-- Security Amount -->
                         <div class="col-md-6 mb-3">
                             <label for="security_amount" class="form-label">
@@ -552,37 +584,7 @@
                             @enderror
                         </div>
 
-                        <!-- Events Section - ADDED FROM CREATE PAGE -->
-                        <div class="mb-3 col-6">
-                            <label class="form-label">
-                                Event <span class="text-danger">*</span>
-                            </label>
-
-                            <div class="d-flex flex-wrap gap-3">
-                                @foreach($events as $locationEvent)
-                                @if($locationEvent->event)
-                                <div class="form-check">
-                                    <input
-                                        class="form-check-input"
-                                        type="checkbox"
-                                        name="event_ids[]"
-                                        id="event_{{ $locationEvent->event->id }}"
-                                        value="{{ $locationEvent->event->id }}"
-                                        {{ in_array($locationEvent->event->id, old('event_ids', $userEventIds ?? [])) ? 'checked' : '' }}>
-                                    <label
-                                        class="form-check-label"
-                                        for="event_{{ $locationEvent->event->id }}">
-                                        {{ $locationEvent->event->name }}
-                                    </label>
-                                </div>
-                                @endif
-                                @endforeach
-                            </div>
-
-                            @error('event_ids')
-                            <span class="text-danger">{{ $message }}</span>
-                            @enderror
-                        </div>
+                  
 
                         <!-- Guest Allowed -->
                         <div class="col-md-6 mb-3">

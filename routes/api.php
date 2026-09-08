@@ -8,7 +8,9 @@ use App\Http\Controllers\API\ApiAttendanceController;
 use App\Http\Controllers\API\ApiDashboardController;
 use App\Http\Controllers\API\ApiForgetPasswordController;
 use App\Http\Controllers\API\ApiReportController;
-use App\Http\Controllers\Api\ApiFeedbackController;
+use App\Http\Controllers\API\ApiFeedbackController;
+
+
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -25,6 +27,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/guest-list-today', [ApiAttendanceController::class, 'guestListToday']);
     Route::get('/guest-list', [ApiAttendanceController::class, 'guestList']);
     Route::post('/mark-attendance', [ApiAttendanceController::class, 'markAttendance']);
+    Route::post('/mark-attendance-calendar', [ApiAttendanceController::class, 'markAttendanceCalendar']);
     Route::get('/getDepartment', [ApiAttendanceController::class, 'getDepartment']);
     Route::get('/getUsersByDepartment', [ApiAttendanceController::class, 'getuserByDepartment']);
 

@@ -4,10 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Bill;
 use App\Models\BillDetail;
+use App\Models\Ledger;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Traits\AdminViewSharedDataTrait;
+use App\Models\DayStatus;
 use App\Models\Payment;
+use App\Models\User;
 use Yajra\DataTables\Facades\DataTables;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class PaymentController extends Controller
 {
@@ -49,11 +55,11 @@ class PaymentController extends Controller
                 })
 
                 ->editColumn('net_chargeable_diet', function ($row) {
-                    return '₹ ' . number_format($row->net_monthly_expenses, 2);
+                    return '₹ ' . number_format($row->net_monthly_expenses, 0);
                 })
 
                 ->editColumn('per_diet_calculation', function ($row) {
-                    return '₹ ' . number_format($row->per_diet_calculation, 2);
+                    return '₹ ' . number_format($row->per_diet_calculation, 0);
                 })
 
                 ->addColumn('status', function ($row) {
@@ -98,6 +104,7 @@ class PaymentController extends Controller
     public function create($id)
     {
         $bill = Bill::findOrFail($id);
+        // dd($bill);
         $billDetails = BillDetail::with('user')->where('bill_id', $id)->get();
 
         return view('payment.create', compact('bill', 'billDetails'));
@@ -107,8 +114,32 @@ class PaymentController extends Controller
 
     public function getPaymentData(Request $request)
     {
+        $authUser = Auth::user();
+        if ($authUser->role !== 'Canteen Administrator') {
+            return redirect()->back()->with('error', 'Payment is not available for this role.');
+        }
+        $billId = $request->bill_id;
+        if (!$billId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bill ID is required.'
+            ], 400);
+        }
+        $bill = Bill::find($billId);
+        if (!$bill) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bill not found.'
+            ], 404);
+        }
+        if($bill->location_id !== $authUser->location_id){
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to access this bill.'
+            ], 403);
+        }
         if ($request->ajax()) {
-            $data = BillDetail::with('user')->get();
+            $data = BillDetail::with('user')->where('bill_id', $request->bill_id)->get();
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -116,7 +147,7 @@ class PaymentController extends Controller
                     return $row->user?->first_name ?? 'N/A';
                 })
                 ->addColumn('role', function ($row) {
-                    return $row->user?->role ?? 'N/A';
+                    return $row->role ?? 'N/A';
                 })
                 ->addColumn('user_diets', function ($row) {
                     return $row->user_diets;
@@ -169,8 +200,31 @@ class PaymentController extends Controller
             'payment_note' => 'nullable|string|max:500',
         ]);
 
+        DB::beginTransaction();
+
         try {
+            $authUser = Auth::user();
             $billDetail = BillDetail::findOrFail($request->bill_detail_id);
+
+            // Check if bill detail exists
+            if (!$billDetail) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Bill detail not found!'
+                ], 404);
+            }
+
+            // Check if already fully paid
+            if ($billDetail->balance <= 0) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This bill is already fully paid!'
+                ], 400);
+            }
+
+            $currentDate = Carbon::now()->format('Y-m-d');
 
             // Get bill_id from bill_detail
             $billId = $billDetail->bill_id;
@@ -178,10 +232,20 @@ class PaymentController extends Controller
             // Calculate amounts
             $payableAmount = $billDetail->bill_amount ?? 0;
             $receiveAmount = $request->receive_amount;
-            $balanceAmount =  $payableAmount - $receiveAmount;
+
+            // Check if receive amount is greater than balance
+            // if ($receiveAmount > $billDetail->balance) {
+            //     DB::rollBack();
+            //     return response()->json([
+            //         'success' => false,
+            //         'message' => 'Receive amount cannot be greater than balance amount!'
+            //     ], 400);
+            // }
+
+            $balanceAmount = $billDetail->balance - $receiveAmount;
 
             // Determine status
-            $status = 'Paid';
+            $status = 1; // Paid
 
             // Create payment record
             $payment = Payment::create([
@@ -191,29 +255,210 @@ class PaymentController extends Controller
                 'payable_amount' => $payableAmount,
                 'receive_amount' => $receiveAmount,
                 'balance_amount' => $balanceAmount,
-                'amount' => $receiveAmount,
+                'amount' => $receiveAmount         ,
                 'status' => $status,
                 'payment_date' => $request->payment_date,
                 'payment_time' => now()->format('H:i:s'),
             ]);
 
+            if (!$payment) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create payment record!'
+                ], 500);
+            }
+
             // Update balance in bill_details
-            $billDetail->balance = $balanceAmount;
             $billDetail->payment_flag = 1;
-            $billDetail->payment_amount = $receiveAmount;  // Add to existing payment amount
+            $billDetail->payment_amount = ($billDetail->payment_amount ?? 0) + $receiveAmount;
             $billDetail->save();
 
+            // Get user
+            $user = User::find($billDetail->user_id);
+
+            if (!$user) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not found!'
+                ], 404);
+            }
+
+            // Get calendar ID
+            $calendarId = DayStatus::where('date', $currentDate)
+                ->where('location_id', $user->location_id)
+                ->value('id');
+
+            // Get existing ledger for user
+            $existingLedger = Ledger::where('user_id', $billDetail->user_id)
+                ->where('location_id', $authUser->location_id)
+                ->orderByDesc('id')
+                ->first();
+
+            if ($existingLedger) {
+                $newBalance = $existingLedger->balance - $receiveAmount;
+                $due = 0;
+                $paid = $receiveAmount;
+            } else {
+                $newBalance = -$receiveAmount;
+                $due = 0;
+                $paid = $receiveAmount;
+            }
+
+            // Create ledger entry
+            $ledger = Ledger::create([
+                'user_id' => $billDetail->user_id,
+                'calendar_id' => $calendarId,
+                'location_id' => $authUser->location_id,
+                'bill_id' => $billId,
+                'date' => $currentDate,
+                'transaction' => 'Monthly Bill Payment',
+                'due' => $due,
+                'paid' => $paid,
+                'balance' => $newBalance,
+                'created_by' => $authUser->id
+            ]);
+
+            if (!$ledger) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create ledger entry!'
+                ], 500);
+            }
+
+            // Commit transaction if everything is successful
+            DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Payment successful!',
-                'data' => $payment
+                'data' => $payment,
+                'balance_remaining' => $balanceAmount
             ], 201);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Bill detail not found!'
+            ], 404);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed!',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
+            DB::rollBack();
+
+            // Log the error for debugging
+            \Log::error('Payment Store Error: ' . $e->getMessage());
+            \Log::error('Line: ' . $e->getLine() . ' in ' . $e->getFile());
+
             return response()->json([
                 'success' => false,
                 'message' => 'Payment failed: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function openingCreate()
+    {
+        $authUser = Auth::user();
+        if ($authUser->role !== 'Canteen Administrator') {
+            return redirect()->back()->with('error', 'Security Deposit is not available for this role.');
+        }
+        $users = User::where('status', 1)->where('location_id', $authUser->location_id)->whereIn('role', ['Member', 'Non Member'])
+            ->orderBy('first_name', 'Asc')->get();
+        return view('payment.opening_amount', compact('users'));
+    }
+
+
+    public function openingStore(Request $request)
+    {
+        $request->validate([
+            'date'    => 'required|date',
+            'user_id' => 'required|exists:users,id',
+            'amount'  => 'required|numeric',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            $authUser = Auth::user();
+            $user = User::findOrFail($request->user_id);
+
+            // Get calendar ID based on selected date
+            $calendarId = DayStatus::where('date', Carbon::parse($request->date)->format('Y-m-d'))
+                ->where('location_id', $user->location_id)
+                ->value('id');
+
+            if (!$calendarId) {
+                DB::rollBack();
+
+                return back()
+                    ->withInput()
+                    ->with('error', 'Day status/calendar not found for the selected date.');
+            }
+
+            // Check if ledger already exists for this user
+            $existingLedger = Ledger::where('user_id', $request->user_id)
+                ->where('location_id', $authUser->location_id)
+                ->orderByDesc('id')
+                ->first();
+
+            if ($existingLedger) {
+                DB::rollBack();
+
+                return back()
+                    ->withInput()
+                    ->with('error', 'Ledger entry already exists for this user.');
+            }
+
+            $amount = (float) $request->amount;
+
+            // Opening balance
+            $due = $amount;
+            $paid = 0;
+            $balance = $amount;
+
+            // Create ledger entry
+            $ledger = Ledger::create([
+                'user_id'     => $request->user_id,
+                'location_id' => $authUser->location_id,
+                'calendar_id' => $calendarId,
+                'date'        => Carbon::parse($request->date)->format('Y-m-d'),
+                'transaction' => 'Opening Balance',
+                'due'         => $due,
+                'paid'        => $paid,
+                'balance'     => $balance,
+                'created_by'  => $authUser->id,
+            ]);
+
+            if (!$ledger) {
+                DB::rollBack();
+
+                return back()
+                    ->withInput()
+                    ->with('error', 'Failed to create opening balance.');
+            }
+
+            DB::commit();
+
+            return back()
+                ->with('success', 'Opening balance created successfully.');
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            \Log::error('Opening Balance Store Error: ' . $e->getMessage());
+            \Log::error('Line: ' . $e->getLine() . ' in ' . $e->getFile());
+
+            return back()
+                ->withInput()
+                ->with('error', 'Failed to create opening balance.');
         }
     }
 }

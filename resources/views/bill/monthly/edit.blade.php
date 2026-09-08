@@ -46,7 +46,7 @@
             }
 
             $('#per_diet_calculation').val(perDiet);
-            $('#per_diet_calculation_manual').val(perDietManual);
+            // $('#per_diet_calculation_manual').val(perDietManual);
         }
 
         // Trigger calculation on input changes
@@ -276,8 +276,8 @@
                                             id="per_diet_calculation_manual"
                                             name="per_diet_calculation_manual"
                                             class="form-control text-start"
-                                            value="{{ old('per_diet_calculation_manual', $bill->per_diet_calculation_auto ?? 0) }}"
-                                            min="1">
+                                           value="{{ $rateMaster ? $rateMaster->member_rate : '' }}"
+                                            min="1" readonly>
                                     </td>
                                 </tr>
 

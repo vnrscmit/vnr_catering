@@ -108,12 +108,12 @@
               </a>
               <div class="collapse {{ request()->route()->named('bill-generate.*') ? 'show' : '' }}" id="bill-generate">
                 <ul class="nav flex-column sub-menu">
-                  <li class="nav-item">
+                  <!-- <li class="nav-item">
                     <a class="nav-link {{ request()->route()->named('bill-generate.individual') ? 'active' : '' }}"
                       href="{{ route('bill-generate.individual') }}">
                       <i class="fa fa-user me-2"></i> Individual Settlement
                     </a>
-                  </li>
+                  </li> -->
                   <li class="nav-item">
                     <a class="nav-link {{ request()->route()->named('bill-generate.monthly') ? 'active' : '' }}"
                       href="{{ route('bill-generate.monthly') }}">
@@ -124,16 +124,6 @@
                 </ul>
               </div>
             </li>
-
-            <li class="nav-item {{ request()->route()->named('payment.*') ? 'active-nav' : '' }}">
-              <a class="nav-link" href="{{ route('payment.index') }}">
-                <i class="fas fa-credit-card"></i>
-                <span class="menu-title">Bill Payment</span>
-              </a>
-            </li>
-
-
-
 
             @endif
 
@@ -255,7 +245,7 @@
                 <ul class="nav flex-column sub-menu">
 
                   {{-- Individual Settlement --}}
-                  <li class="nav-item {{ 
+                  <!-- <li class="nav-item {{ 
                 request()->route()->named('bill-generate.individual')
                     ? 'active-nav' : '' 
             }}">
@@ -266,7 +256,7 @@
                       <span class="menu-title">Individual Settlement</span>
 
                     </a>
-                  </li>
+                  </li> -->
 
                   {{-- Monthly Bill --}}
                   <li class="nav-item {{ 
@@ -288,7 +278,8 @@
             {{-- Transaction --}}
             <li class="nav-item {{ 
     request()->route()->named('payment.*') ||
-    request()->routeIs('feedback.*')
+    request()->routeIs('feedback.*') ||
+    request()->routeIs('security-amount.*')
         ? 'active' : '' 
 }}">
 
@@ -297,7 +288,8 @@
                 href="#transactionMenu"
                 aria-expanded="{{ 
             request()->route()->named('payment.*') ||
-            request()->routeIs('feedback.*')
+            request()->routeIs('feedback.*') ||
+            request()->routeIs('security-amount.*')
                 ? 'true' : 'false' 
         }}"
                 aria-controls="transactionMenu">
@@ -309,22 +301,36 @@
 
               <div class="collapse {{ 
         request()->route()->named('payment.*') ||
-        request()->routeIs('feedback.*')
+        request()->routeIs('feedback.*') ||
+         request()->routeIs('opening-amount.*') ||
+        request()->routeIs('security-amount.*')
             ? 'show' : '' 
     }}" id="transactionMenu">
 
                 <ul class="nav flex-column sub-menu">
 
                   {{-- Bill Payment --}}
+
+
+                  {{-- Security Amount --}}
                   <li class="nav-item {{ 
-                request()->route()->named('payment.*')
+                request()->routeIs('security-amount.*')
                     ? 'active-nav' : '' 
             }}">
-                    <a class="nav-link" href="{{ route('payment.index') }}">
+                    <a class="nav-link" href="{{ route('security-amount.create') }}">
+                      <i class="fa fa-shield-alt menu-icon"></i>
+                      <span class="menu-title">Security Amount</span>
+                    </a>
+                  </li>
 
-                      <i class="fa fa-credit-card menu-icon"></i>
-                      <span class="menu-title">Bill Payment</span>
-
+                  {{-- Opening Amount --}}
+                  <li class="nav-item {{ 
+    request()->routeIs('opening-amount.*')
+        ? 'active-nav' : '' 
+}}">
+                    <a class="nav-link" href="{{ route('opening-amount.create') }}">
+                      <i class="fa fa-balance-scale menu-icon"></i>
+                      <span class="menu-title">Opening Amount</span>
                     </a>
                   </li>
 
@@ -334,10 +340,8 @@
                     ? 'active-nav' : '' 
             }}">
                     <a class="nav-link" href="{{ route('feedback.index') }}">
-
                       <i class="fa fa-comment-dots menu-icon"></i>
                       <span class="menu-title">Feedback</span>
-
                     </a>
                   </li>
 
@@ -380,7 +384,7 @@
                     <a class="nav-link" href="{{ route('report.daily') }}">
 
                       <i class="fa fa-user menu-icon"></i>
-                      <span class="menu-title">Daily Attendance Report</span>
+                      <span class="menu-title">Daily Attendance</span>
 
                     </a>
                   </li>
@@ -406,8 +410,27 @@
                     <a class="nav-link" href="{{ route('report.guest') }}">
 
                       <i class="fa fa-users menu-icon"></i>
-                      <span class="menu-title">Guest Report</span>
+                      <span class="menu-title">Guest</span>
 
+                    </a>
+                  </li>
+                  <li class="nav-item {{ 
+    request()->routeIs('report.ledger')
+        ? 'active-nav' : '' 
+}}">
+                    <a class="nav-link" href="{{ route('report.ledger') }}">
+                      <i class="fa fa-book menu-icon"></i>
+                      <span class="menu-title">User Ledger</span>
+                    </a>
+                  </li>
+
+                  <li class="nav-item {{ 
+    request()->routeIs('report.collection_expenses')
+        ? 'active-nav' : '' 
+}}">
+                    <a class="nav-link" href="{{ route('report.collection_expenses') }}">
+                      <i class="fa fa-book-open menu-icon"></i>
+                      <span class="menu-title">Collection & Expense</span>
                     </a>
                   </li>
 

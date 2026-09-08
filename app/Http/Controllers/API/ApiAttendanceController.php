@@ -7,6 +7,7 @@ use App\Models\DayStatus;
 use App\Models\UserEvent;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,7 @@ use App\Models\AttendanceAbsent;
 use App\Models\AttendanceLog;
 use App\Models\CompanyParameter;
 use App\Models\Department;
+use App\Models\EventMaster;
 use App\Models\Location;
 use App\Models\MultipleLocation;
 
@@ -161,27 +163,51 @@ class ApiAttendanceController extends Controller
     {
         $request->validate([
             'location_id' => 'required|exists:locations,id',
-            'event_id' => 'required|exists:event_masters,id',
+            'event_id'    => 'required|exists:event_masters,id',
         ]);
 
-        $userData = Auth::user();
-
-        $today = Carbon::today()->toDateString();
+        $userData   = Auth::user();
+        $today      = Carbon::today('Asia/Kolkata');
         $locationId = $request->location_id;
-        $eventId = $request->event_id;
+        $eventId    = $request->event_id;
+
+        /*
+    |--------------------------------------------------------------------------
+    | User Start Calendar Date
+    |--------------------------------------------------------------------------
+    */
+        $startCalendarDate = null;
+
+        if ($userData->start_calendar_id !== null) {
+
+            $startCalendarDate = DayStatus::where(
+                'id',
+                $userData->start_calendar_id
+            )->value('date');
+
+            if ($startCalendarDate) {
+                $startCalendarDate = Carbon::parse($startCalendarDate)
+                    ->startOfDay();
+            }
+        }
 
         /*
     |--------------------------------------------------------------------------
     | Weekly Summary Helper
     |--------------------------------------------------------------------------
     */
-        $makeWeekSummary = function ($currentWeek, $weekStartDate) use ($userData) {
+        $makeWeekSummary = function (
+            $currentWeek,
+            $weekStartDate
+        ) use (
+            $today,
+            $userData
+        ) {
 
             $weekDays = collect($currentWeek)
                 ->where('open_flag', 1)
                 ->values();
 
-            // If week has no open days, don't try to access last()->date
             if ($weekDays->isEmpty()) {
                 return null;
             }
@@ -195,21 +221,28 @@ class ApiAttendanceController extends Controller
 
                 'days' => $weekDays->count(),
 
-                'present' => $weekDays->filter(function ($d) {
+                'present' => $weekDays
+                    ->filter(function ($day) use ($today) {
 
-                    return $d->absent_flag == 0
-                        && $d->open_flag == 1
-                        && Carbon::parse($d->date)->lte(Carbon::today());
-                })->count(),
+                        return $day->absent_flag == 0
+                            && $day->open_flag == 1
+                            && Carbon::parse($day->date)->lte($today);
+                    })
+                    ->count(),
 
-                'absent' => $weekDays->filter(function ($d) use ($userData) {
+                'absent' => $weekDays
+                    ->filter(function ($day) use (
+                        $userData,
+                        $today
+                    ) {
 
-                    return $d->absent_flag == 1
-                        && $d->open_flag == 1
-                        && $userData->start_calendar_id !== null
-                        && $d->id >= $userData->start_calendar_id
-                        && Carbon::parse($d->date)->lte(Carbon::today());
-                })->count(),
+                        return $day->absent_flag == 1
+                            && $day->open_flag == 1
+                            && $userData->start_calendar_id !== null
+                            && $day->id >= $userData->start_calendar_id
+                            && Carbon::parse($day->date)->lte($today);
+                    })
+                    ->count(),
             ];
         };
 
@@ -219,49 +252,128 @@ class ApiAttendanceController extends Controller
     | Month / Week Summary Function
     |--------------------------------------------------------------------------
     */
-        $getWeekSummary = function ($start, $end, $type)
-        use ($userData, $today, $locationId,  $eventId, $makeWeekSummary) {
+        $getWeekSummary = function (
+            $start,
+            $end,
+            $type
+        ) use (
+            $userData,
+            $today,
+            $locationId,
+            $eventId,
+            $makeWeekSummary,
+            $startCalendarDate,
+        ) {
 
-            $days = DayStatus::whereBetween('day_statuses.date', [
-                $start->toDateString(),
-                $end->toDateString()
-            ])
-                ->leftJoin('attendance_absents', function ($join) use ($userData, $locationId, $eventId) {
-
-                    $join->on(
-                        'day_statuses.id',
-                        '=',
-                        'attendance_absents.calendar_id'
-                    )
-                        ->where('attendance_absents.user_id', $userData->id)
-                        ->where('attendance_absents.event_id', $eventId)
-                        ->where('attendance_absents.location_id', $locationId);
-                })
-
-                ->leftJoin('holiday_lists', function ($join) use ($locationId) {
-
-                    $join->on(
-                        'day_statuses.id',
-                        '=',
-                        'holiday_lists.calendar_id'
-                    )
-                        ->on(
-                            'day_statuses.location_id',
-                            '=',
-                            'holiday_lists.location_id'
-                        )
-                        ->where('holiday_lists.status', 1);
-                })
-
+            /*
+        |--------------------------------------------------------------------------
+        | Attendance Subquery
+        |
+        | IMPORTANT:
+        | Same calendar_id may have duplicate attendance_absents records.
+        | Grouping here ensures only ONE row is joined.
+        |--------------------------------------------------------------------------
+        */
+            $attendanceSubQuery = DB::table('attendance_absents')
                 ->select(
-                    'day_statuses.*',
-                    DB::raw('IFNULL(attendance_absents.absent_flag, 0) as absent_flag'),
-                    'holiday_lists.remarks as holiday_remarks'
+                    'calendar_id',
+                    DB::raw('MAX(absent_flag) as absent_flag')
+                )
+                ->where('user_id', $userData->id)
+                ->where('event_id', $eventId)
+                ->where('location_id', $locationId)
+                ->groupBy('calendar_id');
+
+
+            /*
+        |--------------------------------------------------------------------------
+        | Holiday Subquery
+        |
+        | Prevent duplicate day_status rows if multiple holiday records
+        | exist for the same calendar/location.
+        |--------------------------------------------------------------------------
+        */
+            $holidaySubQuery = DB::table('holiday_lists')
+                ->select(
+                    'calendar_id',
+                    'location_id',
+                    DB::raw('MAX(remarks) as holiday_remarks')
+                )
+                ->where('location_id', $locationId)
+                ->where('status', 1)
+                ->groupBy(
+                    'calendar_id',
+                    'location_id'
+                );
+
+
+            /*
+        |--------------------------------------------------------------------------
+        | Get Days
+        |--------------------------------------------------------------------------
+        */
+            $days = DayStatus::whereBetween(
+                'day_statuses.date',
+                [
+                    $start->toDateString(),
+                    $end->toDateString()
+                ]
+            )
+                ->where(
+                    'day_statuses.location_id',
+                    $locationId
                 )
 
-                ->where('day_statuses.location_id', $locationId)
+                ->leftJoinSub(
+                    $attendanceSubQuery,
+                    'attendance_absents',
+                    function ($join) {
 
-                ->orderBy('day_statuses.date')
+                        $join->on(
+                            'day_statuses.id',
+                            '=',
+                            'attendance_absents.calendar_id'
+                        );
+                    }
+                )
+
+                ->leftJoinSub(
+                    $holidaySubQuery,
+                    'holiday_lists',
+                    function ($join) {
+
+                        $join->on(
+                            'day_statuses.id',
+                            '=',
+                            'holiday_lists.calendar_id'
+                        )
+                            ->on(
+                                'day_statuses.location_id',
+                                '=',
+                                'holiday_lists.location_id'
+                            );
+                    }
+                )
+
+                /*
+            |--------------------------------------------------------------------------
+            | Select
+            |--------------------------------------------------------------------------
+            */
+                ->select(
+                    'day_statuses.*',
+
+                    DB::raw(
+                        'COALESCE(attendance_absents.absent_flag, 0) as absent_flag'
+                    ),
+
+                    'holiday_lists.holiday_remarks'
+                )
+
+                ->orderBy(
+                    'day_statuses.date',
+                    'asc'
+                )
 
                 ->get();
 
@@ -273,28 +385,43 @@ class ApiAttendanceController extends Controller
         */
             $weeks = [];
 
-            $currentWeek = [];
+            $currentWeek   = [];
             $weekStartDate = null;
 
 
             foreach ($days as $day) {
 
                 $dayDate = Carbon::parse($day->date);
-                $startDate = Carbon::parse(
-                    DayStatus::where('id', $userData->start_calendar_id)->value('date')
-                );
 
-                if ($dayDate->lt($startDate)) {
+                /*
+            |--------------------------------------------------------------------------
+            | Lock Days Before User Start Calendar
+            |--------------------------------------------------------------------------
+            */
+                if (
+                    $startCalendarDate !== null
+                    && $dayDate->lt($startCalendarDate)
+                ) {
+
                     $day->lock_flag = 1;
                 }
 
-                // Monday = new week
+
+                /*
+            |--------------------------------------------------------------------------
+            | Monday = New Week
+            |--------------------------------------------------------------------------
+            */
                 if (
-                    $dayDate->dayOfWeek == Carbon::MONDAY
+                    $dayDate->dayOfWeek === Carbon::MONDAY
                     || $weekStartDate === null
                 ) {
 
-                    // Previous week
+                    /*
+                |--------------------------------------------------------------------------
+                | Previous Week
+                |--------------------------------------------------------------------------
+                */
                     if (!empty($currentWeek)) {
 
                         $weekSummary = $makeWeekSummary(
@@ -302,17 +429,19 @@ class ApiAttendanceController extends Controller
                             $weekStartDate
                         );
 
-                        // Only add if week has open days
                         if ($weekSummary !== null) {
                             $weeks[] = $weekSummary;
                         }
                     }
 
 
-                    // Start new week
-                    $currentWeek = [];
-
-                    $weekStartDate = $dayDate;
+                    /*
+                |--------------------------------------------------------------------------
+                | Start New Week
+                |--------------------------------------------------------------------------
+                */
+                    $currentWeek   = [];
+                    $weekStartDate = $dayDate->copy();
                 }
 
 
@@ -332,7 +461,6 @@ class ApiAttendanceController extends Controller
                     $weekStartDate
                 );
 
-                // Only add if week has open days
                 if ($weekSummary !== null) {
                     $weeks[] = $weekSummary;
                 }
@@ -347,23 +475,25 @@ class ApiAttendanceController extends Controller
             $presentCount = $days
                 ->where('absent_flag', 0)
                 ->where('open_flag', 1)
-                ->filter(function ($day) {
+                ->filter(function ($day) use ($today) {
 
                     return Carbon::parse($day->date)
-                        ->lte(Carbon::today());
+                        ->lte($today);
                 })
                 ->count();
 
 
             $absentCount = $days
-                ->filter(function ($day) use ($userData) {
+                ->filter(function ($day) use (
+                    $userData,
+                    $today
+                ) {
 
                     return $day->absent_flag == 1
                         && $day->open_flag == 1
                         && $userData->start_calendar_id !== null
                         && $day->id >= $userData->start_calendar_id
-                        && Carbon::parse($day->date)
-                        ->lte(Carbon::today());
+                        && Carbon::parse($day->date)->lte($today);
                 })
                 ->count();
 
@@ -373,7 +503,11 @@ class ApiAttendanceController extends Controller
                 ->count();
 
 
-
+            /*
+        |--------------------------------------------------------------------------
+        | Return
+        |--------------------------------------------------------------------------
+        */
             return [
 
                 $type . 'days' => $days,
@@ -394,6 +528,23 @@ class ApiAttendanceController extends Controller
 
         /*
     |--------------------------------------------------------------------------
+    | Calculate Months From One Fixed Date
+    |--------------------------------------------------------------------------
+    */
+
+        $currentMonth = $today->copy();
+
+        $previousMonth = $today
+            ->copy()
+            ->subMonthNoOverflow();
+
+        $nextMonth = $today
+            ->copy()
+            ->addMonthNoOverflow();
+
+
+        /*
+    |--------------------------------------------------------------------------
     | Response
     |--------------------------------------------------------------------------
     */
@@ -403,37 +554,37 @@ class ApiAttendanceController extends Controller
 
             'data' => [
 
+                /*
+            |--------------------------------------------------------------------------
+            | Previous Month
+            |--------------------------------------------------------------------------
+            */
                 'previous_month' => $getWeekSummary(
-                    Carbon::now()
-                        ->subMonth()
-                        ->startOfMonth(),
-
-                    Carbon::now()
-                        ->subMonth()
-                        ->endOfMonth(),
-
+                    $previousMonth->copy()->startOfMonth(),
+                    $previousMonth->copy()->endOfMonth(),
                     'previous'
                 ),
 
+
+                /*
+            |--------------------------------------------------------------------------
+            | Current Month
+            |--------------------------------------------------------------------------
+            */
                 'current_month' => $getWeekSummary(
-                    Carbon::now()
-                        ->startOfMonth(),
-
-                    Carbon::now()
-                        ->endOfMonth(),
-
+                    $currentMonth->copy()->startOfMonth(),
+                    $currentMonth->copy()->endOfMonth(),
                     'current'
                 ),
 
+                /*
+            |--------------------------------------------------------------------------
+            | Next Month
+            |--------------------------------------------------------------------------
+            */
                 'next_month' => $getWeekSummary(
-                    Carbon::now()
-                        ->addMonth()
-                        ->startOfMonth(),
-
-                    Carbon::now()
-                        ->addMonth()
-                        ->endOfMonth(),
-
+                    $nextMonth->copy()->startOfMonth(),
+                    $nextMonth->copy()->endOfMonth(),
                     'next'
                 ),
             ],
@@ -464,8 +615,8 @@ class ApiAttendanceController extends Controller
         }
         $date = Carbon::parse($request->date)->format('Y-m-d');
         $today = Carbon::today()->format('Y-m-d');
-        $calendarId = DayStatus::where('date', $date)->where('location_id', $request->location_id)->where('event_id', $request->event_id)->where('open_flag', 1)->value('id');
-        $calendarDate = DayStatus::where('date', $date)->where('location_id', $request->location_id)->where('event_id', $request->event_id)->where('open_flag', 1)->value('date');
+        $calendarId = DayStatus::where('date', $date)->where('location_id', $request->location_id)->where('open_flag', 1)->value('id');
+        $calendarDate = DayStatus::where('date', $date)->where('location_id', $request->location_id)->where('open_flag', 1)->value('date');
         if ($calendarId) {
         } else {
             return response()->json([
@@ -728,6 +879,476 @@ class ApiAttendanceController extends Controller
         ]);
     }
 
+ public function markAttendanceCalendar(Request $request)
+{
+    /*
+    |--------------------------------------------------------------------------
+    | Normalize event_id
+    |--------------------------------------------------------------------------
+    */
+
+    $eventIds = $request->input('event_id');
+
+    // If event_id comes as JSON string: "[2,4]"
+    if (is_string($eventIds)) {
+
+        $decodedEventIds = json_decode($eventIds, true);
+
+        if (
+            json_last_error() === JSON_ERROR_NONE
+            && is_array($decodedEventIds)
+        ) {
+            $eventIds = $decodedEventIds;
+        } else {
+
+            // If event_id comes as "2,4"
+            $eventIds = array_filter(
+                array_map(
+                    'trim',
+                    explode(',', $eventIds)
+                )
+            );
+        }
+    }
+
+    // Make sure it is always an array
+    $eventIds = is_array($eventIds)
+        ? array_values($eventIds)
+        : [];
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Put normalized event IDs back into request
+    |--------------------------------------------------------------------------
+    */
+
+    $request->merge([
+        'event_id' => $eventIds
+    ]);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validation
+    |--------------------------------------------------------------------------
+    */
+
+    $validator = Validator::make($request->all(), [
+
+        'calendar_id' => 'required|exists:day_statuses,id',
+
+        'user_id' => 'required|exists:users,id',
+
+        'date' => 'required|date',
+
+        'absent_flag' => 'required|in:0,1',
+
+        'location_id' => 'required|exists:locations,id',
+
+        'event_id' => 'required|array|min:1',
+
+        'event_id.*' => 'required|integer|exists:event_masters,id',
+    ]);
+
+
+    if ($validator->fails()) {
+
+        return response()->json([
+            'status'  => false,
+            'message' => 'Validation failed.',
+            'errors'  => $validator->errors(),
+        ], 422);
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Unique Event IDs
+    |--------------------------------------------------------------------------
+    */
+
+    $eventIds = array_values(
+        array_unique(
+            array_map('intval', $request->event_id)
+        )
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | User
+    |--------------------------------------------------------------------------
+    */
+
+    $userData = User::where('status', 1)
+        ->where('id', $request->user_id)
+        ->first();
+
+    if (!$userData) {
+
+        return response()->json([
+            'status'  => false,
+            'message' => 'User not found.'
+        ], 404);
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Start Transaction
+    |--------------------------------------------------------------------------
+    */
+
+    DB::beginTransaction();
+
+    try {
+
+        /*
+        |--------------------------------------------------------------------------
+        | Check Calendar
+        |--------------------------------------------------------------------------
+        */
+
+        $calendar = DayStatus::where('id', $request->calendar_id)
+            ->where('location_id', $request->location_id)
+            ->whereDate('date', $request->date)
+            ->first();
+
+        if (!$calendar) {
+
+            DB::rollBack();
+
+            return response()->json([
+                'status'  => false,
+                'message' => 'Invalid calendar or date.'
+            ], 404);
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Today
+        |--------------------------------------------------------------------------
+        */
+
+        $today = Carbon::today('Asia/Kolkata')->toDateString();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Get Event Names
+        |--------------------------------------------------------------------------
+        */
+
+        $events = EventMaster::whereIn('id', $eventIds)
+            ->get([
+                'id',
+                'name'
+            ])
+            ->keyBy('id');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Company Parameters
+        |--------------------------------------------------------------------------
+        */
+
+        $companyParameters = CompanyParameter::where(
+                'location_id',
+                $request->location_id
+            )
+            ->whereIn('event_id', $eventIds)
+            ->where('status', 1)
+            ->get()
+            ->keyBy('event_id');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Check Company Parameter For Every Event
+        |--------------------------------------------------------------------------
+        */
+
+        foreach ($eventIds as $eventId) {
+
+            if (!$companyParameters->has($eventId)) {
+
+                DB::rollBack();
+
+                $eventName = $events->get($eventId)?->name
+                    ?? "Event ID {$eventId}";
+
+                return response()->json([
+                    'status' => false,
+                    'message' => "Company Parameter not set for {$eventName}."
+                ], 404);
+            }
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Attendance Time Check
+        |--------------------------------------------------------------------------
+        */
+
+        if ($calendar->date == $today) {
+
+            $currentTime = Carbon::now('Asia/Kolkata');
+
+            foreach ($eventIds as $eventId) {
+
+                $companyParameter = $companyParameters->get($eventId);
+
+                $maxTime = Carbon::parse(
+                    $companyParameter->attendance_out_time
+                );
+
+                if (
+                    $currentTime->format('H:i:s')
+                    > $maxTime->format('H:i:s')
+                ) {
+
+                    $eventName = $events->get($eventId)?->name
+                        ?? "Event ID {$eventId}";
+
+                    DB::rollBack();
+
+                    return response()->json([
+                        'status' => false,
+                        'message' => "Attendance cannot be marked for {$eventName} after "
+                            . $maxTime->format('h:i A')
+                            . ". The maximum allowed attendance marking time has been exceeded."
+                    ], 422);
+                }
+            }
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Multiple Locations
+        |--------------------------------------------------------------------------
+        */
+
+        $multiLocationData = collect();
+
+        if ($userData->multilocation_flag == 1) {
+
+            $multiLocationData = MultipleLocation::where(
+                'user_id',
+                $userData->id
+            )->get();
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Mark Attendance Event Wise
+        |--------------------------------------------------------------------------
+        */
+
+        foreach ($eventIds as $eventId) {
+
+            /*
+            |--------------------------------------------------------------------------
+            | Event Name
+            |--------------------------------------------------------------------------
+            */
+
+            $eventName = $events->get($eventId)?->name
+                ?? "Event ID {$eventId}";
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Main Location Attendance
+            |--------------------------------------------------------------------------
+            */
+
+            AttendanceAbsent::updateOrCreate(
+                [
+                    'calendar_id' => $calendar->id,
+                    'user_id'     => $userData->id,
+                    'location_id' => $request->location_id,
+                    'event_id'    => $eventId,
+                ],
+                [
+                    'absent_flag' => $request->absent_flag,
+                    'status'      => 1,
+                ]
+            );
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Attendance Log
+            |--------------------------------------------------------------------------
+            */
+
+            AttendanceLog::create([
+                'calendar_id' => $calendar->id,
+                'user_id'     => $userData->id,
+                'event_id'    => $eventId,
+                'absent_flag' => $request->absent_flag,
+                'created_by'  => auth()->id(),
+                'remarks'     => "Attendance updated for {$eventName}",
+                'status'      => 1,
+            ]);
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Multiple Location Attendance
+            |--------------------------------------------------------------------------
+            */
+
+            if ($userData->multilocation_flag == 1) {
+
+                /*
+                |--------------------------------------------------------------------------
+                | User's Main Location
+                |--------------------------------------------------------------------------
+                */
+
+                if ($userData->location_id == $calendar->location_id) {
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Present In Main Location
+                    | Mark Absent In Other Locations
+                    |--------------------------------------------------------------------------
+                    */
+
+                    if ($request->absent_flag == 0) {
+
+                        foreach ($multiLocationData as $location) {
+
+                            /*
+                            | Don't mark main location again
+                            */
+
+                            if (
+                                $location->location_id
+                                == $request->location_id
+                            ) {
+                                continue;
+                            }
+
+
+                            AttendanceAbsent::updateOrCreate(
+                                [
+                                    'calendar_id' => $calendar->id,
+                                    'user_id'     => $userData->id,
+                                    'location_id' => $location->location_id,
+                                    'event_id'    => $eventId,
+                                ],
+                                [
+                                    'absent_flag' => 1,
+                                    'status'      => 1,
+                                ]
+                            );
+                        }
+                    }
+
+                } else {
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Calendar Is Other Location
+                    |--------------------------------------------------------------------------
+                    */
+
+                    $userMainLocation = Location::find(
+                        $userData->location_id
+                    );
+
+                    if (
+                        $request->absent_flag == 0
+                        && $userMainLocation
+                    ) {
+
+                        AttendanceAbsent::updateOrCreate(
+                            [
+                                'calendar_id' => $calendar->id,
+                                'user_id'     => $userData->id,
+                                'location_id' => $userMainLocation->id,
+                                'event_id'    => $eventId,
+                            ],
+                            [
+                                'absent_flag' => 1,
+                                'status'      => 1,
+                            ]
+                        );
+                    }
+                }
+            }
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Commit
+        |--------------------------------------------------------------------------
+        */
+
+        DB::commit();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Response
+        |--------------------------------------------------------------------------
+        */
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Attendance marked successfully.',
+
+            'data' => [
+
+                'calendar_id' => $calendar->id,
+
+                'user_id' => $userData->id,
+
+                'location_id' => $request->location_id,
+
+                'absent_flag' => (int) $request->absent_flag,
+
+                'events' => collect($eventIds)
+                    ->map(function ($eventId) use ($events) {
+
+                        return [
+                            'event_id' => (int) $eventId,
+
+                            'event_name' => $events->get($eventId)?->name,
+                        ];
+                    })
+                    ->values()
+                    ->toArray(),
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+
+        /*
+        |--------------------------------------------------------------------------
+        | Rollback On Error
+        |--------------------------------------------------------------------------
+        */
+
+        DB::rollBack();
+
+        return response()->json([
+            'status'  => false,
+            'message' => 'Something went wrong while marking attendance.',
+            'error'   => $e->getMessage(),
+        ], 500);
+    }
+}
+
     // Canteen Incharge 
     public function manageAttendance(Request $request)
     {
@@ -774,7 +1395,7 @@ class ApiAttendanceController extends Controller
         $singleLinkedUserIds = User::where('location_id', $locationId)
             ->whereNotNull('start_calendar_id')
             ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge', 'Canteen Administrator'])
-            ->whereIn('id', $eventUserIds)
+            ->whereIn('users.id', $eventUserIds)
             ->where('status', 1)
             ->pluck('id');
 
@@ -782,7 +1403,7 @@ class ApiAttendanceController extends Controller
             ->where('multiple_locations.location_id', $locationId)
             ->where('users.status', 1)
             ->whereNotIn('users.role', ['Admin', 'Super Admin', 'Canteen Incharge', 'Canteen Administrator'])
-            ->whereIn('id', $eventUserIds)
+            ->whereIn('users.id', $eventUserIds)
             ->pluck('multiple_locations.user_id');
 
         $allLinkedUserIds = $singleLinkedUserIds
@@ -871,7 +1492,7 @@ class ApiAttendanceController extends Controller
         try {
             $locationId = $request->location_id;
 
-            $dayStatus = DayStatus::where('date', $request->attendance_date)->where('location_id', $locationId)->where('event_id', $request->event_id)->where('open_flag', 1)->first();
+            $dayStatus = DayStatus::where('date', $request->attendance_date)->where('location_id', $locationId)->where('open_flag', 1)->first();
 
             if (!$dayStatus) {
                 return response()->json([
