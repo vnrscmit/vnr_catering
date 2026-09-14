@@ -164,7 +164,6 @@
 <div class="main-panel">
     <div class="content-wrapper">
         <div class="card">
-
             <div class="card-header">
                 <h5 class="card-title mb-0">Create New Guest - {{ auth()->user()->location->name ?? 'N/A' }} </h5>
             </div>
@@ -342,7 +341,7 @@
                         <div class="col-md-12 mb-3">
                             <label>Remarks</label>
                             <textarea
-                                name="guest_remarks" placeholder="Enter Remarks"  rows="5"
+                                name="guest_remarks" placeholder="Enter Remarks" rows="5"
                                 class="form-control">{{ old('guest_remarks') }}</textarea>
                         </div>
                     </div>

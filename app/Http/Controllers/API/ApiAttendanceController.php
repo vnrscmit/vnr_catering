@@ -659,6 +659,30 @@ class ApiAttendanceController extends Controller
             $lateFlag = 1;
         }
 
+
+        // Check if event allows attendance marking today
+        if ($authUser->role !== 'Canteen Administrator') {
+
+            $today = Carbon::today()->toDateString();
+
+            if ($authUser->date == $today) {
+
+                $currentTime = Carbon::now()->format('H:i:s');
+                $maxTime = $companyParameter->attendance_out_time->format('H:i:s');
+
+                if ($currentTime > $maxTime) {
+
+                    $maxTimeFormatted = Carbon::createFromFormat('H:i:s', $maxTime)
+                        ->format('h:i A');
+
+                    return back()->with(
+                        'error',
+                        "Guest cannot be added after {$maxTimeFormatted}. Please contact your Canteen Administrator if you need to add a guest."
+                    );
+                }
+            }
+        }
+
         $guest = Guest::create([
             'guest_type'      => $request->guest_type,
             'date'     => $calendarDate,
@@ -879,370 +903,401 @@ class ApiAttendanceController extends Controller
         ]);
     }
 
- public function markAttendanceCalendar(Request $request)
-{
-    /*
+    public function markAttendanceCalendar(Request $request)
+    {
+        /*
     |--------------------------------------------------------------------------
     | Normalize event_id
     |--------------------------------------------------------------------------
     */
 
-    $eventIds = $request->input('event_id');
+        $eventIds = $request->input('event_id');
 
-    // If event_id comes as JSON string: "[2,4]"
-    if (is_string($eventIds)) {
+        // If event_id comes as JSON string: "[2,4]"
+        if (is_string($eventIds)) {
 
-        $decodedEventIds = json_decode($eventIds, true);
+            $decodedEventIds = json_decode($eventIds, true);
 
-        if (
-            json_last_error() === JSON_ERROR_NONE
-            && is_array($decodedEventIds)
-        ) {
-            $eventIds = $decodedEventIds;
-        } else {
+            if (
+                json_last_error() === JSON_ERROR_NONE
+                && is_array($decodedEventIds)
+            ) {
+                $eventIds = $decodedEventIds;
+            } else {
 
-            // If event_id comes as "2,4"
-            $eventIds = array_filter(
-                array_map(
-                    'trim',
-                    explode(',', $eventIds)
-                )
-            );
+                // If event_id comes as "2,4"
+                $eventIds = array_filter(
+                    array_map(
+                        'trim',
+                        explode(',', $eventIds)
+                    )
+                );
+            }
         }
-    }
 
-    // Make sure it is always an array
-    $eventIds = is_array($eventIds)
-        ? array_values($eventIds)
-        : [];
+        // Make sure it is always an array
+        $eventIds = is_array($eventIds)
+            ? array_values($eventIds)
+            : [];
 
 
-    /*
+        /*
     |--------------------------------------------------------------------------
     | Put normalized event IDs back into request
     |--------------------------------------------------------------------------
     */
 
-    $request->merge([
-        'event_id' => $eventIds
-    ]);
+        $request->merge([
+            'event_id' => $eventIds
+        ]);
 
 
-    /*
+        /*
     |--------------------------------------------------------------------------
     | Validation
     |--------------------------------------------------------------------------
     */
 
-    $validator = Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
 
-        'calendar_id' => 'required|exists:day_statuses,id',
+            'calendar_id' => 'required|exists:day_statuses,id',
 
-        'user_id' => 'required|exists:users,id',
+            'user_id' => 'required|exists:users,id',
 
-        'date' => 'required|date',
+            'date' => 'required|date',
 
-        'absent_flag' => 'required|in:0,1',
+            'absent_flag' => 'required|in:0,1',
 
-        'location_id' => 'required|exists:locations,id',
+            'location_id' => 'required|exists:locations,id',
 
-        'event_id' => 'required|array|min:1',
+            'event_id' => 'required|array|min:1',
 
-        'event_id.*' => 'required|integer|exists:event_masters,id',
-    ]);
-
-
-    if ($validator->fails()) {
-
-        return response()->json([
-            'status'  => false,
-            'message' => 'Validation failed.',
-            'errors'  => $validator->errors(),
-        ], 422);
-    }
+            'event_id.*' => 'required|integer|exists:event_masters,id',
+        ]);
 
 
-    /*
+        if ($validator->fails()) {
+
+            return response()->json([
+                'status'  => false,
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+
+        /*
     |--------------------------------------------------------------------------
     | Unique Event IDs
     |--------------------------------------------------------------------------
     */
 
-    $eventIds = array_values(
-        array_unique(
-            array_map('intval', $request->event_id)
-        )
-    );
+        $eventIds = array_values(
+            array_unique(
+                array_map('intval', $request->event_id)
+            )
+        );
 
 
-    /*
+        /*
     |--------------------------------------------------------------------------
     | User
     |--------------------------------------------------------------------------
     */
 
-    $userData = User::where('status', 1)
-        ->where('id', $request->user_id)
-        ->first();
-
-    if (!$userData) {
-
-        return response()->json([
-            'status'  => false,
-            'message' => 'User not found.'
-        ], 404);
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Start Transaction
-    |--------------------------------------------------------------------------
-    */
-
-    DB::beginTransaction();
-
-    try {
-
-        /*
-        |--------------------------------------------------------------------------
-        | Check Calendar
-        |--------------------------------------------------------------------------
-        */
-
-        $calendar = DayStatus::where('id', $request->calendar_id)
-            ->where('location_id', $request->location_id)
-            ->whereDate('date', $request->date)
+        $userData = User::where('status', 1)
+            ->where('id', $request->user_id)
             ->first();
 
-        if (!$calendar) {
-
-            DB::rollBack();
+        if (!$userData) {
 
             return response()->json([
                 'status'  => false,
-                'message' => 'Invalid calendar or date.'
+                'message' => 'User not found.'
             ], 404);
         }
 
 
         /*
+    |--------------------------------------------------------------------------
+    | Start Transaction
+    |--------------------------------------------------------------------------
+    */
+
+        DB::beginTransaction();
+
+        try {
+
+            /*
+        |--------------------------------------------------------------------------
+        | Check Calendar
+        |--------------------------------------------------------------------------
+        */
+
+            $calendar = DayStatus::where('id', $request->calendar_id)
+                ->where('location_id', $request->location_id)
+                ->whereDate('date', $request->date)
+                ->first();
+
+            if (!$calendar) {
+
+                DB::rollBack();
+
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Invalid calendar or date.'
+                ], 404);
+            }
+
+
+            /*
         |--------------------------------------------------------------------------
         | Today
         |--------------------------------------------------------------------------
         */
 
-        $today = Carbon::today('Asia/Kolkata')->toDateString();
+            $today = Carbon::today('Asia/Kolkata')->toDateString();
 
 
-        /*
+            /*
         |--------------------------------------------------------------------------
         | Get Event Names
         |--------------------------------------------------------------------------
         */
 
-        $events = EventMaster::whereIn('id', $eventIds)
-            ->get([
-                'id',
-                'name'
-            ])
-            ->keyBy('id');
+            $events = EventMaster::whereIn('id', $eventIds)
+                ->get([
+                    'id',
+                    'name'
+                ])
+                ->keyBy('id');
 
 
-        /*
+            /*
         |--------------------------------------------------------------------------
         | Company Parameters
         |--------------------------------------------------------------------------
         */
 
-        $companyParameters = CompanyParameter::where(
+            $companyParameters = CompanyParameter::where(
                 'location_id',
                 $request->location_id
             )
-            ->whereIn('event_id', $eventIds)
-            ->where('status', 1)
-            ->get()
-            ->keyBy('event_id');
+                ->whereIn('event_id', $eventIds)
+                ->where('status', 1)
+                ->get()
+                ->keyBy('event_id');
 
 
-        /*
+            /*
         |--------------------------------------------------------------------------
         | Check Company Parameter For Every Event
         |--------------------------------------------------------------------------
         */
 
-        foreach ($eventIds as $eventId) {
+            foreach ($eventIds as $eventId) {
 
-            if (!$companyParameters->has($eventId)) {
+                if (!$companyParameters->has($eventId)) {
 
-                DB::rollBack();
+                    DB::rollBack();
 
-                $eventName = $events->get($eventId)?->name
-                    ?? "Event ID {$eventId}";
+                    $eventName = $events->get($eventId)?->name
+                        ?? "Event ID {$eventId}";
 
-                return response()->json([
-                    'status' => false,
-                    'message' => "Company Parameter not set for {$eventName}."
-                ], 404);
+                    return response()->json([
+                        'status' => false,
+                        'message' => "Company Parameter not set for {$eventName}."
+                    ], 404);
+                }
             }
-        }
 
 
-        /*
+            /*
         |--------------------------------------------------------------------------
         | Attendance Time Check
         |--------------------------------------------------------------------------
         */
 
-        if ($calendar->date == $today) {
+            if ($calendar->date == $today) {
 
-            $currentTime = Carbon::now('Asia/Kolkata');
+                $currentTime = Carbon::now('Asia/Kolkata');
 
-            foreach ($eventIds as $eventId) {
+                foreach ($eventIds as $eventId) {
 
-                $companyParameter = $companyParameters->get($eventId);
+                    $companyParameter = $companyParameters->get($eventId);
 
-                $maxTime = Carbon::parse(
-                    $companyParameter->attendance_out_time
-                );
+                    $maxTime = Carbon::parse(
+                        $companyParameter->attendance_out_time
+                    );
 
-                if (
-                    $currentTime->format('H:i:s')
-                    > $maxTime->format('H:i:s')
-                ) {
+                    if (
+                        $currentTime->format('H:i:s')
+                        > $maxTime->format('H:i:s')
+                    ) {
 
-                    $eventName = $events->get($eventId)?->name
-                        ?? "Event ID {$eventId}";
+                        $eventName = $events->get($eventId)?->name
+                            ?? "Event ID {$eventId}";
 
-                    DB::rollBack();
+                        DB::rollBack();
 
-                    return response()->json([
-                        'status' => false,
-                        'message' => "Attendance cannot be marked for {$eventName} after "
-                            . $maxTime->format('h:i A')
-                            . ". The maximum allowed attendance marking time has been exceeded."
-                    ], 422);
+                        return response()->json([
+                            'status' => false,
+                            'message' => "Attendance cannot be marked for {$eventName} after "
+                                . $maxTime->format('h:i A')
+                                . ". The maximum allowed attendance marking time has been exceeded."
+                        ], 422);
+                    }
                 }
             }
-        }
 
 
-        /*
+            /*
         |--------------------------------------------------------------------------
         | Multiple Locations
         |--------------------------------------------------------------------------
         */
 
-        $multiLocationData = collect();
+            $multiLocationData = collect();
 
-        if ($userData->multilocation_flag == 1) {
+            if ($userData->multilocation_flag == 1) {
 
-            $multiLocationData = MultipleLocation::where(
-                'user_id',
-                $userData->id
-            )->get();
-        }
+                $multiLocationData = MultipleLocation::where(
+                    'user_id',
+                    $userData->id
+                )->get();
+            }
 
 
-        /*
+            /*
         |--------------------------------------------------------------------------
         | Mark Attendance Event Wise
         |--------------------------------------------------------------------------
         */
 
-        foreach ($eventIds as $eventId) {
+            foreach ($eventIds as $eventId) {
 
-            /*
+                /*
             |--------------------------------------------------------------------------
             | Event Name
             |--------------------------------------------------------------------------
             */
 
-            $eventName = $events->get($eventId)?->name
-                ?? "Event ID {$eventId}";
+                $eventName = $events->get($eventId)?->name
+                    ?? "Event ID {$eventId}";
 
 
-            /*
+                /*
             |--------------------------------------------------------------------------
             | Main Location Attendance
             |--------------------------------------------------------------------------
             */
 
-            AttendanceAbsent::updateOrCreate(
-                [
-                    'calendar_id' => $calendar->id,
-                    'user_id'     => $userData->id,
-                    'location_id' => $request->location_id,
-                    'event_id'    => $eventId,
-                ],
-                [
-                    'absent_flag' => $request->absent_flag,
-                    'status'      => 1,
-                ]
-            );
+                AttendanceAbsent::updateOrCreate(
+                    [
+                        'calendar_id' => $calendar->id,
+                        'user_id'     => $userData->id,
+                        'location_id' => $request->location_id,
+                        'event_id'    => $eventId,
+                    ],
+                    [
+                        'absent_flag' => $request->absent_flag,
+                        'status'      => 1,
+                    ]
+                );
 
 
-            /*
+                /*
             |--------------------------------------------------------------------------
             | Attendance Log
             |--------------------------------------------------------------------------
             */
 
-            AttendanceLog::create([
-                'calendar_id' => $calendar->id,
-                'user_id'     => $userData->id,
-                'event_id'    => $eventId,
-                'absent_flag' => $request->absent_flag,
-                'created_by'  => auth()->id(),
-                'remarks'     => "Attendance updated for {$eventName}",
-                'status'      => 1,
-            ]);
+                AttendanceLog::create([
+                    'calendar_id' => $calendar->id,
+                    'user_id'     => $userData->id,
+                    'event_id'    => $eventId,
+                    'absent_flag' => $request->absent_flag,
+                    'created_by'  => auth()->id(),
+                    'remarks'     => "Attendance updated for {$eventName}",
+                    'status'      => 1,
+                ]);
 
 
-            /*
+                /*
             |--------------------------------------------------------------------------
             | Multiple Location Attendance
             |--------------------------------------------------------------------------
             */
 
-            if ($userData->multilocation_flag == 1) {
+                if ($userData->multilocation_flag == 1) {
 
-                /*
+                    /*
                 |--------------------------------------------------------------------------
                 | User's Main Location
                 |--------------------------------------------------------------------------
                 */
 
-                if ($userData->location_id == $calendar->location_id) {
+                    if ($userData->location_id == $calendar->location_id) {
 
-                    /*
+                        /*
                     |--------------------------------------------------------------------------
                     | Present In Main Location
                     | Mark Absent In Other Locations
                     |--------------------------------------------------------------------------
                     */
 
-                    if ($request->absent_flag == 0) {
+                        if ($request->absent_flag == 0) {
 
-                        foreach ($multiLocationData as $location) {
+                            foreach ($multiLocationData as $location) {
 
-                            /*
+                                /*
                             | Don't mark main location again
                             */
 
-                            if (
-                                $location->location_id
-                                == $request->location_id
-                            ) {
-                                continue;
-                            }
+                                if (
+                                    $location->location_id
+                                    == $request->location_id
+                                ) {
+                                    continue;
+                                }
 
+
+                                AttendanceAbsent::updateOrCreate(
+                                    [
+                                        'calendar_id' => $calendar->id,
+                                        'user_id'     => $userData->id,
+                                        'location_id' => $location->location_id,
+                                        'event_id'    => $eventId,
+                                    ],
+                                    [
+                                        'absent_flag' => 1,
+                                        'status'      => 1,
+                                    ]
+                                );
+                            }
+                        }
+                    } else {
+
+                        /*
+                    |--------------------------------------------------------------------------
+                    | Calendar Is Other Location
+                    |--------------------------------------------------------------------------
+                    */
+
+                        $userMainLocation = Location::find(
+                            $userData->location_id
+                        );
+
+                        if (
+                            $request->absent_flag == 0
+                            && $userMainLocation
+                        ) {
 
                             AttendanceAbsent::updateOrCreate(
                                 [
                                     'calendar_id' => $calendar->id,
                                     'user_id'     => $userData->id,
-                                    'location_id' => $location->location_id,
+                                    'location_id' => $userMainLocation->id,
                                     'event_id'    => $eventId,
                                 ],
                                 [
@@ -1252,102 +1307,69 @@ class ApiAttendanceController extends Controller
                             );
                         }
                     }
-
-                } else {
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Calendar Is Other Location
-                    |--------------------------------------------------------------------------
-                    */
-
-                    $userMainLocation = Location::find(
-                        $userData->location_id
-                    );
-
-                    if (
-                        $request->absent_flag == 0
-                        && $userMainLocation
-                    ) {
-
-                        AttendanceAbsent::updateOrCreate(
-                            [
-                                'calendar_id' => $calendar->id,
-                                'user_id'     => $userData->id,
-                                'location_id' => $userMainLocation->id,
-                                'event_id'    => $eventId,
-                            ],
-                            [
-                                'absent_flag' => 1,
-                                'status'      => 1,
-                            ]
-                        );
-                    }
                 }
             }
-        }
 
 
-        /*
+            /*
         |--------------------------------------------------------------------------
         | Commit
         |--------------------------------------------------------------------------
         */
 
-        DB::commit();
+            DB::commit();
 
 
-        /*
+            /*
         |--------------------------------------------------------------------------
         | Response
         |--------------------------------------------------------------------------
         */
 
-        return response()->json([
-            'status'  => true,
-            'message' => 'Attendance marked successfully.',
+            return response()->json([
+                'status'  => true,
+                'message' => 'Attendance marked successfully.',
 
-            'data' => [
+                'data' => [
 
-                'calendar_id' => $calendar->id,
+                    'calendar_id' => $calendar->id,
 
-                'user_id' => $userData->id,
+                    'user_id' => $userData->id,
 
-                'location_id' => $request->location_id,
+                    'location_id' => $request->location_id,
 
-                'absent_flag' => (int) $request->absent_flag,
+                    'absent_flag' => (int) $request->absent_flag,
 
-                'events' => collect($eventIds)
-                    ->map(function ($eventId) use ($events) {
+                    'events' => collect($eventIds)
+                        ->map(function ($eventId) use ($events) {
 
-                        return [
-                            'event_id' => (int) $eventId,
+                            return [
+                                'event_id' => (int) $eventId,
 
-                            'event_name' => $events->get($eventId)?->name,
-                        ];
-                    })
-                    ->values()
-                    ->toArray(),
-            ]
-        ]);
+                                'event_name' => $events->get($eventId)?->name,
+                            ];
+                        })
+                        ->values()
+                        ->toArray(),
+                ]
+            ]);
+        } catch (\Exception $e) {
 
-    } catch (\Exception $e) {
-
-        /*
+            /*
         |--------------------------------------------------------------------------
         | Rollback On Error
         |--------------------------------------------------------------------------
         */
 
-        DB::rollBack();
+            DB::rollBack();
 
-        return response()->json([
-            'status'  => false,
-            'message' => 'Something went wrong while marking attendance.',
-            'error'   => $e->getMessage(),
-        ], 500);
+            return response()->json([
+                'status'  => false,
+                'message' => 'Something went wrong while marking attendance.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
     }
-}
 
     // Canteen Incharge 
     public function manageAttendance(Request $request)
