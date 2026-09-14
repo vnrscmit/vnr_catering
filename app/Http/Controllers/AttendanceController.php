@@ -260,7 +260,7 @@ class AttendanceController extends Controller
             'guest_remarks' => 'nullable|string|max:1000',
             'calendar_id' => 'required|exists:day_statuses,id',
             'date' => 'required|date',
-            'guest_name.*' => 'required|string|max:255',
+            'guest_name.*' => 'nullable|string|max:255',
             'department_id.*' => 'nullable|exists:departments,id',
         ]);
 
@@ -291,6 +291,9 @@ class AttendanceController extends Controller
         if (count($guestNames) != $request->guest_count) {
             return back()->with('error', 'Guest count does not match the number of guest names provided.')->withInput();
         }
+
+
+
 
         // Check for existing guests and capacity
         $userData = $request->filled('attend_user_id') ? User::find($request->attend_user_id) : null;
@@ -329,6 +332,31 @@ class AttendanceController extends Controller
         if ($companyParameter && $currentTime->gt($companyParameter->attendance_out_time)) {
             $lateFlag = 1;
         }
+
+        // Check if event allows attendance marking today
+        if ($userDataCheck->role !== 'Canteen Administrator') {
+
+            $today = Carbon::today()->toDateString();
+
+            if ($calendar->date == $today) {
+
+                $currentTime = Carbon::now()->format('H:i:s');
+                $maxTime = $companyParameter->attendance_out_time->format('H:i:s');
+
+                if ($currentTime > $maxTime) {
+
+                    $maxTimeFormatted = Carbon::createFromFormat('H:i:s', $maxTime)
+                        ->format('h:i A');
+
+                    return back()->with(
+                        'error',
+                        "Guest cannot be added after {$maxTimeFormatted}. Please contact your Canteen Administrator if you need to add a guest."
+                    );
+                }
+            }
+        }
+
+
 
         // Create main guest record
         $guest = Guest::create([
@@ -431,188 +459,216 @@ class AttendanceController extends Controller
         ]);
     }
 
-public function guestEdit(Guest $guest)
-{
-    $userDataCheck = Auth::user();
+    public function guestEdit(Guest $guest)
+    {
+        $userDataCheck = Auth::user();
 
-    $guest->load(['calendar', 'guestDetails']);
+        $guest->load(['calendar', 'guestDetails']);
 
-    $eventList = LocationEvent::with('event')
-        ->where('location_id', $userDataCheck->location_id)
-        ->where('status', 1)
-        ->get()
-        ->pluck('event.name', 'event.id');
+        $eventList = LocationEvent::with('event')
+            ->where('location_id', $userDataCheck->location_id)
+            ->where('status', 1)
+            ->get()
+            ->pluck('event.name', 'event.id');
 
-    if ($userDataCheck->role == 'Member' || $userDataCheck->role == 'Non Member') {
-        $location = Location::where('id', $userDataCheck->location_id)->where('status', 1)->get();
-        $departmentFetchId = Department::getByDepartment($userDataCheck->location_id)->pluck('department_id')->toArray();
-        $department = Department::where('status', 1)->whereIn('id', $departmentFetchId)->get();
-        $user = User::where('status', 1)->where('id', $userDataCheck->id)->get();
-    } else if ($userDataCheck->role == 'Canteen Incharge' || $userDataCheck->role == 'Canteen Administrator') {
-        $location = Location::where('id', $userDataCheck->location_id)->where('status', 1)->get();
-        $departmentFetchId = Department::getByDepartment($userDataCheck->location_id)->pluck('department_id')->toArray();
-        $department = Department::where('status', 1)->whereIn('id', $departmentFetchId)->get();
-        $userData1 = User::where('status', 1)->where('location_id', $userDataCheck->location_id)->pluck('id')->toArray();
-        $userData2 = MultipleLocation::where('location_id', $userDataCheck->location_id)->pluck('user_id')->toArray();
-        $userIds = array_values(array_unique(array_merge($userData1, $userData2)));
-        $user = User::where('status', 1)->whereIn('id', $userIds)->get();
-    } else {
-        $location = Location::where('status', 1)->get();
-        $department = Department::where('status', 1)->get();
-        $user = User::where('status', 1)->get();
-    }
-
-    // Prepare guest details for view
-    $guestDetails = $guest->guestDetails()->get();
-
-    return view('admin.guests.edit', [
-        'guest'         => $guest,
-        'guestDetails'  => $guestDetails,
-        'departments'   => $department,
-        'locations'     => $location,
-        'users'         => $user,
-        'selectedDate'  => optional($guest->calendar)->date,
-        'eventList'    => $eventList,
-    ]);
-}
-
-public function guestUpdate(Request $request, Guest $guest)
-{
-    $userDataCheck = Auth::user();
-
-    if (!$userDataCheck) {
-        return back()->with('error', 'User not found.');
-    }
-
-    $validator = Validator::make($request->all(), [
-        'guest_type' => 'required|in:Office Guest,Personal Guest',
-        'location_id' => 'required|exists:locations,id',
-        'calendar_id' => 'required|exists:day_statuses,id',
-        'date' => 'required|date',
-        'guest_count' => 'required|integer|min:1',
-        'guest_remarks' => 'nullable|string|max:1000',
-        'guest_name.*' => 'required|string|max:255',
-        'department_id.*' => 'nullable|exists:departments,id',
-    ]);
-
-    if ($validator->fails()) {
-        return back()->withErrors($validator)->withInput();
-    }
-
-    // Get guest names and department IDs from array
-    $guestNames = $request->input('guest_name', []);
-    $departmentIds = $request->input('guest_department_id', []);
-  
-
-    // Ensure we have at least one guest
-    if (empty($guestNames)) {
-        return back()->with('error', 'Please add at least one guest.')->withInput();
-    }
-
-    // Check if guest count matches the number of names
-    if (count($guestNames) != $request->guest_count) {
-        return back()->with('error', 'Guest count does not match the number of guest names provided.')->withInput();
-    }
-
-    // Check for existing guests and capacity
-    $userData = User::find($request->attend_user_id ?? $guest->attend_user_id);
-
-    if ($userData) {
-        $existingGuest = Guest::where('calendar_id', $request->calendar_id)
-            ->where('attend_user_id', $request->attend_user_id)
-            ->where('guest_type', $request->guest_type)
-            ->where('id', '!=', $guest->id)
-            ->sum('guest_count');
-
-        $newGuestCount = $existingGuest + $request->guest_count;
-
-        if ($request->guest_type == 'Personal Guest' && $newGuestCount > $userData->max_personal_guest_allowed) {
-            return back()->with(
-                'error',
-                'Maximum ' . $userData->max_personal_guest_allowed .
-                    ' personal guests are allowed. Existing: ' . $existingGuest .
-                    ', Requested: ' . $request->guest_count .
-                    ', Total: ' . $newGuestCount
-            )->withInput();
+        if ($userDataCheck->role == 'Member' || $userDataCheck->role == 'Non Member') {
+            $location = Location::where('id', $userDataCheck->location_id)->where('status', 1)->get();
+            $departmentFetchId = Department::getByDepartment($userDataCheck->location_id)->pluck('department_id')->toArray();
+            $department = Department::where('status', 1)->whereIn('id', $departmentFetchId)->get();
+            $user = User::where('status', 1)->where('id', $userDataCheck->id)->get();
+        } else if ($userDataCheck->role == 'Canteen Incharge' || $userDataCheck->role == 'Canteen Administrator') {
+            $location = Location::where('id', $userDataCheck->location_id)->where('status', 1)->get();
+            $departmentFetchId = Department::getByDepartment($userDataCheck->location_id)->pluck('department_id')->toArray();
+            $department = Department::where('status', 1)->whereIn('id', $departmentFetchId)->get();
+            $userData1 = User::where('status', 1)->where('location_id', $userDataCheck->location_id)->pluck('id')->toArray();
+            $userData2 = MultipleLocation::where('location_id', $userDataCheck->location_id)->pluck('user_id')->toArray();
+            $userIds = array_values(array_unique(array_merge($userData1, $userData2)));
+            $user = User::where('status', 1)->whereIn('id', $userIds)->get();
+        } else {
+            $location = Location::where('status', 1)->get();
+            $department = Department::where('status', 1)->get();
+            $user = User::where('status', 1)->get();
         }
 
-        if ($request->guest_type == 'Office Guest' && $newGuestCount > $userData->max_office_guest_allowed) {
-            return back()->with(
-                'error',
-                'Maximum ' . $userData->max_office_guest_allowed .
-                    ' office guests are allowed. Existing: ' . $existingGuest .
-                    ', Requested: ' . $request->guest_count .
-                    ', Total: ' . $newGuestCount
-            )->withInput();
-        }
+        // Prepare guest details for view
+        $guestDetails = $guest->guestDetails()->get();
+
+        return view('admin.guests.edit', [
+            'guest'         => $guest,
+            'guestDetails'  => $guestDetails,
+            'departments'   => $department,
+            'locations'     => $location,
+            'users'         => $user,
+            'selectedDate'  => optional($guest->calendar)->date,
+            'eventList'    => $eventList,
+        ]);
     }
 
-    // Check late flag
-    $companyParameter = CompanyParameter::where('location_id', $request->location_id)
-        ->where('status', 1)
-        ->first();
+    public function guestUpdate(Request $request, Guest $guest)
+    {
+        $userDataCheck = Auth::user();
 
-    $currentTime = Carbon::now();
-    $lateFlag = 0;
-
-    if ($companyParameter && $currentTime->gt($companyParameter->attendance_out_time)) {
-        $lateFlag = 1;
-    }
-
-    // Update main guest record
-    $guest->update([
-        'guest_type' => $request->guest_type,
-        'date' => $request->date,
-        'department_id' => $request->department_id ?? null,
-        'location_id' => $request->location_id,
-        'event_id' => $request->event_id ?? $guest->event_id,
-        'calendar_id' => $request->calendar_id,
-        'guest_count' => $request->guest_count,
-        'guest_remarks' => $request->guest_remarks,
-        'attend_user_id' => $request->attend_user_id ?? $guest->attend_user_id,
-        'late_flag' => $lateFlag,
-    ]);
-
-    // Delete existing guest details
-    GuestDetail::where('guest_id', $guest->id)->delete();
-
-    // Create new guest details
-    $guestNamesList = [];
-    foreach ($guestNames as $index => $name) {
-        // Check if department_id is 0 or empty, then set to null
-        $departmentId = isset($departmentIds[$index]) && $departmentIds[$index] != 0 ? $departmentIds[$index] : null;
-        $departmentName = null;
-
-        // Get department name if department ID is provided and not 0
-        if ($departmentId) {
-            $department = Department::find($departmentId);
-            $departmentName = $department ? $department->name : null;
+        if (!$userDataCheck) {
+            return back()->with('error', 'User not found.');
         }
 
-        GuestDetail::create([
-            'guest_id' => $guest->id,
-            'guest_name' => trim($name),
-            'department_id' => $departmentId,
-            'department_name' => $departmentName,
-            'status' => 1,
+        $validator = Validator::make($request->all(), [
+            'guest_type' => 'required|in:Office Guest,Personal Guest',
+            'location_id' => 'required|exists:locations,id',
+            'calendar_id' => 'required|exists:day_statuses,id',
+            'date' => 'required|date',
+            'guest_count' => 'required|integer|min:1',
+            'guest_remarks' => 'nullable|string|max:1000',
+            'guest_name.*' => 'nullable|string|max:255',
+            'department_id.*' => 'nullable|exists:departments,id',
         ]);
 
-        // Build guest name with department for comma-separated list
-        $guestWithDept = trim($name);
-        if ($departmentName) {
-            $guestWithDept .= " - {$departmentName}";
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
         }
-        $guestNamesList[] = $guestWithDept;
+
+        // Get guest names and department IDs from array
+        $guestNames = $request->input('guest_name', []);
+        $departmentIds = $request->input('guest_department_id', []);
+
+
+        // Ensure we have at least one guest
+        if (empty($guestNames)) {
+            return back()->with('error', 'Please add at least one guest.')->withInput();
+        }
+
+        // Check if guest count matches the number of names
+        if (count($guestNames) != $request->guest_count) {
+            return back()->with('error', 'Guest count does not match the number of guest names provided.')->withInput();
+        }
+
+        // Check for existing guests and capacity
+        $userData = User::find($request->attend_user_id ?? $guest->attend_user_id);
+
+        if ($userData) {
+            $existingGuest = Guest::where('calendar_id', $request->calendar_id)
+                ->where('attend_user_id', $request->attend_user_id)
+                ->where('guest_type', $request->guest_type)
+                ->where('id', '!=', $guest->id)
+                ->sum('guest_count');
+
+            $newGuestCount = $existingGuest + $request->guest_count;
+
+            if ($request->guest_type == 'Personal Guest' && $newGuestCount > $userData->max_personal_guest_allowed) {
+                return back()->with(
+                    'error',
+                    'Maximum ' . $userData->max_personal_guest_allowed .
+                        ' personal guests are allowed. Existing: ' . $existingGuest .
+                        ', Requested: ' . $request->guest_count .
+                        ', Total: ' . $newGuestCount
+                )->withInput();
+            }
+
+            if ($request->guest_type == 'Office Guest' && $newGuestCount > $userData->max_office_guest_allowed) {
+                return back()->with(
+                    'error',
+                    'Maximum ' . $userData->max_office_guest_allowed .
+                        ' office guests are allowed. Existing: ' . $existingGuest .
+                        ', Requested: ' . $request->guest_count .
+                        ', Total: ' . $newGuestCount
+                )->withInput();
+            }
+        }
+
+        // Check late flag
+        $companyParameter = CompanyParameter::where('location_id', $request->location_id)
+            ->where('status', 1)
+            ->first();
+
+        $currentTime = Carbon::now();
+        $lateFlag = 0;
+
+        if ($companyParameter && $currentTime->gt($companyParameter->attendance_out_time)) {
+            $lateFlag = 1;
+        }
+
+        // Check if event allows attendance marking today
+        if ($userDataCheck->role !== 'Canteen Administrator') {
+
+            $today = Carbon::today()->toDateString();
+
+            $calendar = DayStatus::where('date', $request->date)
+                ->where('location_id', $request->location_id)
+                ->where('open_flag', 1)
+                ->first();
+
+            if ($calendar->date == $today) {
+
+                $currentTime = Carbon::now()->format('H:i:s');
+                $maxTime = $companyParameter->attendance_out_time->format('H:i:s');
+
+                if ($currentTime > $maxTime) {
+
+                    $maxTimeFormatted = Carbon::createFromFormat('H:i:s', $maxTime)
+                        ->format('h:i A');
+
+                    return back()->with(
+                        'error',
+                        "Guest cannot be update after {$maxTimeFormatted}. Please contact your Canteen Administrator if you need to add a guest."
+                    );
+                }
+            }
+        }
+
+        // Update main guest record
+        $guest->update([
+            'guest_type' => $request->guest_type,
+            'date' => $request->date,
+            'department_id' => $request->department_id ?? null,
+            'location_id' => $request->location_id,
+            'event_id' => $request->event_id ?? $guest->event_id,
+            'calendar_id' => $request->calendar_id,
+            'guest_count' => $request->guest_count,
+            'guest_remarks' => $request->guest_remarks,
+            'attend_user_id' => $request->attend_user_id ?? $guest->attend_user_id,
+            'late_flag' => $lateFlag,
+        ]);
+
+        // Delete existing guest details
+        GuestDetail::where('guest_id', $guest->id)->delete();
+
+        // Create new guest details
+        $guestNamesList = [];
+        foreach ($guestNames as $index => $name) {
+            // Check if department_id is 0 or empty, then set to null
+            $departmentId = isset($departmentIds[$index]) && $departmentIds[$index] != 0 ? $departmentIds[$index] : null;
+            $departmentName = null;
+
+            // Get department name if department ID is provided and not 0
+            if ($departmentId) {
+                $department = Department::find($departmentId);
+                $departmentName = $department ? $department->name : null;
+            }
+
+            GuestDetail::create([
+                'guest_id' => $guest->id,
+                'guest_name' => trim($name),
+                'department_id' => $departmentId,
+                'department_name' => $departmentName,
+                'status' => 1,
+            ]);
+
+            // Build guest name with department for comma-separated list
+            $guestWithDept = trim($name);
+            if ($departmentName) {
+                $guestWithDept .= " - {$departmentName}";
+            }
+            $guestNamesList[] = $guestWithDept;
+        }
+
+        // Update main guest with comma-separated names
+        $mainGuestName = implode(', ', $guestNamesList);
+        Guest::where('id', $guest->id)->update(['guest_name' => $mainGuestName]);
+
+        return redirect()
+            ->route('admin.guests.list', ['id' => $request->calendar_id])
+            ->with('success', 'Guest updated successfully with ' . $request->guest_count . ' guest.');
     }
-
-    // Update main guest with comma-separated names
-    $mainGuestName = implode(', ', $guestNamesList);
-    Guest::where('id', $guest->id)->update(['guest_name' => $mainGuestName]);
-
-    return redirect()
-        ->route('admin.guests.list', ['id' => $request->calendar_id])
-        ->with('success', 'Guest updated successfully with ' . $request->guest_count . ' guest.');
-}
 
     public function destroy(Guest $guest)
     {

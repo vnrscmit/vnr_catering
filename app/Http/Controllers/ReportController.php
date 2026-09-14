@@ -414,7 +414,6 @@ class ReportController extends Controller
         return DataTables::of($formattedData)->make(true);
     }
 
-
     public function collectionExpenseReport(Request $request)
     {
         $authUser = Auth::user();
